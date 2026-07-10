@@ -167,7 +167,47 @@ class Command(BaseCommand):
             )
             self.stdout.write(f'  Subject: {subject}')
 
+        # ── Modules ─────────────────────────────────────
+        from apps.ground_training.models import Module, Room, Course, CourseEnrollment
+        nav = Subject.objects.get(code='NAV-101')
+        Module.objects.get_or_create(subject=nav, title='Earth and Navigation', duration=15, order=1, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=nav, title='Charts and Publications', duration=15, order=2, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=nav, title='Flight Planning', duration=20, order=3, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=nav, title='Radio Navigation', duration=10, order=4, defaults={'status': 'active'})
+
+        met = Subject.objects.get(code='MET-201')
+        Module.objects.get_or_create(subject=met, title='Atmosphere and Pressure', duration=12, order=1, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=met, title='Clouds and Precipitation', duration=12, order=2, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=met, title='Weather Hazards', duration=10, order=3, defaults={'status': 'active'})
+        Module.objects.get_or_create(subject=met, title='METAR and TAF', duration=11, order=4, defaults={'status': 'active'})
+        self.stdout.write(f'  Modules: 8 created (NAV + MET)')
+
+        # ── Rooms ───────────────────────────────────────
+        room1, _ = Room.objects.get_or_create(name='Classroom A', defaults={'capacity': 25, 'location': 'Ground Floor'})
+        room2, _ = Room.objects.get_or_create(name='Classroom B', defaults={'capacity': 15, 'location': 'First Floor'})
+        self.stdout.write(f'  Rooms: {room1}, {room2}')
+
+        # ── Courses ─────────────────────────────────────
+        today = date.today()
+        course1, _ = Course.objects.get_or_create(
+            subject=nav, instructor=gi, academic_year=ay, title='Navigation Basics',
+            scheduled_date=today, start_time='09:00', end_time='11:00',
+            defaults={'room': room1, 'status': 'scheduled'},
+        )
+        course2, _ = Course.objects.get_or_create(
+            subject=met, instructor=gi, academic_year=ay, title='Weather Fundamentals',
+            scheduled_date=today + timedelta(days=1), start_time='10:00', end_time='12:00',
+            defaults={'room': room2, 'status': 'scheduled'},
+        )
+        self.stdout.write(f'  Courses: {course1}, {course2}')
+
+        # ── Enrollments ─────────────────────────────────
+        for s in students:
+            CourseEnrollment.objects.get_or_create(student=s, course=course1)
+            CourseEnrollment.objects.get_or_create(student=s, course=course2)
+        self.stdout.write(f'  Enrollments: {CourseEnrollment.objects.count()} created')
+
         self.stdout.write(self.style.SUCCESS(
             f'\nDemo data seeded: {len(students)} students, 2 instructors, '
-            f'{len(aircraft_list)} aircraft, 3 subjects'
+            f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses'
         ))
