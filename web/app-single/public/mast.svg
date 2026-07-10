@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1448 1086"
+   width="1448"
+   height="1086"
+   version="1.1"
+   id="svg20"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs10">
+    <linearGradient
+       id="gold"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="0%">
+      <stop
+         offset="0%"
+         stop-color="#F3DFAE"
+         id="stop1" />
+      <stop
+         offset="18%"
+         stop-color="#E4C48B"
+         id="stop2" />
+      <stop
+         offset="38%"
+         stop-color="#C6975B"
+         id="stop3" />
+      <stop
+         offset="50%"
+         stop-color="#B8895A"
+         id="stop4" />
+      <stop
+         offset="62%"
+         stop-color="#C6975B"
+         id="stop5" />
+      <stop
+         offset="82%"
+         stop-color="#E4C48B"
+         id="stop6" />
+      <stop
+         offset="100%"
+         stop-color="#F6E4B4"
+         id="stop7" />
+    </linearGradient>
+    <linearGradient
+       id="goldSoft"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="0%">
+      <stop
+         offset="0%"
+         stop-color="#F3DFAE"
+         id="stop8" />
+      <stop
+         offset="50%"
+         stop-color="#D6AE73"
+         id="stop9" />
+      <stop
+         offset="100%"
+         stop-color="#F6E4B4"
+         id="stop10" />
+    </linearGradient>
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient20"
+       x1="1734.1348"
+       y1="133.32067"
+       x2="1763.1175"
+       y2="133.32067"
+       gradientTransform="matrix(0.41403934,0,0,2.4152295,-0.99342557,-10.927681)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient21"
+       x1="857.22031"
+       y1="336.17495"
+       x2="880.45821"
+       y2="336.17495"
+       gradientTransform="scale(0.77459667,1.2909944)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient22"
+       x1="888.20418"
+       y1="336.17495"
+       x2="911.44208"
+       y2="336.17495"
+       gradientTransform="scale(0.77459667,1.2909944)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient23"
+       x1="921.77004"
+       y1="336.17495"
+       x2="945.00794"
+       y2="336.17495"
+       gradientTransform="scale(0.77459667,1.2909944)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient24"
+       x1="952.7539"
+       y1="336.17495"
+       x2="975.9918"
+       y2="336.17495"
+       gradientTransform="scale(0.77459667,1.2909944)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient25"
+       x1="379.17072"
+       y1="760.01649"
+       x2="431.70642"
+       y2="760.01649"
+       gradientTransform="scale(1.7511901,0.57104024)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient26"
+       x1="101.15961"
+       y1="1563.329"
+       x2="383.98148"
+       y2="1563.329"
+       gradientTransform="matrix(3.0102913,0,0,0.33219376,250.987,-178.89912)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient29"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(3.0102913,0,0,0.33219376,-219.90364,-34.510681)"
+       x1="101.15961"
+       y1="1563.329"
+       x2="383.98148"
+       y2="1563.329" />
+    <linearGradient
+       xlink:href="#gold"
+       id="linearGradient30"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(3.0102913,0,0,0.33219376,36.371993,-32.790072)"
+       x1="101.15961"
+       y1="1563.329"
+       x2="383.98148"
+       y2="1563.329" />
+    <linearGradient
+       xlink:href="#goldSoft"
+       id="linearGradient35"
+       x1="22.734123"
+       y1="7385.1981"
+       x2="44.551547"
+       y2="7385.1981"
+       gradientTransform="scale(10.908712,0.09166985)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#goldSoft"
+       id="linearGradient36"
+       x1="141.85151"
+       y1="2433.6601"
+       x2="250.26982"
+       y2="2433.6601"
+       gradientTransform="matrix(3.6927349,0,0,0.270802,-2.9802767,-38.743597)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#goldSoft"
+       id="linearGradient37"
+       x1="88.186395"
+       y1="7385.1981"
+       x2="110.00382"
+       y2="7385.1981"
+       gradientTransform="scale(10.908712,0.09166985)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#goldSoft"
+       id="linearGradient38"
+       x1="133.50307"
+       y1="3091.4786"
+       x2="213.31838"
+       y2="3091.4786"
+       gradientTransform="matrix(4.1823307,0,0,0.23910113,-2.9802767,-38.743597)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <!-- ===================== PLANE ICON ===================== -->
+  <g
+     fill="none"
+     stroke="url(#gold)"
+     stroke-width="5"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="g14">
+    <!-- tail fin -->
+    <path
+       d="m 723.00657,311.07232 6,70 h -12 z"
+       fill="url(#gold)"
+       stroke="none"
+       id="path10"
+       style="fill:url(#linearGradient20)" />
+    <!-- nose circle -->
+    <path
+       id="circle10"
+       d="m 668.8448,498.28071 a 72,72 0 0 1 5.7458,-98.65161 72,72 0 0 1 98.8188,0 72,72 0 0 1 5.7458,98.65161" />
+    <!-- left wing -->
+    <path
+       d="M652 432 L318 428 L322 434 L640 452 L652 462"
+       fill="url(#gold)"
+       stroke="url(#gold)"
+       id="path1" />
+    <!-- right wing -->
+    <path
+       d="M796 432 L1130 428 L1126 434 L808 452 L796 462"
+       fill="url(#gold)"
+       stroke="url(#gold)"
+       id="path2" />
+  </g>
+  <!-- cockpit windows -->
+  <g
+     fill="url(#gold)"
+     id="g18"
+     style="fill:url(#linearGradient25)"
+     transform="translate(12.914532,-28.568296)">
+    <path
+       d="m 672,434 h 10 l -4,30 h -14 z"
+       id="path15"
+       style="fill:url(#linearGradient21)" />
+    <path
+       d="m 690,434 h 16 v 30 h -18 z"
+       id="path16"
+       style="fill:url(#linearGradient22)" />
+    <path
+       d="m 714,434 h 16 l 2,30 h -16 z"
+       id="path17"
+       style="fill:url(#linearGradient23)" />
+    <path
+       d="m 738,434 h 10 l 8,30 h -16 z"
+       id="path18"
+       style="fill:url(#linearGradient24)" />
+  </g>
+  <!-- ===================== WORDMARK ===================== -->
+  <!-- MAS - left -->
+  <text
+     x="504.09637"
+     y="580.98938"
+     text-anchor="middle"
+     font-family="Poppins, sans-serif"
+     font-weight="700"
+     font-size="120px"
+     letter-spacing="34"
+     fill="url(#gold)"
+     id="text-left"
+     style="fill:url(#linearGradient29)">MAS</text>
+  <!-- T - center-left -->
+  <text
+     x="740.37177"
+     y="578.17957"
+     text-anchor="middle"
+     font-family="Poppins, sans-serif"
+     font-weight="700"
+     font-size="120px"
+     letter-spacing="34"
+     fill="url(#gold)"
+     id="text-center"
+     style="fill:url(#linearGradient30)">T</text>
+  <!-- ERLY - right (tighter spacing to match MAS width) -->
+  <text
+     x="974.98706"
+     y="583.09674"
+     text-anchor="middle"
+     font-family="Poppins, sans-serif"
+     font-weight="700"
+     font-size="120px"
+     letter-spacing="14"
+     fill="url(#gold)"
+     id="text-right"
+     style="fill:url(#linearGradient26)">ERLY</text>
+  <!-- ===================== SUBLINE ===================== -->
+  <line
+     x1="245.01973"
+     y1="639.25641"
+     x2="483.01971"
+     y2="639.25641"
+     stroke="url(#goldSoft)"
+     stroke-width="2"
+     id="line18"
+     style="stroke:url(#linearGradient35)" />
+  <text
+     x="721.01971"
+     y="649.25641"
+     text-anchor="middle"
+     font-family="Poppins, sans-serif"
+     font-weight="300"
+     font-size="40px"
+     letter-spacing="14"
+     fill="url(#goldSoft)"
+     id="text19"
+     style="fill:url(#linearGradient36)">AIR ACADEMY</text>
+  <line
+     x1="959.01971"
+     y1="639.25641"
+     x2="1197.0198"
+     y2="639.25641"
+     stroke="url(#goldSoft)"
+     stroke-width="2"
+     id="line19"
+     style="stroke:url(#linearGradient37)" />
+  <!-- ===================== TAGLINE ===================== -->
+  <text
+     x="721.01971"
+     y="719.25641"
+     text-anchor="middle"
+     font-family="Poppins, sans-serif"
+     font-weight="300"
+     font-size="26px"
+     letter-spacing="10"
+     fill="url(#goldSoft)"
+     id="text20"
+     style="fill:url(#linearGradient38)">MASTER THE SKY</text>
+</svg>

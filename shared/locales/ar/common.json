@@ -1,0 +1,42 @@
+{
+  "app_name": "أكاديمية ماسترلي للطيران",
+  "buttons": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "create": "إنشاء",
+    "edit": "تعديل",
+    "search": "بحث"
+  },
+  "status": {
+    "active": "نشط",
+    "suspended": "معلق",
+    "archived": "مؤرشف",
+    "pending": "قيد الانتظار"
+  },
+  "navigation": {
+    "dashboard": "لوحة القيادة",
+    "students": "الطلاب",
+    "courses": "الدورات",
+    "schedule": "الجدول",
+    "exams": "الامتحانات",
+    "documents": "الوثائق",
+    "reports": "التقارير",
+    "settings": "الإعدادات"
+  },
+  "auth": {
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "login_title": "تسجيل دخول الموظفين",
+    "student_login_title": "بوابة الطالب",
+    "invalid_credentials": "بريد إلكتروني أو كلمة مرور غير صالحة",
+    "account_deactivated": "تم تعطيل حسابك"
+  },
+  "errors": {
+    "generic": "حدث خطأ ما",
+    "connection": "خطأ في الاتصال",
+    "unauthorized": "غير مصرح لك بالوصول إلى هذه الصفحة"
+  }
+}

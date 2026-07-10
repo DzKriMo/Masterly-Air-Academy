@@ -1,0 +1,42 @@
+{
+  "app_name": "Masterly Air Academy",
+  "buttons": {
+    "login": "Sign In",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "search": "Search"
+  },
+  "status": {
+    "active": "Active",
+    "suspended": "Suspended",
+    "archived": "Archived",
+    "pending": "Pending"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "students": "Students",
+    "courses": "Courses",
+    "schedule": "Schedule",
+    "exams": "Exams",
+    "documents": "Documents",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "login_title": "Staff Login",
+    "student_login_title": "Student Portal",
+    "invalid_credentials": "Invalid email or password",
+    "account_deactivated": "Your account has been deactivated"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "connection": "Connection error. Please try again.",
+    "unauthorized": "You are not authorized to access this page"
+  }
+}

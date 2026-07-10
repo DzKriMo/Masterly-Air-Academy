@@ -1,0 +1,42 @@
+{
+  "app_name": "Masterly Air Academy",
+  "buttons": {
+    "login": "Se Connecter",
+    "logout": "Déconnexion",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "edit": "Modifier",
+    "search": "Rechercher"
+  },
+  "status": {
+    "active": "Actif",
+    "suspended": "Suspendu",
+    "archived": "Archivé",
+    "pending": "En Attente"
+  },
+  "navigation": {
+    "dashboard": "Tableau de Bord",
+    "students": "Élèves",
+    "courses": "Cours",
+    "schedule": "Emploi du Temps",
+    "exams": "Examens",
+    "documents": "Documents",
+    "reports": "Rapports",
+    "settings": "Paramètres"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Mot de Passe",
+    "login_title": "Connexion Personnel",
+    "student_login_title": "Portail Élève",
+    "invalid_credentials": "Email ou mot de passe invalide",
+    "account_deactivated": "Votre compte a été désactivé"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "connection": "Erreur de connexion",
+    "unauthorized": "Vous n'êtes pas autorisé à accéder à cette page"
+  }
+}

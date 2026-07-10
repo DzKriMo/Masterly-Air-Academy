@@ -1,0 +1,164 @@
+services:
+  nginx:
+    image: nginx:1.31-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  api:
+    build: ./backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      DEBUG: ${DEBUG:-true}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: masterly
+      DB_USER: masterly
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-secret}@redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: ${MINIO_PASSWORD:-minioadmin}
+      MINIO_BUCKET: masterly-documents
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_KEY: ${MEILI_KEY:-masterkey}
+      ALLOWED_HOSTS: localhost,127.0.0.1,api
+      CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  celery:
+    build: ./backend
+    command: celery -A config worker -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      DEBUG: ${DEBUG:-false}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: masterly
+      DB_USER: masterly
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-secret}@redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: masterly
+      POSTGRES_USER: masterly
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U masterly -d masterly"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  redis:
+    image: redis:8-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-secret}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-secret}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.13.1
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_KEY:-masterkey}
+    volumes:
+      - meilisearch_data:/meili_data
+    ports:
+      - "7700:7700"
+    restart: unless-stopped
+    networks:
+      - masterly
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  meilisearch_data:
+
+networks:
+  masterly:
+    driver: bridge
