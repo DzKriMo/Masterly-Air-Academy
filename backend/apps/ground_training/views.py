@@ -4,12 +4,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import (
-    Subject, Module, ModuleLesson, Room,
+    Subject, Module, ModuleLesson, ModuleDocument, Room,
     Course, CourseEnrollment, AttendanceRecord,
 )
 from .serializers import (
     SubjectSerializer, SubjectListSerializer,
-    ModuleSerializer, ModuleLessonSerializer,
+    ModuleSerializer, ModuleLessonSerializer, ModuleDocumentSerializer,
     RoomSerializer,
     CourseSerializer, CourseCreateSerializer,
     CourseEnrollmentSerializer,
@@ -50,6 +50,29 @@ class ModuleViewSet(viewsets.ModelViewSet):
         module = self.get_object()
         lessons = module.lessons.all()
         return Response(ModuleLessonSerializer(lessons, many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def upload_document(self, request, pk=None):
+        module = self.get_object()
+        file = request.FILES.get('file')
+        name = request.data.get('name', file.name if file else 'Document')
+        doc_type = request.data.get('type', 'pdf')
+
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Simple local storage (MinIO comes in Sprint 7)
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'module_docs/{module.id}/{file.name}', file)
+        file_url = f'/media/{path}'
+
+        doc = ModuleDocument.objects.create(
+            module=module,
+            name=name,
+            file_url=file_url,
+            type=doc_type,
+        )
+        return Response(ModuleDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
 
 class RoomViewSet(viewsets.ModelViewSet):

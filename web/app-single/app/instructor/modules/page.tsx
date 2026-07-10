@@ -175,10 +175,48 @@ export default function ModulesPage() {
                       )}
                     </div>
 
+                    {/* Upload form */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Upload Document</h4>
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const formEl = e.target as HTMLFormElement;
+                        const fileInput = formEl.querySelector('input[type="file"]') as HTMLInputElement;
+                        const nameInput = formEl.querySelector('input[name="doc_name"]') as HTMLInputElement;
+                        const file = fileInput?.files?.[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        fd.append('name', nameInput?.value || file.name);
+                        fd.append('type', file.type.split('/')[1] || 'pdf');
+                        const session = JSON.parse(sessionStorage.getItem("maa_session") || "{}");
+                        await fetch(`/api/modules/${m.id}/upload_document/`, {
+                          method: 'POST',
+                          headers: { Authorization: `Bearer ${session.token}` },
+                          body: fd,
+                        });
+                        fetchModules(selectedSubject);
+                        formEl.reset();
+                      }}
+                        className="flex flex-col sm:flex-row gap-3 items-end bg-navy-900 rounded-lg p-4 border border-navy-700">
+                        <div className="flex-1 w-full">
+                          <label className="block text-xs text-gray-500 mb-1">Document Name</label>
+                          <input name="doc_name" className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" placeholder="e.g. Week 1 Slides" />
+                        </div>
+                        <div className="flex-1 w-full">
+                          <label className="block text-xs text-gray-500 mb-1">File</label>
+                          <input type="file" className="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gold-500 file:text-navy-900 hover:file:bg-gold-600" />
+                        </div>
+                        <button type="submit" className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors whitespace-nowrap">
+                          Upload
+                        </button>
+                      </form>
+                    </div>
+
                     <div className="flex gap-2 pt-2">
                       <a href={`/admin/ground_training/module/${m.id}/change/`} target="_blank"
-                        className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900 transition-colors">
-                        Edit in Admin
+                        className="px-4 py-2 bg-navy-900 border border-navy-600 text-gray-400 rounded-lg text-sm hover:border-gold-500 hover:text-gold-500 transition-colors">
+                        Advanced Edit
                       </a>
                     </div>
                   </div>

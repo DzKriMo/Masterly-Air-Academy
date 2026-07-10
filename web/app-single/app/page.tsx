@@ -109,8 +109,8 @@ export default function LandingPage() {
               <Image
                 src="/mast.svg"
                 alt="Masterly Air Academy"
-                width={260}
-                height={260}
+                width={360}
+                height={360}
                 className="w-52 h-52 md:w-64 md:h-64 lg:w-72 lg:h-72"
                 priority
               />
