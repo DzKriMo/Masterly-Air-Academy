@@ -73,41 +73,47 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.03] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-24 md:pt-28 md:pb-32">
-          <div className="max-w-3xl">
-            <Image
-              src="/mast.svg"
-              alt="Masterly Air Academy"
-              width={220}
-              height={220}
-              className="mb-8 md:w-[280px] md:h-[280px]"
-              priority
-            />
-            <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">
-              Approved Training Organization
-            </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-              Your Aviation Career<br />
-              <span className="text-gold-500">Starts Here</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-400 leading-relaxed mb-10 max-w-2xl">
-              Masterly Air Academy delivers world-class flight training with a modern fleet,
-              experienced instructors, and a rigorous curriculum designed to produce
-              safe, competent, and professional pilots.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <a
-                href="#programs"
-                className="px-8 py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors"
-              >
-                Explore Programs
-              </a>
-              <a
-                href="#contact"
-                className="px-8 py-3.5 border border-gold-500/30 hover:border-gold-500 text-gold-500 font-semibold rounded-lg transition-colors"
-              >
-                Contact Us
-              </a>
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-24 md:pt-24 md:pb-32">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+            {/* Text side */}
+            <div className="flex-1 text-center lg:text-left">
+              <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">
+                Approved Training Organization
+              </p>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
+                Your Aviation Career<br />
+                <span className="text-gold-500">Starts Here</span>
+              </h1>
+              <p className="text-lg md:text-xl text-gray-400 leading-relaxed mb-10">
+                Masterly Air Academy delivers world-class flight training with a modern fleet,
+                experienced instructors, and a rigorous curriculum designed to produce
+                safe, competent, and professional pilots.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+                <a
+                  href="#programs"
+                  className="px-8 py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors"
+                >
+                  Explore Programs
+                </a>
+                <a
+                  href="#contact"
+                  className="px-8 py-3.5 border border-gold-500/30 hover:border-gold-500 text-gold-500 font-semibold rounded-lg transition-colors"
+                >
+                  Contact Us
+                </a>
+              </div>
+            </div>
+            {/* Logo side */}
+            <div className="flex-shrink-0">
+              <Image
+                src="/mast.svg"
+                alt="Masterly Air Academy"
+                width={260}
+                height={260}
+                className="w-52 h-52 md:w-64 md:h-64 lg:w-72 lg:h-72"
+                priority
+              />
             </div>
           </div>
         </div>
