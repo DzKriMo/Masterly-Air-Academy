@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -60,7 +60,7 @@ export default function StudentLoginPage() {
           </p>
         </div>
 
-        {/* Login form — large touch targets for iPad */}
+        {/* Login form | large touch targets for iPad */}
         <form
           onSubmit={handleSubmit}
           className="bg-navy-800 rounded-2xl p-8 md:p-10 shadow-2xl border border-navy-700"
@@ -71,7 +71,7 @@ export default function StudentLoginPage() {
             </div>
           )}
 
-          {/* Email field — min 52px height for comfortable iPad touch */}
+          {/* Email field | min 52px height for comfortable iPad touch */}
           <div className="mb-5">
             <label className="block text-base font-medium text-gray-300 mb-2.5">
               Email
@@ -104,7 +104,7 @@ export default function StudentLoginPage() {
             />
           </div>
 
-          {/* Submit button — large tap target */}
+          {/* Submit button | large tap target */}
           <button
             type="submit"
             disabled={loading}

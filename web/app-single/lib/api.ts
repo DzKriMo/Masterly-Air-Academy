@@ -1,5 +1,5 @@
-// ============================================================
-// MASTERLY AIR ACADEMY — API Client (JWT + Django DRF)
+﻿// ============================================================
+// MASTERLY AIR ACADEMY | API Client (JWT + Django DRF)
 // ============================================================
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';

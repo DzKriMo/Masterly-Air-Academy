@@ -259,7 +259,7 @@ export default function LandingPage() {
       <section id="access" className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20">
         <div className="text-center mb-10">
           <h2 className="text-xl font-bold text-white mb-2">Academy Portal Access</h2>
-          <p className="text-sm text-gray-500">Students, instructors, and staff — select your portal to continue.</p>
+          <p className="text-sm text-gray-500">Select your portal to continue.</p>
         </div>
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
           <Link
@@ -289,7 +289,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="MAA" width={28} height={28} className="rounded-md opacity-70" />
-              <span>Masterly Air Academy — Approved Training Organization</span>
+              <span>Masterly Air Academy, Approved Training Organization</span>
             </div>
             <div className="flex gap-4">
               <span>100% On-Premise</span>

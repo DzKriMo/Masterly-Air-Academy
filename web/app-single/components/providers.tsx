@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 // ============================================================
-// MASTERLY AIR ACADEMY — Root Providers Wrapper
+// MASTERLY AIR ACADEMY | Root Providers Wrapper
 // ============================================================
 
 import { AuthProvider } from '@/lib/auth-context';

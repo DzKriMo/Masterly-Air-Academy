@@ -1,5 +1,5 @@
-// ============================================================
-// MASTERLY AIR ACADEMY — Portal Access Control
+﻿// ============================================================
+// MASTERLY AIR ACADEMY | Portal Access Control
 // ============================================================
 
 export const USER_ROLES = [

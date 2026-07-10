@@ -1,5 +1,5 @@
-// ============================================================
-// MASTERLY AIR ACADEMY — Shared TypeScript Types
+﻿// ============================================================
+// MASTERLY AIR ACADEMY | Shared TypeScript Types
 // ============================================================
 
 export type UserRole =

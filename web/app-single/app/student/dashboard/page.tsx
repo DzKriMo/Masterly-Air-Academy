@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -44,7 +44,7 @@ export default function StudentDashboardPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      {/* Navigation bar — sticky for iPad */}
+      {/* Navigation bar | sticky for iPad */}
       <nav className="sticky top-0 z-50 bg-navy-800/95 backdrop-blur border-b border-navy-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
@@ -88,7 +88,7 @@ export default function StudentDashboardPage() {
         </div>
       </nav>
 
-      {/* Main content — iPad-optimized grid */}
+      {/* Main content | iPad-optimized grid */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         {/* Welcome */}
         <div className="mb-8 md:mb-10">
@@ -100,7 +100,7 @@ export default function StudentDashboardPage() {
           </p>
         </div>
 
-        {/* Stats cards — 2x2 on iPad, 4-col on desktop */}
+        {/* Stats cards | 2x2 on iPad, 4-col on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
           <StatCard
             title="Upcoming"
@@ -124,7 +124,7 @@ export default function StudentDashboardPage() {
             color="border-l-blue-500"
           />
           <StatCard
-            title={stats.examAverage > 0 ? `${stats.examAverage}%` : "—"}
+            title={stats.examAverage > 0 ? `${stats.examAverage}%` : "|"}
             value=""
             subtitle="Exam Average"
             icon="📝"
@@ -132,7 +132,7 @@ export default function StudentDashboardPage() {
           />
         </div>
 
-        {/* Quick access tiles — iPad-friendly large touch targets */}
+        {/* Quick access tiles | iPad-friendly large touch targets */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
           <QuickTile href="/student/schedule" icon="🗓️" label="My Schedule" />
           <QuickTile href="/student/courses" icon="📚" label="My Courses" />
@@ -192,7 +192,7 @@ function StatCard({
   );
 }
 
-/* ── Quick Tile — large iPad touch target ──────── */
+/* ── Quick Tile | large iPad touch target ──────── */
 
 function QuickTile({
   href,

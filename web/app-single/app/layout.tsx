@@ -1,10 +1,10 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "Masterly Air Academy",
-  description: "ATO Management Platform — Training, Administration & Compliance",
+  description: "ATO Management Platform | Training, Administration & Compliance",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",

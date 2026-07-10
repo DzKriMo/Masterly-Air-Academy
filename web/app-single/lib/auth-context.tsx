@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 // ============================================================
-// MASTERLY AIR ACADEMY — Auth Context (JWT + Django)
+// MASTERLY AIR ACADEMY | Auth Context (JWT + Django)
 // Token stored in sessionStorage (cleared on browser close)
 // ============================================================
 
@@ -86,14 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    // POST /api/login/ — Custom JWT serializer returns { access, refresh, user }
+    // POST /api/login/ | Custom JWT serializer returns { access, refresh, user }
     const response = await api.post<{
       access: string;
       refresh: string;
       user: AuthUser;
     }>('/login/', { email, password });
 
-    // DRF returns the data directly — no .data wrapper on success
+    // DRF returns the data directly | no .data wrapper on success
     const { access, refresh, user: userData } = response as unknown as {
       access: string;
       refresh: string;
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post('/logout/');
     } catch {
-      // Token may already be invalid — cleanup anyway
+      // Token may already be invalid | cleanup anyway
     }
     setToken(null);
     setUser(null);

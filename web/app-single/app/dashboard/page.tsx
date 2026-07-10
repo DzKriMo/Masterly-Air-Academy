@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           Welcome, {user.name?.split(" ")[0] || "User"}
         </h2>
 
-        {/* Stats cards — role appropriate */}
+        {/* Stats cards | role appropriate */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {getRoleCards(user.role).map((card, i) => (
             <div
@@ -132,52 +132,52 @@ function getRoleCards(role: string): { title: string; value: string; icon: strin
   switch (true) {
     case role.startsWith("flight_instructor") || role.startsWith("chief_flight"):
       return [
-        { title: "Today's Flights", value: "—", icon: "✈️" },
-        { title: "My Students", value: "—", icon: "🎓" },
-        { title: "Hours This Month", value: "—", icon: "⏱️" },
-        { title: "Pending Reports", value: "—", icon: "📝" },
+        { title: "Today's Flights", value: "|", icon: "✈️" },
+        { title: "My Students", value: "|", icon: "🎓" },
+        { title: "Hours This Month", value: "|", icon: "⏱️" },
+        { title: "Pending Reports", value: "|", icon: "📝" },
       ];
     case role.startsWith("ground_instructor") || role.startsWith("chief_ground"):
       return [
-        { title: "Today's Courses", value: "—", icon: "📚" },
-        { title: "My Students", value: "—", icon: "🎓" },
-        { title: "Attendance", value: "—", icon: "✓" },
-        { title: "Pending Evaluations", value: "—", icon: "📝" },
+        { title: "Today's Courses", value: "|", icon: "📚" },
+        { title: "My Students", value: "|", icon: "🎓" },
+        { title: "Attendance", value: "|", icon: "✓" },
+        { title: "Pending Evaluations", value: "|", icon: "📝" },
       ];
     case role === "quality_manager" || role === "safety_manager" || role === "compliance_monitoring_manager":
       return [
-        { title: "Open NCRs", value: "—", icon: "⚠️" },
-        { title: "Audits Planned", value: "—", icon: "🔍" },
-        { title: "CAPA Due", value: "—", icon: "📋" },
-        { title: "Safety Events", value: "—", icon: "🛡️" },
+        { title: "Open NCRs", value: "|", icon: "⚠️" },
+        { title: "Audits Planned", value: "|", icon: "🔍" },
+        { title: "CAPA Due", value: "|", icon: "📋" },
+        { title: "Safety Events", value: "|", icon: "🛡️" },
       ];
     case role === "finance_responsible" || role === "accounting_agent":
       return [
-        { title: "Outstanding", value: "—", icon: "💰" },
-        { title: "Paid This Month", value: "—", icon: "✅" },
-        { title: "Overdue", value: "—", icon: "⚠️" },
-        { title: "Revenue MTD", value: "—", icon: "📈" },
+        { title: "Outstanding", value: "|", icon: "💰" },
+        { title: "Paid This Month", value: "|", icon: "✅" },
+        { title: "Overdue", value: "|", icon: "⚠️" },
+        { title: "Revenue MTD", value: "|", icon: "📈" },
       ];
     case role === "director_general" || role === "head_of_training":
       return [
-        { title: "Active Students", value: "—", icon: "🎓" },
-        { title: "Flight Hours MTD", value: "—", icon: "✈️" },
-        { title: "Revenue MTD", value: "—", icon: "💰" },
-        { title: "Compliance", value: "—", icon: "🛡️" },
+        { title: "Active Students", value: "|", icon: "🎓" },
+        { title: "Flight Hours MTD", value: "|", icon: "✈️" },
+        { title: "Revenue MTD", value: "|", icon: "💰" },
+        { title: "Compliance", value: "|", icon: "🛡️" },
       ];
     case role === "scheduler":
       return [
-        { title: "Today's Bookings", value: "—", icon: "📅" },
-        { title: "Aircraft Available", value: "—", icon: "✈️" },
-        { title: "Conflicts", value: "—", icon: "⚠️" },
-        { title: "Pending Requests", value: "—", icon: "📋" },
+        { title: "Today's Bookings", value: "|", icon: "📅" },
+        { title: "Aircraft Available", value: "|", icon: "✈️" },
+        { title: "Conflicts", value: "|", icon: "⚠️" },
+        { title: "Pending Requests", value: "|", icon: "📋" },
       ];
     default:
       return [
-        { title: "Overview", value: "—", icon: "📊" },
-        { title: "Tasks", value: "—", icon: "📋" },
-        { title: "Messages", value: "—", icon: "💬" },
-        { title: "Activity", value: "—", icon: "🔔" },
+        { title: "Overview", value: "|", icon: "📊" },
+        { title: "Tasks", value: "|", icon: "📋" },
+        { title: "Messages", value: "|", icon: "💬" },
+        { title: "Activity", value: "|", icon: "🔔" },
       ];
   }
 }

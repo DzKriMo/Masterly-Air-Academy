@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 // ============================================================
-// MASTERLY AIR ACADEMY — Auth Guard Component
+// MASTERLY AIR ACADEMY | Auth Guard Component
 // Redirects unauthenticated users to /login
 // ============================================================
 
