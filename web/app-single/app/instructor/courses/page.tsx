@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 
 interface Subject { id: string; code: string; title_en: string; }
-interface Room { id: string; name: string; }
+interface Room { id: string; name: string; capacity: number; }
 
 interface Course {
   id: string;
