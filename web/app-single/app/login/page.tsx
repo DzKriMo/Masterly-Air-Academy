@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { usesFilamentAdmin } from "@/lib/portal-access";
 
@@ -21,15 +22,11 @@ export default function LoginPage() {
     try {
       const { user } = await login(email, password);
 
-      // Admin users → Django Admin (session-based, same password)
       if (usesFilamentAdmin(user.role)) {
-        // Navigate to Django Admin — user may need to login there
-        // since Django Admin uses session auth (not JWT)
         window.location.href = "/admin";
         return;
       }
 
-      // Non-admin users → dashboard
       router.push("/dashboard");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -46,10 +43,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-navy-900 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gold-500/20 flex items-center justify-center mb-4">
-            <span className="text-gold-500 text-xl font-bold">MAA</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">Staff Login</h1>
+          <Image
+            src="/logo.png"
+            alt="Masterly Air Academy"
+            width={72}
+            height={72}
+            className="mx-auto rounded-xl shadow-lg"
+            priority
+          />
+          <h1 className="text-2xl font-bold text-white mt-4">Staff Login</h1>
           <p className="text-gray-400 mt-1">Masterly Air Academy</p>
         </div>
 

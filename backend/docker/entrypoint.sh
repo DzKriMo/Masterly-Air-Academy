@@ -38,6 +38,10 @@ python manage.py migrate --noinput
 echo "Ensuring superuser exists..."
 python manage.py create_superuser_if_missing
 
+# Seed roles and permissions
+echo "Seeding roles and permissions..."
+python manage.py seed_roles_permissions
+
 # Collect static
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

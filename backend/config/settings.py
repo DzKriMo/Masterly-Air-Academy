@@ -185,3 +185,4 @@ AWS_DEFAULT_ACL = None
 ADMIN_SITE_HEADER = 'Masterly Air Academy'
 ADMIN_SITE_TITLE = 'Masterly Air Academy'
 ADMIN_INDEX_TITLE = 'Dashboard'
+ADMIN_SITE_LOGO = '/static/admin/logo.png'  # Custom logo (future)

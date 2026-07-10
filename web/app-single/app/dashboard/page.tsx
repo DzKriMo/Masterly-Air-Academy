@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { getPortalLabel } from "@/lib/portal-access";
 
@@ -18,7 +19,7 @@ export default function DashboardPage() {
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">
-        Loading...
+        <div className="text-gold-500 text-lg animate-pulse">Loading...</div>
       </div>
     );
   }
@@ -32,14 +33,20 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="bg-navy-800 border-b border-navy-700 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
+      <nav className="bg-navy-800 border-b border-navy-700">
+        <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center">
-              <span className="text-gold-500 font-bold">MAA</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="MAA"
+              width={40}
+              height={40}
+              className="rounded-lg"
+            />
             <div>
-              <h1 className="text-lg font-bold text-white">Masterly Air Academy</h1>
+              <h1 className="text-lg font-bold text-white">
+                Masterly Air Academy
+              </h1>
               <p className="text-xs text-gray-400">{roleLabel}</p>
             </div>
           </div>

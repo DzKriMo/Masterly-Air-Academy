@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 
 export default function StudentLoginPage() {
@@ -38,55 +39,87 @@ export default function StudentLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-navy-900 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gold-500/20 flex items-center justify-center mb-4">
-            <span className="text-gold-500 text-xl font-bold">MAA</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">Student Portal</h1>
-          <p className="text-gray-400 mt-1">Masterly Air Academy</p>
+    <div className="min-h-screen flex items-center justify-center bg-navy-900 px-4 sm:px-6">
+      {/* iPad-optimized: max-w-lg for tablet, generous padding */}
+      <div className="w-full max-w-lg">
+        {/* Logo + branding */}
+        <div className="text-center mb-10 md:mb-12">
+          <Image
+            src="/logo.png"
+            alt="Masterly Air Academy"
+            width={96}
+            height={96}
+            className="mx-auto rounded-2xl shadow-2xl md:w-28 md:h-28"
+            priority
+          />
+          <h1 className="text-3xl md:text-4xl font-bold text-white mt-6">
+            Student Portal
+          </h1>
+          <p className="text-gray-400 mt-2 text-base md:text-lg">
+            Masterly Air Academy
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-navy-800 rounded-xl p-8 shadow-xl border border-navy-700">
+        {/* Login form — large touch targets for iPad */}
+        <form
+          onSubmit={handleSubmit}
+          className="bg-navy-800 rounded-2xl p-8 md:p-10 shadow-2xl border border-navy-700"
+        >
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-base">
               {error}
             </div>
           )}
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+          {/* Email field — min 52px height for comfortable iPad touch */}
+          <div className="mb-5">
+            <label className="block text-base font-medium text-gray-300 mb-2.5">
+              Email
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-navy-900 border border-navy-600 text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none transition-colors"
+              className="w-full px-5 py-4 rounded-xl bg-navy-900 border border-navy-600 text-white text-lg placeholder-gray-500 focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20 focus:outline-none transition-all"
               placeholder="student@masterly-air-academy.dz"
+              autoComplete="email"
+              inputMode="email"
               required
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+          {/* Password field */}
+          <div className="mb-8">
+            <label className="block text-base font-medium text-gray-300 mb-2.5">
+              Password
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-navy-900 border border-navy-600 text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none transition-colors"
+              className="w-full px-5 py-4 rounded-xl bg-navy-900 border border-navy-600 text-white text-lg placeholder-gray-500 focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20 focus:outline-none transition-all"
               placeholder="••••••••"
+              autoComplete="current-password"
               required
             />
           </div>
 
+          {/* Submit button — large tap target */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg transition-colors"
+            className="w-full py-4 bg-gold-500 hover:bg-gold-600 active:bg-gold-700 disabled:opacity-50 text-navy-900 font-bold text-lg rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p className="text-center text-sm text-gray-600 mt-8">
+          Staff member?{" "}
+          <a href="/login" className="text-gold-500 hover:underline">
+            Go to Staff Login
+          </a>
+        </p>
       </div>
     </div>
   );

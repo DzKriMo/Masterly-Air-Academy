@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -7,9 +8,14 @@ export default function HomePage() {
     <div className="min-h-screen flex items-center justify-center bg-navy-900">
       <div className="text-center max-w-2xl mx-auto px-6">
         <div className="mb-8">
-          <div className="w-24 h-24 mx-auto rounded-full bg-gold-500/20 flex items-center justify-center">
-            <span className="text-gold-500 text-4xl font-bold">MAA</span>
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Masterly Air Academy"
+            width={120}
+            height={120}
+            className="mx-auto rounded-2xl shadow-2xl"
+            priority
+          />
         </div>
         <h1 className="text-4xl font-bold text-white mb-4">
           Masterly Air Academy
