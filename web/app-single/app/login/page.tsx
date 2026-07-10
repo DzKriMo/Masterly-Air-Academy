@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Image
-            src="/logo.png"
+            src="/mast.svg"
             alt="Masterly Air Academy"
             width={72}
             height={72}

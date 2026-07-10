@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   title: "Masterly Air Academy",
   description: "ATO Management Platform | Training, Administration & Compliance",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/mast.svg",
+    apple: "/mast.svg",
   },
 };
 

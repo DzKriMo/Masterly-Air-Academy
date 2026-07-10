@@ -48,7 +48,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/mast.svg"
               alt="MAA"
               width={40}
               height={40}

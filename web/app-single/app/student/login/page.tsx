@@ -45,7 +45,7 @@ export default function StudentLoginPage() {
         {/* Logo + branding */}
         <div className="text-center mb-10 md:mb-12">
           <Image
-            src="/logo.png"
+            src="/mast.svg"
             alt="Masterly Air Academy"
             width={96}
             height={96}

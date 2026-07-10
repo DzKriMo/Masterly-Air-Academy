@@ -49,7 +49,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="MAA" width={38} height={38} className="rounded-lg" />
+              <Image src="/mast.svg" alt="MAA" width={44} height={44} className="rounded-lg" />
               <span className="text-white font-bold text-lg tracking-tight">
                 Masterly <span className="text-gold-500">Air Academy</span>
               </span>
@@ -75,6 +75,14 @@ export default function LandingPage() {
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-24 md:pt-28 md:pb-32">
           <div className="max-w-3xl">
+            <Image
+              src="/mast.svg"
+              alt="Masterly Air Academy"
+              width={220}
+              height={220}
+              className="mb-8 md:w-[280px] md:h-[280px]"
+              priority
+            />
             <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">
               Approved Training Organization
             </p>
@@ -288,7 +296,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="MAA" width={28} height={28} className="rounded-md opacity-70" />
+              <Image src="/mast.svg" alt="MAA" width={28} height={28} className="opacity-70" />
               <span>Masterly Air Academy, Approved Training Organization</span>
             </div>
             <div className="flex gap-4">

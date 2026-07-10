@@ -51,7 +51,7 @@ export default function StudentDashboardPage() {
             {/* Logo + branding */}
             <div className="flex items-center gap-3">
               <Image
-                src="/logo.png"
+                src="/mast.svg"
                 alt="MAA"
                 width={40}
                 height={40}
