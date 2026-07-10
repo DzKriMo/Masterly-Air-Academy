@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import { usesFilamentAdmin } from "@/lib/portal-access";
+import { usesFilamentAdmin, getDefaultPortal } from "@/lib/portal-access";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push(getDefaultPortal(user.role));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

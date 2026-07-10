@@ -77,9 +77,9 @@ export default function InstructorDashboard() {
           <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <ActionBtn onClick={() => router.push("/instructor/courses")} label="My Courses" />
+            <ActionBtn onClick={() => router.push("/instructor/modules")} label="Module Content" />
             <ActionBtn onClick={() => router.push("/instructor/attendance")} label="Take Attendance" />
-            <ActionBtn onClick={() => router.push("/instructor/students")} label="Students" />
-            <ActionBtn onClick={() => window.open("/admin/ground_training/course/", "_blank")} label="Admin Panel" external />
+            <ActionBtn onClick={() => window.open("/admin", "_blank")} label="Admin Panel" external />
           </div>
         </div>
 
