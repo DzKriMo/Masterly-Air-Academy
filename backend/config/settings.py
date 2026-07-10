@@ -181,8 +181,6 @@ AWS_S3_REGION_NAME = 'us-east-1'
 AWS_S3_USE_SSL = False
 AWS_DEFAULT_ACL = None
 
-# Django Admin customization
-ADMIN_SITE_HEADER = 'Masterly Air Academy'
-ADMIN_SITE_TITLE = 'Masterly Air Academy'
-ADMIN_INDEX_TITLE = 'Dashboard'
-ADMIN_SITE_LOGO = '/static/admin/logo.png'  # Custom logo (future)
+# Custom Admin Site class for branding
+# We subclass AdminSite to override branding at the site level
+

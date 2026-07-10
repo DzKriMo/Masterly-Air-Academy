@@ -86,21 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    // POST /api/login/ — returns { access, refresh, user? }
-    // Django SimpleJWT returns { access, refresh } by default
+    // POST /api/login/ — Custom JWT serializer returns { access, refresh, user }
     const response = await api.post<{
       access: string;
       refresh: string;
-      user?: AuthUser;
+      user: AuthUser;
     }>('/login/', { email, password });
 
-    const { access, refresh } = response.data;
+    // DRF returns the data directly — no .data wrapper on success
+    const { access, refresh, user: userData } = response as unknown as {
+      access: string;
+      refresh: string;
+      user: AuthUser;
+    };
 
-    // Fetch user info if login response doesn't include it
-    let userData: AuthUser;
-    api.setTokens(access, refresh);
-    const meResponse = await api.get<AuthUser>('/me/');
-    userData = meResponse.data;
+    if (!access || !userData) {
+      throw new Error('Invalid response from server.');
+    }
 
     setToken(access);
     setUser(userData);
