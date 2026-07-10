@@ -25,6 +25,13 @@ INSTALLED_APPS = [
     # Local apps
     'apps.core',
     'apps.accounts',
+    'apps.students',
+    'apps.ground_training',
+    'apps.flight_training',
+    'apps.administration',
+    'apps.quality_safety',
+    'apps.exams',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
