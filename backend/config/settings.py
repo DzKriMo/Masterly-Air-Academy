@@ -11,6 +11,9 @@ DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,api').split(',')
 
 INSTALLED_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
+    'unfold.contrib.forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -188,6 +191,19 @@ AWS_S3_REGION_NAME = 'us-east-1'
 AWS_S3_USE_SSL = False
 AWS_DEFAULT_ACL = None
 
-# Custom Admin Site class for branding
-# We subclass AdminSite to override branding at the site level
+# django-unfold admin theme
+UNFOLD = {
+    "SITE_TITLE": "Masterly Air Academy",
+    "SITE_HEADER": "Masterly Administration",
+    "SITE_SYMBOL": "flight",
+    "SHOW_HISTORY": True,
+    "COLORS": {
+        "primary": {
+            "50": "#fdf8ef", "100": "#fbf0db", "200": "#f7e0b7",
+            "300": "#f1ca89", "400": "#ebae59", "500": "#c4943c",
+            "600": "#b38535", "700": "#8f6a2e", "800": "#75552b", "900": "#624725",
+        },
+    },
+    "SIDEBAR": {"show_search": True, "show_all_applications": True},
+}
 
