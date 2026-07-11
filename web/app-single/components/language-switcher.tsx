@@ -26,10 +26,8 @@ export function LanguageSwitcher() {
   const active = langs.find(l => l.code === currentLocale) || langs[0];
 
   const switchTo = (code: string) => {
-    const path = segments.filter(s => !langs.some(l => l.code === s)).join("/");
-    const newPath = code === "en" ? `/${path || ""}` : `/${code}/${path || ""}`;
     document.cookie = `locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
-    window.location.href = newPath || "/";
+    window.location.reload();
   };
 
   return (
