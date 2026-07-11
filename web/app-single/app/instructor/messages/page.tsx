@@ -68,18 +68,18 @@ export default function InstructorMessagesPage() {
         )}
         {loading ? <p className="text-gray-500">Loading...</p> : (
           <div className="space-y-2">
-            {(tab === "inbox" ? received : sent).length === 0 ? <p className="text-gray-500 text-center py-8">{tab === "inbox" ? "No messages received." : "No messages sent."}</p> : (
-              (tab === "inbox" ? received : sent).map(m => (
-                <div key={m.id} className={`bg-navy-800 border border-navy-700 rounded-xl p-4 ${!m.is_read && tab === "inbox" ? "border-l-4 border-l-gold-500" : ""}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-white font-medium text-sm">{tab === "inbox" ? m.sender_name : m.receiver_name}</span>
-                    <span className="text-[10px] text-gray-500">{new Date(m.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-sm font-medium text-gray-300">{m.subject}</p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{m.body}</p>
+            {tab === "inbox" && received.length === 0 && <p className="text-gray-500 text-center py-8">No messages received.</p>}
+            {tab === "sent" && sent.length === 0 && <p className="text-gray-500 text-center py-8">No messages sent.</p>}
+            {(tab === "inbox" ? received : sent).map(m => (
+              <div key={m.id} className={`bg-navy-800 border border-navy-700 rounded-xl p-4 ${!m.is_read && tab === "inbox" ? "border-l-4 border-l-gold-500" : ""}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-white font-medium text-sm">{tab === "inbox" ? m.sender_name : m.receiver_name}</span>
+                  <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleDateString()}</span>
                 </div>
-              ))
-            )}
+                <p className="text-sm font-medium text-gray-300">{m.subject}</p>
+                <p className="text-xs text-gray-500 mt-1">{m.body}</p>
+              </div>
+            ))}
           </div>
         )}
       </main>
