@@ -282,18 +282,18 @@ class Command(BaseCommand):
         from apps.administration.models import Invoice, Payment
         inv1, _ = Invoice.objects.get_or_create(
             invoice_number='INV-2026-0001', student=students[0],
-            defaults={'type': 'tuition', 'description': 'PPL Program - Semester 1', 'amount': 45000, 'currency': 'MAD', 'status': 'paid', 'issued_at': timezone.now(), 'due_at': timezone.now() + timedelta(days=30)},
+            defaults={'type': 'tuition', 'description': 'PPL Program - Semester 1', 'amount': 45000, 'currency': 'DZD', 'status': 'paid', 'issued_at': timezone.now(), 'due_at': timezone.now() + timedelta(days=30)},
         )
         inv2, _ = Invoice.objects.get_or_create(
             invoice_number='INV-2026-0002', student=students[1],
-            defaults={'type': 'tuition', 'description': 'CPL Program - Semester 1', 'amount': 75000, 'currency': 'MAD', 'status': 'issued', 'issued_at': timezone.now(), 'due_at': timezone.now() + timedelta(days=30)},
+            defaults={'type': 'tuition', 'description': 'CPL Program - Semester 1', 'amount': 75000, 'currency': 'DZD', 'status': 'issued', 'issued_at': timezone.now(), 'due_at': timezone.now() + timedelta(days=30)},
         )
         inv3, _ = Invoice.objects.get_or_create(
             invoice_number='INV-2026-0003', student=students[0],
-            defaults={'type': 'flight_hours', 'description': 'Additional Flight Hours - 10h', 'amount': 15000, 'currency': 'MAD', 'status': 'overdue', 'issued_at': timezone.now() - timedelta(days=60), 'due_at': timezone.now() - timedelta(days=30)},
+            defaults={'type': 'flight_hours', 'description': 'Additional Flight Hours - 10h', 'amount': 15000, 'currency': 'DZD', 'status': 'overdue', 'issued_at': timezone.now() - timedelta(days=60), 'due_at': timezone.now() - timedelta(days=30)},
         )
-        Payment.objects.get_or_create(invoice=inv1, student=students[0], defaults={'amount': 45000, 'currency': 'MAD', 'method': 'bank_transfer', 'reference': 'TRF-001'})
-        Payment.objects.get_or_create(invoice=inv2, student=students[1], defaults={'amount': 30000, 'currency': 'MAD', 'method': 'cash', 'reference': 'CSH-001'})
+        Payment.objects.get_or_create(invoice=inv1, student=students[0], defaults={'amount': 45000, 'currency': 'DZD', 'method': 'bank_transfer', 'reference': 'TRF-001'})
+        Payment.objects.get_or_create(invoice=inv2, student=students[1], defaults={'amount': 30000, 'currency': 'DZD', 'method': 'cash', 'reference': 'CSH-001'})
         self.stdout.write(f'  Invoices: 3 created, 2 payments recorded')
 
         self.stdout.write(self.style.SUCCESS(

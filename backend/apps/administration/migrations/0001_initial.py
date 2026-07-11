@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
                 ('type', models.CharField(blank=True, max_length=30, null=True)),
                 ('description', models.TextField(blank=True, null=True)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('currency', models.CharField(default='MAD', max_length=3)),
+                ('currency', models.CharField(default='DZD', max_length=3)),
                 ('status', models.CharField(choices=[('draft', 'Draft'), ('issued', 'Issued'), ('paid', 'Paid'), ('partially_paid', 'Partially Paid'), ('overdue', 'Overdue'), ('cancelled', 'Cancelled')], default='draft', max_length=20)),
                 ('issued_at', models.DateTimeField(blank=True, null=True)),
                 ('due_at', models.DateTimeField(blank=True, null=True)),
@@ -105,7 +105,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('currency', models.CharField(default='MAD', max_length=3)),
+                ('currency', models.CharField(default='DZD', max_length=3)),
                 ('method', models.CharField(blank=True, max_length=30, null=True)),
                 ('reference', models.CharField(blank=True, max_length=100, null=True)),
                 ('notes', models.TextField(blank=True, null=True)),

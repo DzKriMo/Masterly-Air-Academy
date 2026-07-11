@@ -33,7 +33,7 @@ export default function FinanceDashboard() {
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/mast.svg" alt="MAA" width={72} height={72} className="rounded-lg" />
+            <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
             <div><h1 className="text-lg font-bold text-white">Finance</h1><p className="text-xs text-gold-500">Dashboard</p></div>
           </div>
           <div className="flex gap-2">
@@ -44,10 +44,10 @@ export default function FinanceDashboard() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Total Issued" value={`${totalIssued.toLocaleString()} MAD`} color="text-blue-400" />
-          <StatCard label="Collected" value={`${totalPaid.toLocaleString()} MAD`} color="text-green-400" />
-          <StatCard label="Outstanding" value={`${outstanding.toLocaleString()} MAD`} color="text-yellow-400" />
-          <StatCard label="Overdue" value={`${overdue.toLocaleString()} MAD`} color="text-red-400" />
+          <StatCard label="Total Issued" value={`${totalIssued.toLocaleString()} DZD`} color="text-blue-400" />
+          <StatCard label="Collected" value={`${totalPaid.toLocaleString()} DZD`} color="text-green-400" />
+          <StatCard label="Outstanding" value={`${outstanding.toLocaleString()} DZD`} color="text-yellow-400" />
+          <StatCard label="Overdue" value={`${overdue.toLocaleString()} DZD`} color="text-red-400" />
         </div>
 
         <div className="bg-navy-800 border border-navy-700 rounded-xl p-6">

@@ -15,7 +15,7 @@ export default function InvoicesPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ student: "", type: "tuition", description: "", amount: "", currency: "MAD", due_at: "" });
+  const [form, setForm] = useState({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +42,7 @@ export default function InvoicesPage() {
         const data = await res.json();
         setInvoices([data, ...invoices]);
         setShowForm(false); setMsg("Invoice created.");
-        setForm({ student: "", type: "tuition", description: "", amount: "", currency: "MAD", due_at: "" });
+        setForm({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
       } else {
         const d = await res.json();
         setMsg(d.message || Object.values(d).flat().join(", ") || "Failed");
@@ -73,7 +73,7 @@ export default function InvoicesPage() {
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/mast.svg" alt="MAA" width={72} height={72} className="rounded-lg" />
+            <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
             <div><h1 className="text-lg font-bold text-white">Invoices</h1>
               <button onClick={() => router.push("/finance/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Finance</button></div>
           </div>
@@ -90,7 +90,7 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="block text-sm text-gray-400 mb-1">Student</label><select value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="">Select...</option>{students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_number})</option>)}</select></div>
               <div><label className="block text-sm text-gray-400 mb-1">Type</label><select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="tuition">Tuition</option><option value="exam_fee">Exam Fee</option><option value="flight_hours">Flight Hours</option><option value="other">Other</option></select></div>
-              <div><label className="block text-sm text-gray-400 mb-1">Amount (MAD)</label><input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">Amount (DZD)</label><input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
               <div><label className="block text-sm text-gray-400 mb-1">Description</label><input value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
               <div><label className="block text-sm text-gray-400 mb-1">Due Date</label><input type="date" value={form.due_at} onChange={e => setForm({...form, due_at: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
             </div>
