@@ -1,42 +1,51 @@
 {
   "app_name": "Masterly Air Academy",
-  "buttons": {
-    "login": "Se Connecter",
-    "logout": "Déconnexion",
-    "save": "Enregistrer",
-    "cancel": "Annuler",
-    "delete": "Supprimer",
-    "create": "Créer",
-    "edit": "Modifier",
-    "search": "Rechercher"
+  "tagline": "Organisme de Formation Agree",
+  "hero_title": "Votre Carriere Aeronautique Commence Ici",
+  "hero_desc": "Masterly Air Academy offre une formation au pilotage de classe mondiale avec une flotte moderne, des instructeurs experimentes et un programme rigoureux concu pour produire des pilotes surs, competents et professionnels.",
+  "explore_programs": "Explorer les Programmes",
+  "contact_us": "Contactez-Nous",
+  "programs_title": "Programmes de Formation",
+  "programs_subtitle": "Choisissez Votre Voie",
+  "programs_desc": "Des programmes structures depuis votre premier vol de decouverte jusqu'a la certification de ligne. Chaque programme suit un programme rigoureux et approuve.",
+  "about_title": "A propos de l'Academie",
+  "about_heading": "Former des Pilotes au Plus Haut Niveau",
+  "about_p1": "Masterly Air Academy est un Organisme de Formation Agree (ATO) dedie a la production de pilotes qui repondent et depassent les normes de l'industrie. Notre approche structuree combine un enseignement theorique rigoureux avec une formation pratique approfondie au pilotage.",
+  "about_p2": "Nous exploitons une flotte moderne d'avions monomoteurs et multimoteurs, soutenue par des instructeurs experimentes qui apportent des milliers d'heures d'experience de vol reelle a chaque lecon.",
+  "about_p3": "De votre premier vol decouverte a votre licence de pilote de ligne, chaque etape de votre parcours est suivie, evaluee et soutenue grace a notre systeme integre de gestion de la formation.",
+  "why_us_title": "Pourquoi Masterly Air Academy",
+  "why_us_subtitle": "Construite pour une Formation Serieuse",
+  "ato_certified": "ATO Certifiee",
+  "ato_certified_desc": "Entierement approuvee par l'autorite de l'aviation civile. Nos programmes repondent a toutes les exigences reglementaires pour les licences de pilote.",
+  "modern_fleet": "Flotte Moderne",
+  "modern_fleet_desc": "Avions a cockpits numeriques maintenus aux normes les plus elevees. Des inspections regulieres garantissent la securite et la disponibilite.",
+  "efficient_training": "Formation Efficace",
+  "efficient_training_desc": "Progression structuree avec des jalons clairs. Un suivi numerique integre vous tient informe de votre progression a chaque etape.",
+  "portal_access": "Acces au Portail de l'Academie",
+  "portal_access_desc": "Etudiants, instructeurs et personnel | selectionnez votre portail pour continuer.",
+  "student_portal": "Portail Etudiant",
+  "staff_access": "Acces Personnel",
+  "administration": "Administration",
+  "programs": "Programmes",
+  "about": "A propos",
+  "why_us": "Pourquoi Nous",
+  "student_access": "Acces Etudiant",
+  "nav_student": "Acces Etudiant",
+  "durations": {
+    "ppl": "6-8 mois",
+    "cpl": "12-18 mois",
+    "ir": "3-4 mois",
+    "mep": "1-2 mois",
+    "mcc": "2-3 semaines"
   },
-  "status": {
-    "active": "Actif",
-    "suspended": "Suspendu",
-    "archived": "Archivé",
-    "pending": "En Attente"
+  "prerequisites": {
+    "ppl": "Certificat Medical Classe 2",
+    "cpl": "PPL + Certificat Medical Classe 1",
+    "ir": "PPL + 50 heures de navigation",
+    "mep": "CPL ou en cours",
+    "mcc": "CPL + IR"
   },
-  "navigation": {
-    "dashboard": "Tableau de Bord",
-    "students": "Élèves",
-    "courses": "Cours",
-    "schedule": "Emploi du Temps",
-    "exams": "Examens",
-    "documents": "Documents",
-    "reports": "Rapports",
-    "settings": "Paramètres"
-  },
-  "auth": {
-    "email": "Email",
-    "password": "Mot de Passe",
-    "login_title": "Connexion Personnel",
-    "student_login_title": "Portail Élève",
-    "invalid_credentials": "Email ou mot de passe invalide",
-    "account_deactivated": "Votre compte a été désactivé"
-  },
-  "errors": {
-    "generic": "Une erreur est survenue",
-    "connection": "Erreur de connexion",
-    "unauthorized": "Vous n'êtes pas autorisé à accéder à cette page"
-  }
+  "footer_onprem": "100% Sur Site",
+  "footer_languages": "EN | FR | العربية",
+  "footer_copyright": "Masterly Air Academy. Tous droits reserves."
 }

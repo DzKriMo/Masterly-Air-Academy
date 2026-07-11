@@ -1,42 +1,51 @@
 {
   "app_name": "Masterly Air Academy",
-  "buttons": {
-    "login": "Sign In",
-    "logout": "Logout",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "create": "Create",
-    "edit": "Edit",
-    "search": "Search"
+  "tagline": "Approved Training Organization",
+  "hero_title": "Your Aviation Career Starts Here",
+  "hero_desc": "Masterly Air Academy delivers world-class flight training with a modern fleet, experienced instructors, and a rigorous curriculum designed to produce safe, competent, and professional pilots.",
+  "explore_programs": "Explore Programs",
+  "contact_us": "Contact Us",
+  "programs_title": "Training Programs",
+  "programs_subtitle": "Choose Your Path",
+  "programs_desc": "Structured programs from your first discovery flight to airline-ready certification. Every program follows a rigorous, approved syllabus.",
+  "about_title": "About the Academy",
+  "about_heading": "Training Pilots to the Highest Standard",
+  "about_p1": "Masterly Air Academy is an Approved Training Organization (ATO) dedicated to producing pilots who meet and exceed industry standards. Our structured approach combines rigorous theoretical instruction with extensive practical flight training.",
+  "about_p2": "We operate a modern fleet of single and multi-engine aircraft, supported by experienced instructors who bring thousands of hours of real-world flying experience to every lesson.",
+  "about_p3": "From your first trial flight to your airline transport license, every step of your journey is tracked, assessed, and supported through our integrated training management system.",
+  "why_us_title": "Why Masterly Air Academy",
+  "why_us_subtitle": "Built for Serious Training",
+  "ato_certified": "ATO Certified",
+  "ato_certified_desc": "Fully approved by the civil aviation authority. Our programs meet all regulatory requirements for pilot licensing.",
+  "modern_fleet": "Modern Fleet",
+  "modern_fleet_desc": "Glass-cockpit aircraft maintained to the highest standards. Regular inspections ensure safety and availability.",
+  "efficient_training": "Efficient Training",
+  "efficient_training_desc": "Structured progression with clear milestones. Integrated digital tracking keeps you informed of your progress at every stage.",
+  "portal_access": "Academy Portal Access",
+  "portal_access_desc": "Students, instructors, and staff | select your portal to continue.",
+  "student_portal": "Student Portal",
+  "staff_access": "Staff Access",
+  "administration": "Administration",
+  "programs": "Programs",
+  "about": "About",
+  "why_us": "Why Us",
+  "student_access": "Student Access",
+  "nav_student": "Student Access",
+  "durations": {
+    "ppl": "6-8 months",
+    "cpl": "12-18 months",
+    "ir": "3-4 months",
+    "mep": "1-2 months",
+    "mcc": "2-3 weeks"
   },
-  "status": {
-    "active": "Active",
-    "suspended": "Suspended",
-    "archived": "Archived",
-    "pending": "Pending"
+  "prerequisites": {
+    "ppl": "Class 2 Medical Certificate",
+    "cpl": "PPL + Class 1 Medical Certificate",
+    "ir": "PPL + 50 hours cross-country",
+    "mep": "CPL or in progress",
+    "mcc": "CPL + IR"
   },
-  "navigation": {
-    "dashboard": "Dashboard",
-    "students": "Students",
-    "courses": "Courses",
-    "schedule": "Schedule",
-    "exams": "Exams",
-    "documents": "Documents",
-    "reports": "Reports",
-    "settings": "Settings"
-  },
-  "auth": {
-    "email": "Email",
-    "password": "Password",
-    "login_title": "Staff Login",
-    "student_login_title": "Student Portal",
-    "invalid_credentials": "Invalid email or password",
-    "account_deactivated": "Your account has been deactivated"
-  },
-  "errors": {
-    "generic": "Something went wrong",
-    "connection": "Connection error. Please try again.",
-    "unauthorized": "You are not authorized to access this page"
-  }
+  "footer_onprem": "100% On-Premise",
+  "footer_languages": "EN | FR | العربية",
+  "footer_copyright": "Masterly Air Academy. All rights reserved."
 }
