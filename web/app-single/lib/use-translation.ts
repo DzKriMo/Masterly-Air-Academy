@@ -118,19 +118,33 @@ const translations: Record<string, any> = {
 };
 
 function getCookie(name: string): string {
-  if (typeof document === "undefined") return "en";
+  if (typeof document === "undefined") {
+    if (typeof window !== "undefined" && window.location) {
+      const path = window.location.pathname;
+      const seg = path.split("/").filter(Boolean)[0];
+      if (seg === "fr" || seg === "ar") return seg;
+    }
+    return "en";
+  }
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : "en";
+  if (match) return decodeURIComponent(match[1]);
+  const path = window.location.pathname;
+  const seg = path.split("/").filter(Boolean)[0];
+  if (seg === "fr" || seg === "ar") return seg;
+  return "en";
 }
 
 export function useTranslation() {
-  const [locale, setLocale] = useState("en");
-  const [t, setT] = useState<Record<string, any>>(translations.en);
+  const initialLocale = getCookie("locale");
+  const [locale, setLocale] = useState(initialLocale);
+  const [t, setT] = useState<Record<string, any>>(translations[initialLocale] || translations.en);
 
   useEffect(() => {
     const loc = getCookie("locale") || "en";
-    setLocale(loc);
-    setT(translations[loc] || translations.en);
+    if (loc !== locale) {
+      setLocale(loc);
+      setT(translations[loc] || translations.en);
+    }
   }, []);
 
   const switchTo = (code: string) => {
