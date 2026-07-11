@@ -117,30 +117,24 @@ const translations: Record<string, any> = {
   },
 };
 
-function getCookie(name: string): string {
-  if (typeof document === "undefined") {
-    if (typeof window !== "undefined" && window.location) {
-      const path = window.location.pathname;
-      const seg = path.split("/").filter(Boolean)[0];
-      if (seg === "fr" || seg === "ar") return seg;
-    }
-    return "en";
-  }
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  if (match) return decodeURIComponent(match[1]);
-  const path = window.location.pathname;
-  const seg = path.split("/").filter(Boolean)[0];
+function readLocale(): string {
+  if (typeof window === "undefined") return "en";
+  const urlPath = window.location.pathname;
+  const seg = urlPath.split("/").filter(Boolean)[0];
   if (seg === "fr" || seg === "ar") return seg;
+  try {
+    const m = document.cookie.match(/(?:^|; )locale=([^;]*)/);
+    if (m) return m[1];
+  } catch {}
   return "en";
 }
 
 export function useTranslation() {
-  const initialLocale = getCookie("locale");
-  const [locale, setLocale] = useState(initialLocale);
-  const [t, setT] = useState<Record<string, any>>(translations[initialLocale] || translations.en);
+  const [locale, setLocale] = useState(readLocale);
+  const [t, setT] = useState<Record<string, any>>(() => translations[readLocale()] || translations.en);
 
   useEffect(() => {
-    const loc = getCookie("locale") || "en";
+    const loc = readLocale();
     if (loc !== locale) {
       setLocale(loc);
       setT(translations[loc] || translations.en);
