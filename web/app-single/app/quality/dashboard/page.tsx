@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+
+const NCR_COLORS = { critical: "#ef4444", major: "#f59e0b", minor: "#3b82f6" };
 
 interface Audit { id: string; title: string; type: string; scheduled_date: string; status: string; ncr_count: number; }
 interface NCR { id: string; title: string; severity: string; status: string; due_date: string | null; audit_title: string; }
@@ -92,6 +95,15 @@ export default function QualityDashboard() {
           <StatCard label="Planned Audits" value={plannedAudits} color="text-blue-400" />
           <StatCard label="Safety Events" value={reportedEvents} color="text-purple-400" />
         </div>
+
+        {ncrs.length > 0 && (
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8">
+            <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">NCRs by Severity</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart><Pie data={[{ name: "Critical", value: ncrs.filter((n: any) => n.severity === "critical").length }, { name: "Major", value: ncrs.filter((n: any) => n.severity === "major").length }, { name: "Minor", value: ncrs.filter((n: any) => n.severity === "minor").length }]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }: any) => `${name}: ${value}`}>{[0, 1, 2].map(i => <Cell key={i} fill={Object.values(NCR_COLORS)[i]} />)}</Pie><Tooltip /></PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         <div className="flex gap-2 mb-6">
           {(["audits","ncrs","capas","safety"] as const).map(t => (
