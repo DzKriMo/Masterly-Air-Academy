@@ -97,9 +97,7 @@ export default function TakeExamPage() {
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  if (loading && showModal) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
-
-  // Anti-cheat modal shown before exam starts
+  // Anti-cheat modal shown before exam starts (must be first)
   if (showModal) {
     return (
       <div className="min-h-screen bg-navy-900 flex items-center justify-center px-4">
@@ -128,7 +126,7 @@ export default function TakeExamPage() {
     );
   }
 
-  if (loading && !showModal) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
+  if (loading) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
 
   if (submitted && result) {
     return (
