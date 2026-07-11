@@ -21,6 +21,7 @@ from apps.exams.views import (
 from apps.administration.views import (
     ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
 )
+from apps.students.views import StudentViewSet
 from apps.quality_safety.views import (
     AuditViewSet, NonConformityViewSet, CAPAViewSet,
     RiskAssessmentViewSet, SafetyEventViewSet,
@@ -59,6 +60,7 @@ router.register(r'non-conformities', NonConformityViewSet, basename='ncr')
 router.register(r'capas', CAPAViewSet)
 router.register(r'risk-assessments', RiskAssessmentViewSet)
 router.register(r'safety-events', SafetyEventViewSet)
+router.register(r'students', StudentViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),

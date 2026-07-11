@@ -11,7 +11,7 @@ const COLORS = ["#22c55e", "#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6"];
 interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 
 export default function FinanceDashboard() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +39,12 @@ export default function FinanceDashboard() {
             <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
             <div><h1 className="text-lg font-bold text-white">Finance</h1><p className="text-xs text-gold-500">Dashboard</p></div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-400 hidden sm:inline">{user?.name || user?.email}</span>
+            <button onClick={async () => { await logout(); router.push("/login"); }} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button>
+            <div className="flex gap-2">
             <button onClick={() => router.push("/finance/invoices")} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">Invoices</button>
-          </div>
+          </div></div>
         </div>
       </nav>
 

@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const COLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6", "#f59e0b"];
 
 export default function DirectorDashboard() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [kpis, setKpis] = useState<any>({});
   const [chartData, setChartData] = useState<any>({ flights: [], revenue: [], fleet: [], invoiceStatus: [] });
@@ -75,7 +75,10 @@ export default function DirectorDashboard() {
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3"><Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" /><div><h1 className="text-lg font-bold text-white">Director Dashboard</h1><p className="text-xs text-gold-500">Executive Overview</p></div></div>
-          <span className="text-sm text-gray-400 hidden sm:inline">{user?.name || user?.email}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400 hidden sm:inline">{user?.name || user?.email}</span>
+            <button onClick={async () => { await logout(); router.push("/login"); }} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button>
+          </div>
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -116,6 +119,11 @@ export default function DirectorDashboard() {
                   <PieChart><Pie data={chartData.invoiceStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }: any) => `${name}: ${value}`}>{chartData.invoiceStatus.map((_: any, i: number) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}</Pie><Tooltip /></PieChart>
                 </ResponsiveContainer>
               </ChartCard>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+              <a href="/admin" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Admin Panel</p><p className="text-xs text-gray-400 mt-1">Full system administration</p></a>
+              <a href="/quality/dashboard" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Quality & Safety</p><p className="text-xs text-gray-400 mt-1">Audits, NCRs, CAPA</p></a>
+              <a href="/finance/dashboard" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Finance</p><p className="text-xs text-gray-400 mt-1">Revenue and invoices</p></a>
             </div>
           </>
         )}

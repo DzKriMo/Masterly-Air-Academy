@@ -49,6 +49,7 @@ class RiskAssessmentSerializer(serializers.ModelSerializer):
 
 class SafetyEventSerializer(serializers.ModelSerializer):
     reporter_name = serializers.SerializerMethodField()
+    reported_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = SafetyEvent

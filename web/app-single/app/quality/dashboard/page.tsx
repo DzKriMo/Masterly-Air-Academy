@@ -14,7 +14,7 @@ interface CAPA { id: string; title: string; type: string; status: string; due_da
 interface SafetyEvent { id: string; title: string; type: string; status: string; created_at: string; }
 
 export default function QualityDashboard() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [audits, setAudits] = useState<Audit[]>([]);
   const [ncrs, setNcrs] = useState<NCR[]>([]);
@@ -67,7 +67,9 @@ export default function QualityDashboard() {
             <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
             <div><h1 className="text-lg font-bold text-white">Quality & Safety</h1><p className="text-xs text-gold-500">Dashboard</p></div>
           </div>
-          <button onClick={() => setShowReport(!showReport)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500 hover:text-white transition-colors">
+          <div className="flex items-center gap-3">
+            <button onClick={async () => { await logout(); router.push("/login"); }} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button>
+            <button onClick={() => setShowReport(!showReport)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500 hover:text-white transition-colors">
             {showReport ? "Cancel" : "+ Report Event"}
           </button>
         </div>
