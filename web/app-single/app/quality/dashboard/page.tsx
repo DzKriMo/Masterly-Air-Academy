@@ -5,16 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 
-
-const NCR_COLORS = { critical: "#ef4444", major: "#f59e0b", minor: "#3b82f6" };
-
 interface Audit { id: string; title: string; type: string; scheduled_date: string; status: string; ncr_count: number; }
 interface NCR { id: string; title: string; severity: string; status: string; due_date: string | null; audit_title: string; }
 interface CAPA { id: string; title: string; type: string; status: string; due_date: string | null; ncr_title: string; }
 interface SafetyEvent { id: string; title: string; type: string; status: string; created_at: string; }
 
 export default function QualityDashboard() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [audits, setAudits] = useState<Audit[]>([]);
   const [ncrs, setNcrs] = useState<NCR[]>([]);
@@ -67,9 +64,7 @@ export default function QualityDashboard() {
             <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
             <div><h1 className="text-lg font-bold text-white">Quality & Safety</h1><p className="text-xs text-gold-500">Dashboard</p></div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={async () => { await logout(); router.push("/login"); }} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button>
-            <button onClick={() => setShowReport(!showReport)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500 hover:text-white transition-colors">
+          <button onClick={() => setShowReport(!showReport)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500 hover:text-white transition-colors">
             {showReport ? "Cancel" : "+ Report Event"}
           </button>
         </div>
@@ -97,13 +92,6 @@ export default function QualityDashboard() {
           <StatCard label="Planned Audits" value={plannedAudits} color="text-blue-400" />
           <StatCard label="Safety Events" value={reportedEvents} color="text-purple-400" />
         </div>
-
-        {ncrs.length > 0 && (
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8">
-            <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">NCRs by Severity</h3>
-            <div className="text-gray-500 text-sm text-center py-4">Chart data available</div>
-          </div>
-        )}
 
         <div className="flex gap-2 mb-6">
           {(["audits","ncrs","capas","safety"] as const).map(t => (
