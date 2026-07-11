@@ -97,3 +97,22 @@ class DocumentViewSet(viewsets.ModelViewSet):
             except Student.DoesNotExist:
                 return qs.none()
         return qs
+
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'documents/{file.name}', file)
+        doc = Document.objects.create(
+            name=request.data.get('name', file.name),
+            file_url=path,
+            type=request.data.get('type', 'other'),
+            category=request.data.get('category', 'general'),
+            mime_type=file.content_type,
+            file_size=file.size,
+            uploaded_by=request.user,
+            student_id=request.data.get('student_id') or None,
+        )
+        return Response(DocumentSerializer(doc).data, status=201)

@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
+    'storages',
     # Local apps
     'apps.core',
     'apps.accounts',
@@ -190,6 +191,10 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET', 'masterly-documents')
 AWS_S3_REGION_NAME = 'us-east-1'
 AWS_S3_USE_SSL = False
 AWS_DEFAULT_ACL = None
+STORAGES = {
+    "default": {"BACKEND": "storages.backends.s3.S3Storage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 
 # django-unfold admin theme
 UNFOLD = {

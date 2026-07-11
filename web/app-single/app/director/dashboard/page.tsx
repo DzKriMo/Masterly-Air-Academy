@@ -64,6 +64,11 @@ export default function DirectorDashboard() {
               <a href="/quality/dashboard" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Quality and Safety</p><p className="text-xs text-gray-400 mt-1">Audits, NCRs, CAPA</p></a>
               <a href="/finance/dashboard" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Finance</p><p className="text-xs text-gray-400 mt-1">Revenue and invoices</p></a>
             </div>
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <a href="/api/export/students/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Students (Excel)</a>
+              <a href="/api/export/invoices/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Invoices (Excel)</a>
+              <a href="/api/export/flights/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Flights (Excel)</a>
+            </div>
           </>
         )}
       </main>

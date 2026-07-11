@@ -23,6 +23,7 @@ from apps.administration.views import (
 )
 from apps.students.views import StudentViewSet
 from apps.notifications.views import NotificationViewSet, MessageViewSet
+from apps.administration.exports import export_students, export_invoices, export_flights
 from apps.quality_safety.views import (
     AuditViewSet, NonConformityViewSet, CAPAViewSet,
     RiskAssessmentViewSet, SafetyEventViewSet,
@@ -68,6 +69,9 @@ router.register(r'messages', MessageViewSet, basename='message')
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
     path('students/flight-log/', FlightLogViewSet.as_view({'get': 'list'}), name='flight-log'),
+    path('export/students/', export_students, name='export-students'),
+    path('export/invoices/', export_invoices, name='export-invoices'),
+    path('export/flights/', export_flights, name='export-flights'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
