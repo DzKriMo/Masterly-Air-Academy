@@ -46,6 +46,22 @@ export default function TakeExamPage() {
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
 
+  // Tab-switch detection: auto-submit if student leaves the tab/window
+  useEffect(() => {
+    if (submitted) return;
+    let violations = 0;
+    const onVisibilityChange = () => {
+      if (document.hidden && !submitted) {
+        violations++;
+        if (violations >= 2) {
+          handleSubmit();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [submitted]);
+
   useEffect(() => {
     if (timeLeft <= 0 && !submitted && questions.length > 0) { handleSubmit(); }
   }, [timeLeft]);
@@ -124,9 +140,9 @@ export default function TakeExamPage() {
               <div className="space-y-2">
                 {q.options.map((opt, j) => {
                   const letter = String.fromCharCode(65 + j);
-                  const selected = answers[q.id] === letter;
+                  const selected = answers[q.id] === opt;
                   return (
-                    <button key={j} onClick={() => setAnswers({...answers, [q.id]: letter})}
+                    <button key={j} onClick={() => setAnswers({...answers, [q.id]: opt})}
                       className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-colors ${selected ? "bg-gold-500/20 border border-gold-500 text-gold-500 font-medium" : "bg-navy-900 border border-navy-600 text-gray-300 hover:border-gray-400"}`}>
                       <span className="font-mono mr-2 text-xs">{letter}.</span> {opt}
                     </button>
