@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import Subject, Module, ModuleLesson, ModuleDocument, Room, Course, CourseEnrollment, AttendanceRecord
 
 
@@ -13,7 +14,7 @@ class ModuleLessonInline(admin.TabularInline):
 
 
 @admin.register(Subject)
-class SubjectAdmin(admin.ModelAdmin):
+class SubjectAdmin(ModelAdmin):
     list_display = ['code', 'title_en', 'program', 'total_hours', 'status']
     list_filter = ['program', 'status', 'academic_year']
     search_fields = ['code', 'title_en', 'title_fr']
@@ -21,7 +22,7 @@ class SubjectAdmin(admin.ModelAdmin):
 
 
 @admin.register(Module)
-class ModuleAdmin(admin.ModelAdmin):
+class ModuleAdmin(ModelAdmin):
     list_display = ['subject', 'title', 'order', 'duration', 'status']
     list_filter = ['subject', 'status']
     search_fields = ['title']
@@ -29,24 +30,24 @@ class ModuleAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModuleLesson)
-class ModuleLessonAdmin(admin.ModelAdmin):
+class ModuleLessonAdmin(ModelAdmin):
     list_display = ['module', 'lesson_no', 'title']
 
 
 @admin.register(ModuleDocument)
-class ModuleDocumentAdmin(admin.ModelAdmin):
+class ModuleDocumentAdmin(ModelAdmin):
     list_display = ['module', 'name', 'type']
 
 
 @admin.register(Room)
-class RoomAdmin(admin.ModelAdmin):
+class RoomAdmin(ModelAdmin):
     list_display = ['name', 'capacity', 'location', 'status']
     list_filter = ['status']
     search_fields = ['name', 'location']
 
 
 @admin.register(Course)
-class CourseAdmin(admin.ModelAdmin):
+class CourseAdmin(ModelAdmin):
     list_display = ['title', 'subject', 'instructor', 'scheduled_date', 'start_time', 'room', 'status']
     list_filter = ['status', 'academic_year']
     search_fields = ['title', 'subject__title_en']
@@ -54,11 +55,11 @@ class CourseAdmin(admin.ModelAdmin):
 
 
 @admin.register(CourseEnrollment)
-class CourseEnrollmentAdmin(admin.ModelAdmin):
+class CourseEnrollmentAdmin(ModelAdmin):
     list_display = ['student', 'course', 'status', 'enrolled_at']
 
 
 @admin.register(AttendanceRecord)
-class AttendanceRecordAdmin(admin.ModelAdmin):
+class AttendanceRecordAdmin(ModelAdmin):
     list_display = ['student', 'course', 'date', 'status']
     list_filter = ['status', 'date']

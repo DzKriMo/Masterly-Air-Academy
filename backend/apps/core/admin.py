@@ -1,9 +1,10 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import AuditLog, SystemSetting, AcademicYear
 
 
 @admin.register(AuditLog)
-class AuditLogAdmin(admin.ModelAdmin):
+class AuditLogAdmin(ModelAdmin):
     list_display = ['created_at', 'user', 'action', 'entity', 'entity_id', 'ip_address']
     list_filter = ['action', 'entity', 'created_at']
     search_fields = ['user__email', 'entity', 'ip_address']
@@ -25,13 +26,13 @@ class AuditLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(SystemSetting)
-class SystemSettingAdmin(admin.ModelAdmin):
+class SystemSettingAdmin(ModelAdmin):
     list_display = ['key', 'updated_at']
     search_fields = ['key']
 
 
 @admin.register(AcademicYear)
-class AcademicYearAdmin(admin.ModelAdmin):
+class AcademicYearAdmin(ModelAdmin):
     list_display = ['name', 'start_date', 'end_date', 'is_active', 'created_at']
     list_filter = ['is_active']
     search_fields = ['name']

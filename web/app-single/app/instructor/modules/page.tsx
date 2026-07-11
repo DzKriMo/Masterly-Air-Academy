@@ -90,8 +90,8 @@ export default function ModulesPage() {
           </div>
           <a href="/admin/ground_training/" target="_blank"
             className="px-4 py-2 text-sm border border-navy-600 rounded-lg text-gray-400 hover:border-gold-500 hover:text-gold-500 transition-colors">
-            Admin Panel
-          </a>
+            My Modules
+          </span>
         </div>
       </nav>
 
@@ -138,7 +138,7 @@ export default function ModulesPage() {
                     <div>
                       <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Lessons</h4>
                       {m.lessons.length === 0 ? (
-                        <p className="text-sm text-gray-500">No lessons yet. Add them via the Admin Panel.</p>
+                        <p className="text-sm text-gray-500">No lessons yet. Use the form below to add content.</p>
                       ) : (
                         <div className="space-y-2">
                           {m.lessons.map(l => (
@@ -157,7 +157,7 @@ export default function ModulesPage() {
                     <div>
                       <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Documents</h4>
                       {m.documents.length === 0 ? (
-                        <p className="text-sm text-gray-500">No documents. Upload via the Admin Panel.</p>
+                        <p className="text-sm text-gray-500">No documents yet. Use the upload form below.</p>
                       ) : (
                         <div className="space-y-2">
                           {m.documents.map(d => (
@@ -216,8 +216,8 @@ export default function ModulesPage() {
                     <div className="flex gap-2 pt-2">
                       <a href={`/admin/ground_training/module/${m.id}/change/`} target="_blank"
                         className="px-4 py-2 bg-navy-900 border border-navy-600 text-gray-400 rounded-lg text-sm hover:border-gold-500 hover:text-gold-500 transition-colors">
-                        Advanced Edit
-                      </a>
+                        Add Lesson
+                      </button>
                     </div>
                   </div>
                 )}
@@ -230,7 +230,7 @@ export default function ModulesPage() {
         ) : (
           <div className="text-center py-20">
             <p className="text-gray-500 text-lg">Select a subject above to view and manage its modules.</p>
-            <p className="text-gray-600 text-sm mt-2">You can add lessons, upload documents, and edit content via the Admin Panel.</p>
+            <p className="text-gray-600 text-sm mt-2">Select a subject to view modules, add lessons, and upload documents.</p>
           </div>
         )}
       </main>
