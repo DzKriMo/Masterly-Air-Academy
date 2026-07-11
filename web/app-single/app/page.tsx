@@ -109,8 +109,8 @@ export default function LandingPage() {
               <Image
                 src="/mast.svg"
                 alt="Masterly Air Academy"
-                width={360}
-                height={360}
+                width={460}
+                height={460}
                 className="w-52 h-52 md:w-64 md:h-64 lg:w-72 lg:h-72"
                 priority
               />
@@ -302,7 +302,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3">
-              <Image src="/mast.svg" alt="MAA" width={60} height={60} className="opacity-80" />
+              <Image src="/mast.svg" alt="MAA" width={90} height={90} className="opacity-80" />
               <span>Masterly Air Academy, Approved Training Organization</span>
             </div>
             <div className="flex gap-4">

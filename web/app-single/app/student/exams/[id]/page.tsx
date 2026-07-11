@@ -182,8 +182,10 @@ export default function TakeExamPage() {
       </nav>
       <main className="max-w-4xl mx-auto px-6 py-8">
         {cheatWarnings > 0 && (
-          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center justify-between">
-            <span>Warning: Leaving the exam tab has been detected. Your exam will be auto-submitted if you leave again.</span>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+            <div className="bg-red-500 text-white px-6 py-4 rounded-2xl shadow-2xl text-sm font-medium max-w-sm text-center">
+              Warning: Tab switch detected. Your exam will be auto-submitted on the next violation.
+            </div>
           </div>
         )}
         <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-6">
