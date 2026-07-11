@@ -18,6 +18,9 @@ from apps.exams.views import (
     QuestionBankViewSet, ExamViewSet, QuizViewSet,
     CertificateViewSet, StudentCompetencyViewSet,
 )
+from apps.administration.views import (
+    ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -43,6 +46,10 @@ router.register(r'exams', ExamViewSet, basename='exam')
 router.register(r'quizzes', QuizViewSet)
 router.register(r'certificates', CertificateViewSet, basename='certificate')
 router.register(r'competencies', StudentCompetencyViewSet)
+router.register(r'applications', ApplicationViewSet)
+router.register(r'invoices', InvoiceViewSet, basename='invoice')
+router.register(r'payments', PaymentViewSet)
+router.register(r'documents', DocumentViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
