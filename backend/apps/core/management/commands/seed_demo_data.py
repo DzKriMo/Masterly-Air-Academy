@@ -245,6 +245,39 @@ class Command(BaseCommand):
         )
         self.stdout.write(f'  Flights: 3 created (1 completed, 2 scheduled)')
 
+        # ── Exam Questions ───────────────────────────────
+        from apps.exams.models import QuestionBank, Exam
+        questions_data = [
+            {'question': 'What is the standard altimeter setting above transition altitude?', 'options': ['QNH', 'QFE', '1013.25 hPa', '29.92 inHg'], 'answer': '1013.25 hPa'},
+            {'question': 'What does VFR stand for?', 'options': ['Visual Flight Rules', 'Variable Frequency Radio', 'Vertical Flight Reference', 'Visual Frequency Range'], 'answer': 'Visual Flight Rules'},
+            {'question': 'The four forces acting on an aircraft in flight are:', 'options': ['Lift, Weight, Thrust, Drag', 'Lift, Gravity, Power, Friction', 'Speed, Altitude, Heading, Position', 'Pitch, Roll, Yaw, Thrust'], 'answer': 'Lift, Weight, Thrust, Drag'},
+            {'question': 'What is Vne?', 'options': ['Never Exceed Speed', 'Normal Operating Speed', 'Best Rate of Climb Speed', 'Stall Speed'], 'answer': 'Never Exceed Speed'},
+            {'question': 'Carburetor icing is most likely to occur at:', 'options': ['High power settings', 'Low power settings during descent', 'Cruise altitude', 'Takeoff'], 'answer': 'Low power settings during descent'},
+            {'question': 'What color is the port (left) navigation light?', 'options': ['Green', 'Red', 'White', 'Blue'], 'answer': 'Red'},
+        ]
+        for qd in questions_data:
+            QuestionBank.objects.get_or_create(
+                question_text=qd['question'],
+                defaults={
+                    'subject': nav, 'question_type': 'multiple_choice',
+                    'options': qd['options'], 'correct_answer': qd['answer'],
+                    'difficulty': 'medium',
+                },
+            )
+        self.stdout.write(f'  Questions: {QuestionBank.objects.count()} created')
+
+        # ── Exam ─────────────────────────────────────────
+        exam, _ = Exam.objects.get_or_create(
+            code='NAV-PPL-01',
+            defaults={
+                'title': 'Navigation Theory Exam',
+                'subject': nav, 'program': 'PPL', 'type': 'theory',
+                'duration': 30, 'question_count': 6, 'passing_grade': 70,
+                'max_attempts': 3, 'status': 'published',
+            },
+        )
+        self.stdout.write(f'  Exam: {exam.code}')
+
         self.stdout.write(self.style.SUCCESS(
             f'\nDemo data seeded: {len(students)} students, 2 instructors, '
             f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses, 3 flights'

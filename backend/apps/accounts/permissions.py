@@ -23,7 +23,11 @@ class HasRolePermission(BasePermission):
         if request.user.is_superuser:
             return True
 
-        return request.user.has_perm(required)
+        # Check across all user permissions (group + user)
+        # Our custom permissions use codenames like 'exams.view'
+        # Django stores them as 'accounts.exams.view'
+        all_perms = request.user.get_all_permissions()
+        return required in all_perms or any(p.endswith(f'.{required}') for p in all_perms)
 
 
 class IsOwnerOrAdmin(BasePermission):

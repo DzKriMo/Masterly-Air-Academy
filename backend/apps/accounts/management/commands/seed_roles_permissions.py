@@ -226,10 +226,9 @@ ROLE_DEFINITIONS = {
         'domains': {
             'dashboard': ['view'],
             'students': ['view_own'],
-            'ground_training': ['view'],
-            'ground_training': ['view_own'],
+            'ground_training': ['view', 'view_own'],
             'flight_training': ['view_own'],
-            'exams': ['view_own'],
+            'exams': ['view', 'view_own'],
             'attendance': ['view_own'],
             'documents': ['view_own'],
             'schedule': ['view_own'],

@@ -306,8 +306,6 @@ export default function LandingPage() {
               <span>Masterly Air Academy, Approved Training Organization</span>
             </div>
             <div className="flex gap-4">
-              <span>100% On-Premise</span>
-              <span className="text-gray-700">|</span>
               <span>EN · FR · العربية</span>
             </div>
           </div>

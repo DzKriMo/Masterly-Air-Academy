@@ -14,6 +14,10 @@ from apps.flight_training.views import (
     AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
     ResourceBookingViewSet, InstructorAvailabilityViewSet, FlightLogViewSet,
 )
+from apps.exams.views import (
+    QuestionBankViewSet, ExamViewSet, QuizViewSet,
+    CertificateViewSet, StudentCompetencyViewSet,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -34,6 +38,11 @@ router.register(r'flight-lessons', FlightLessonViewSet, basename='flightlesson')
 router.register(r'flight-preparations', FlightPreparationViewSet)
 router.register(r'resource-bookings', ResourceBookingViewSet)
 router.register(r'instructor-availability', InstructorAvailabilityViewSet, basename='availability')
+router.register(r'question-bank', QuestionBankViewSet)
+router.register(r'exams', ExamViewSet, basename='exam')
+router.register(r'quizzes', QuizViewSet)
+router.register(r'certificates', CertificateViewSet, basename='certificate')
+router.register(r'competencies', StudentCompetencyViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
