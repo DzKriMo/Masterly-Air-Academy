@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
@@ -21,6 +21,11 @@ export default function TakeExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cheatWarnings, setCheatWarnings] = useState(0);
+  const submittedRef = useRef(false);
+  const answersRef = useRef(answers);
+  const attemptIdRef = useRef(attemptId);
+  const examIdRef = useRef(examId);
 
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
 
@@ -46,35 +51,48 @@ export default function TakeExamPage() {
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
 
-  // Tab-switch detection: auto-submit if student leaves the tab/window
-  useEffect(() => {
-    if (submitted) return;
-    let violations = 0;
-    const onVisibilityChange = () => {
-      if (document.hidden && !submitted) {
-        violations++;
-        if (violations >= 2) {
-          handleSubmit();
-        }
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [submitted]);
+  // Keep refs in sync so the tab detector always has current values
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { attemptIdRef.current = attemptId; }, [attemptId]);
+  useEffect(() => { examIdRef.current = examId; }, [examId]);
 
-  useEffect(() => {
-    if (timeLeft <= 0 && !submitted && questions.length > 0) { handleSubmit(); }
-  }, [timeLeft]);
-
-  const handleSubmit = async () => {
-    if (submitted) return;
+  const doSubmit = async () => {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     setSubmitted(true);
-    const res = await fetch(`/api/exams/${examId}/submit/`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-      body: JSON.stringify({ attempt_id: attemptId, answers }),
+    const t = () => { try { return JSON.parse(sessionStorage.getItem("maa_session") || "{}").token; } catch { return ""; } };
+    const res = await fetch(`/api/exams/${examIdRef.current}/submit/`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t()}` },
+      body: JSON.stringify({ attempt_id: attemptIdRef.current, answers: answersRef.current }),
     });
     setResult(await res.json());
   };
+
+  const handleSubmit = () => { doSubmit(); };
+
+  // Tab-switch detection: 1 visible warning, then force-submit
+  useEffect(() => {
+    let violations = 0;
+    const onHide = () => {
+      if (submittedRef.current) return;
+      violations++;
+      if (violations === 1) {
+        setCheatWarnings(1);
+      } else {
+        doSubmit();
+      }
+    };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+    window.addEventListener("blur", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+      window.removeEventListener("blur", onHide);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft <= 0 && !submitted && questions.length > 0) { doSubmit(); }
+  }, [timeLeft]);
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -125,6 +143,11 @@ export default function TakeExamPage() {
         </div>
       </nav>
       <main className="max-w-4xl mx-auto px-6 py-8">
+        {cheatWarnings > 0 && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center justify-between">
+            <span>Warning: Leaving the exam tab has been detected. Your exam will be auto-submitted if you leave again.</span>
+          </div>
+        )}
         <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-6">
           <p className="text-sm text-gray-400 mb-1">{questions.length} questions</p>
           <div className="w-full bg-navy-700 rounded-full h-2">
