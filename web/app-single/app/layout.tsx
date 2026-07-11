@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-navy-900 text-white min-h-screen antialiased pr-28">
+      <body className="bg-navy-900 text-white min-h-screen antialiased">
         <LocaleProvider>
           <Providers>
             <div className="fixed top-0 right-0 z-[10000] h-16 flex items-center gap-2 px-4"><NotificationBell /><LanguageSwitcher /></div>
