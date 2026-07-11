@@ -296,6 +296,21 @@ class Command(BaseCommand):
         Payment.objects.get_or_create(invoice=inv2, student=students[1], defaults={'amount': 30000, 'currency': 'DZD', 'method': 'cash', 'reference': 'CSH-001'})
         self.stdout.write(f'  Invoices: 3 created, 2 payments recorded')
 
+        # ── Quality & Safety ──────────────────────────────
+        from apps.quality_safety.models import Audit, NonConformity, CAPA, RiskAssessment, SafetyEvent
+        admin_user = User.objects.get(email='admin@masterly-air-academy.dz')
+        audit1, _ = Audit.objects.get_or_create(title='Annual Safety Audit 2026', defaults={'type': 'safety', 'scheduled_date': timezone.now() + timedelta(days=30), 'status': 'planned', 'lead_auditor': admin_user})
+        audit2, _ = Audit.objects.get_or_create(title='Q1 Compliance Review', defaults={'type': 'compliance', 'scheduled_date': timezone.now() - timedelta(days=30), 'status': 'completed', 'lead_auditor': admin_user, 'completed_date': timezone.now()})
+        ncr1, _ = NonConformity.objects.get_or_create(audit=audit2, title='Missing pre-flight checklist signature', defaults={'description': 'Three flights in January lacked instructor signature on pre-flight checklist.', 'severity': 'major', 'status': 'open', 'due_date': timezone.now() + timedelta(days=15)})
+        ncr2, _ = NonConformity.objects.get_or_create(audit=audit2, title='Expired medical certificate on file', defaults={'description': 'Student file STU-003 has an expired Class 2 medical.', 'severity': 'critical', 'status': 'open', 'due_date': timezone.now() + timedelta(days=7)})
+        capa1, _ = CAPA.objects.get_or_create(non_conformity=ncr1, title='Implement digital checklist verification', defaults={'type': 'corrective', 'status': 'open', 'due_date': timezone.now() + timedelta(days=30)})
+        capa2, _ = CAPA.objects.get_or_create(non_conformity=ncr2, title='Review and update all student medical records', defaults={'type': 'corrective', 'status': 'open', 'due_date': timezone.now() + timedelta(days=14)})
+        RiskAssessment.objects.get_or_create(hazard='Aircraft engine failure during takeoff', defaults={'description': 'Catastrophic engine failure at low altitude', 'probability': 1, 'severity': 5, 'mitigation_measures': 'Pre-flight checks, regular maintenance, rejected takeoff procedure'})
+        RiskAssessment.objects.get_or_create(hazard='Mid-air collision in training area', defaults={'description': 'Multiple aircraft operating in congested training zone', 'probability': 2, 'severity': 5, 'mitigation_measures': 'Radio communication protocols, traffic awareness, see-and-avoid'})
+        SafetyEvent.objects.get_or_create(title='Bird strike on final approach', defaults={'type': 'incident', 'description': 'Small bird struck left wing during final approach. No damage. Aircraft landed safely.', 'reported_by': admin_user, 'status': 'reported'})
+        SafetyEvent.objects.get_or_create(title='Runway incursion near miss', defaults={'type': 'near_miss', 'description': 'Aircraft taxied onto active runway without clearance during training session.', 'reported_by': admin_user, 'status': 'reported'})
+        self.stdout.write(f'  Quality: 2 audits, 2 NCRs, 2 CAPAs, 2 risk assessments, 2 safety events')
+
         self.stdout.write(self.style.SUCCESS(
             f'\nDemo data seeded: {len(students)} students, 2 instructors, '
             f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses, 3 flights'

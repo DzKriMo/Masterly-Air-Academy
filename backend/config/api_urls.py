@@ -21,6 +21,10 @@ from apps.exams.views import (
 from apps.administration.views import (
     ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
 )
+from apps.quality_safety.views import (
+    AuditViewSet, NonConformityViewSet, CAPAViewSet,
+    RiskAssessmentViewSet, SafetyEventViewSet,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -50,6 +54,11 @@ router.register(r'applications', ApplicationViewSet)
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'payments', PaymentViewSet)
 router.register(r'documents', DocumentViewSet)
+router.register(r'audits', AuditViewSet)
+router.register(r'non-conformities', NonConformityViewSet, basename='ncr')
+router.register(r'capas', CAPAViewSet)
+router.register(r'risk-assessments', RiskAssessmentViewSet)
+router.register(r'safety-events', SafetyEventViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
