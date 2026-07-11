@@ -49,7 +49,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-3">
-              <Image src="/mast.svg" alt="MAA" width={90} height={90} className="rounded-xl" />
+              <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-xl" />
               <span className="text-white font-bold text-lg tracking-tight">
                 Masterly <span className="text-gold-500">Air Academy</span>
               </span>

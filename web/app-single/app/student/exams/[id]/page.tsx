@@ -23,6 +23,7 @@ export default function TakeExamPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(true);
   const [cheatWarnings, setCheatWarnings] = useState(0);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
   const submittedRef = useRef(false);
   const answersRef = useRef(answers);
   const attemptIdRef = useRef(attemptId);
@@ -71,23 +72,25 @@ export default function TakeExamPage() {
 
   const handleSubmit = () => { doSubmit(); };
 
-  // Tab-switch detection: 1 visible warning, then force-submit
+  // Tab-switch detection: 1 visible warning, then force-submit on 2nd switch
   useEffect(() => {
     let violations = 0;
+    let cooldown = false;
     const onHide = () => {
-      if (submittedRef.current) return;
+      if (submittedRef.current || cooldown) return;
+      cooldown = true;
+      setTimeout(() => { cooldown = false; }, 1000);
       violations++;
       if (violations === 1) {
         setCheatWarnings(1);
       } else {
+        setAutoSubmitted(true);
         doSubmit();
       }
     };
     document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
-    window.addEventListener("blur", onHide);
     return () => {
       document.removeEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
-      window.removeEventListener("blur", onHide);
     };
   }, []);
 
@@ -113,7 +116,7 @@ export default function TakeExamPage() {
             opening another application will be detected.
           </p>
           <p className="text-red-400 text-sm font-medium mb-6">
-            A second violation will immediately submit your exam with your current answers.
+            The first violation will show a warning. A second violation will immediately submit your exam.
           </p>
           <button
             onClick={() => { setShowModal(false); setLoading(true); }}
@@ -144,6 +147,11 @@ export default function TakeExamPage() {
             <p className="text-xl font-bold text-white">{result.is_passed ? "Passed" : "Failed"}</p>
             <p className="text-sm text-gray-400 mt-1">{result.score}/{result.total} correct | Passing: {result.passing_grade}%</p>
           </div>
+          {autoSubmitted && (
+            <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center">
+              This exam was auto-submitted by the anti-cheat system due to tab switching.
+            </div>
+          )}
           <h3 className="text-lg font-bold text-white mb-4">Question Breakdown</h3>
           <div className="space-y-3">
             {result.details.map((d, i) => (
