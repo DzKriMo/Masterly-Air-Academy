@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { LocaleProvider } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { NotificationBell } from "@/components/notification-bell";
 
 export const metadata: Metadata = {
   title: "Masterly Air Academy",
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-navy-900 text-white min-h-screen antialiased">
         <LocaleProvider>
           <Providers>
-            <div className="fixed top-4 right-4 z-[9999]"><LanguageSwitcher /></div>
+            <div className="fixed top-4 right-4 z-[9999] flex items-center gap-2">
+              <NotificationBell />
+              <LanguageSwitcher />
+            </div>
             {children}
           </Providers>
         </LocaleProvider>

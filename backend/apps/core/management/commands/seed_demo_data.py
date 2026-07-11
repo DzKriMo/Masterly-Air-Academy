@@ -311,6 +311,14 @@ class Command(BaseCommand):
         SafetyEvent.objects.get_or_create(title='Runway incursion near miss', defaults={'type': 'near_miss', 'description': 'Aircraft taxied onto active runway without clearance during training session.', 'reported_by': admin_user, 'status': 'reported'})
         self.stdout.write(f'  Quality: 2 audits, 2 NCRs, 2 CAPAs, 2 risk assessments, 2 safety events')
 
+        # ── Notifications ─────────────────────────────────
+        from apps.notifications.models import Notification
+        for student in students[:3]:
+            Notification.objects.get_or_create(user=student.user, type='info', title='Welcome to Masterly Air Academy', defaults={'message': 'Your student account has been created. Explore your dashboard to get started.'})
+        Notification.objects.get_or_create(user=fi_user, type='reminder', title='Flight lesson tomorrow', defaults={'message': 'You have a flight lesson scheduled with Ahmed Benali tomorrow at 14:00.'})
+        Notification.objects.get_or_create(user=gi_user, type='info', title='New course assigned', defaults={'message': 'You have been assigned to teach Navigation Basics starting this week.'})
+        self.stdout.write(f'  Notifications: {Notification.objects.count()} created')
+
         self.stdout.write(self.style.SUCCESS(
             f'\nDemo data seeded: {len(students)} students, 2 instructors, '
             f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses, 3 flights'
