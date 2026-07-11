@@ -88,8 +88,7 @@ export default function ModulesPage() {
               </button>
             </div>
           </div>
-          <a href="/admin/ground_training/" target="_blank"
-            className="px-4 py-2 text-sm border border-navy-600 rounded-lg text-gray-400 hover:border-gold-500 hover:text-gold-500 transition-colors">
+          <span className="px-4 py-2 text-sm border border-navy-600 rounded-lg text-gray-400">
             My Modules
           </span>
         </div>
@@ -217,7 +216,7 @@ export default function ModulesPage() {
                       <a href={`/admin/ground_training/module/${m.id}/change/`} target="_blank"
                         className="px-4 py-2 bg-navy-900 border border-navy-600 text-gray-400 rounded-lg text-sm hover:border-gold-500 hover:text-gold-500 transition-colors">
                         Add Lesson
-                      </button>
+                      </a>
                     </div>
                   </div>
                 )}
