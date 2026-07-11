@@ -21,6 +21,7 @@ export default function TakeExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(true);
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const submittedRef = useRef(false);
   const answersRef = useRef(answers);
@@ -32,7 +33,7 @@ export default function TakeExamPage() {
   const token = () => { try { return JSON.parse(sessionStorage.getItem("maa_session") || "{}").token; } catch { return ""; } };
 
   useEffect(() => {
-    if (!isAuthenticated || !examId) return;
+    if (!isAuthenticated || !examId || showModal) return;
     fetch(`/api/exams/${examId}/start/`, { method: "POST", headers: { Authorization: `Bearer ${token()}` } })
       .then(r => r.json())
       .then(d => {
@@ -43,7 +44,7 @@ export default function TakeExamPage() {
         setTimeLeft((d.duration || 30) * 60);
         setLoading(false);
       });
-  }, [isAuthenticated, examId]);
+  }, [isAuthenticated, examId, showModal]);
 
   useEffect(() => {
     if (timeLeft <= 0 || submitted) return;
@@ -96,7 +97,38 @@ export default function TakeExamPage() {
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  if (loading) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
+  if (loading && showModal) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
+
+  // Anti-cheat modal shown before exam starts
+  if (showModal) {
+    return (
+      <div className="min-h-screen bg-navy-900 flex items-center justify-center px-4">
+        <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-3">Anti-Cheat System Active</h2>
+          <p className="text-gray-400 text-sm leading-relaxed mb-2">
+            This exam is monitored. Switching tabs, minimizing the window, or
+            opening another application will be detected.
+          </p>
+          <p className="text-red-400 text-sm font-medium mb-6">
+            A second violation will immediately submit your exam with your current answers.
+          </p>
+          <button
+            onClick={() => { setShowModal(false); setLoading(true); }}
+            className="w-full py-3 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-xl transition-colors"
+          >
+            I Understand
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !showModal) return <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">Loading exam...</div>;
 
   if (submitted && result) {
     return (
