@@ -26,10 +26,6 @@ else:
     print('WARNING: Database not ready after 60s, proceeding anyway.')
 "
 
-# Generate any missing migration files
-echo "Checking for missing migrations..."
-python manage.py makemigrations accounts core students ground_training flight_training administration quality_safety exams notifications --noinput 2>/dev/null || true
-
 # Run migrations
 echo "Running migrations..."
 python manage.py migrate --noinput

@@ -10,6 +10,10 @@ from apps.ground_training.views import (
     CourseViewSet, CourseEnrollmentViewSet, AttendanceRecordViewSet,
     StudentProgressViewSet,
 )
+from apps.flight_training.views import (
+    AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
+    ResourceBookingViewSet, InstructorAvailabilityViewSet, FlightLogViewSet,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -25,10 +29,15 @@ router.register(r'rooms', RoomViewSet)
 router.register(r'courses', CourseViewSet, basename='course')
 router.register(r'course-enrollments', CourseEnrollmentViewSet)
 router.register(r'attendance', AttendanceRecordViewSet, basename='attendance')
+router.register(r'aircraft', AircraftViewSet)
+router.register(r'flight-lessons', FlightLessonViewSet, basename='flightlesson')
+router.register(r'flight-preparations', FlightPreparationViewSet)
+router.register(r'resource-bookings', ResourceBookingViewSet)
+router.register(r'instructor-availability', InstructorAvailabilityViewSet, basename='availability')
 
 urlpatterns = [
-    # Student progress (ViewSet without queryset — needs explicit path)
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
+    path('students/flight-log/', FlightLogViewSet.as_view({'get': 'list'}), name='flight-log'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

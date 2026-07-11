@@ -48,6 +48,10 @@ class Command(BaseCommand):
             user.first_name = data['first_name']
             user.last_name = data['last_name']
             user.save()
+            from django.contrib.auth.models import Group
+            student_group = Group.objects.filter(name='student').first()
+            if student_group:
+                user.groups.add(student_group)
 
             student, _ = Student.objects.get_or_create(
                 student_number=data['student_number'],
@@ -82,6 +86,11 @@ class Command(BaseCommand):
         )
         gi_user.set_password('instructor123')
         gi_user.save()
+        from django.contrib.auth.models import Group
+        gi_group = Group.objects.filter(name='ground_instructor').first()
+        if gi_group:
+            gi_user.groups.add(gi_group)
+
         gi, _ = GroundInstructor.objects.get_or_create(
             user=gi_user,
             defaults={
@@ -106,6 +115,11 @@ class Command(BaseCommand):
         )
         fi_user.set_password('instructor123')
         fi_user.save()
+        from django.contrib.auth.models import Group
+        fi_group = Group.objects.filter(name='flight_instructor').first()
+        if fi_group:
+            fi_user.groups.add(fi_group)
+
         fi, _ = FlightInstructor.objects.get_or_create(
             user=fi_user,
             defaults={
@@ -207,7 +221,31 @@ class Command(BaseCommand):
             CourseEnrollment.objects.get_or_create(student=s, course=course2)
         self.stdout.write(f'  Enrollments: {CourseEnrollment.objects.count()} created')
 
+        # ── Flight Lessons ───────────────────────────────
+        from apps.flight_training.models import FlightLesson
+        from django.utils import timezone as tz
+        now = tz.now()
+        flight1, _ = FlightLesson.objects.get_or_create(
+            student=students[0], instructor=fi, aircraft=aircraft_list[0],
+            scheduled_date=today,
+            defaults={'start_time': now.replace(hour=14, minute=0), 'end_time': now.replace(hour=15, minute=30), 'status': 'scheduled'},
+        )
+        flight2, _ = FlightLesson.objects.get_or_create(
+            student=students[1], instructor=fi, aircraft=aircraft_list[1],
+            scheduled_date=today - timedelta(days=1),
+            defaults={'start_time': now.replace(hour=9, minute=0) - timedelta(days=1),
+                      'end_time': now.replace(hour=10, minute=30) - timedelta(days=1),
+                      'status': 'completed', 'flight_duration': 1.5, 'grade': 8.5, 'result': 'passed'},
+        )
+        flight3, _ = FlightLesson.objects.get_or_create(
+            student=students[2], instructor=fi, aircraft=aircraft_list[0],
+            scheduled_date=today + timedelta(days=2),
+            defaults={'start_time': now.replace(hour=10, minute=0) + timedelta(days=2),
+                      'end_time': now.replace(hour=11, minute=30) + timedelta(days=2), 'status': 'scheduled'},
+        )
+        self.stdout.write(f'  Flights: 3 created (1 completed, 2 scheduled)')
+
         self.stdout.write(self.style.SUCCESS(
             f'\nDemo data seeded: {len(students)} students, 2 instructors, '
-            f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses'
+            f'{len(aircraft_list)} aircraft, 3 subjects, 8 modules, 2 rooms, 2 courses, 3 flights'
         ))
