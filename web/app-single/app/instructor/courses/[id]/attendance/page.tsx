@@ -96,7 +96,7 @@ export default function AttendancePage() {
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/mast.svg" alt="MAA" width={36} height={36} className="rounded-lg" />
+            <Image src="/mast.svg" alt="MAA" width={72} height={72} className="rounded-lg" />
             <div>
               <h1 className="text-lg font-bold text-white">Take Attendance</h1>
               <button onClick={() => router.push("/instructor/courses")} className="text-xs text-gray-500 hover:text-gold-500">Back to Courses</button>

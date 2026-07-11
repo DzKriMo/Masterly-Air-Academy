@@ -35,7 +35,7 @@ export default function StudentExamsPage() {
     <div className="min-h-screen bg-navy-900">
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Image src="/mast.svg" alt="MAA" width={36} height={36} className="rounded-lg" />
+          <Image src="/mast.svg" alt="MAA" width={72} height={72} className="rounded-lg" />
           <div><h1 className="text-lg font-bold text-white">Exams</h1>
             <button onClick={() => router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Dashboard</button></div>
         </div>

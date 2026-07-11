@@ -47,7 +47,7 @@ export default function InstructorDashboard() {
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/mast.svg" alt="MAA" width={40} height={40} className="rounded-lg" />
+            <Image src="/mast.svg" alt="MAA" width={80} height={80} className="rounded-lg" />
             <div>
               <h1 className="text-lg font-bold text-white">Masterly Air Academy</h1>
               <p className="text-xs text-gold-500">Instructor Portal</p>

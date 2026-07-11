@@ -47,9 +47,9 @@ export default function LandingPage() {
       {/* ── NAVIGATION ───────────────────────────────── */}
       <nav className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur border-b border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-3">
-              <Image src="/mast.svg" alt="MAA" width={44} height={44} className="rounded-lg" />
+              <Image src="/mast.svg" alt="MAA" width={90} height={90} className="rounded-xl" />
               <span className="text-white font-bold text-lg tracking-tight">
                 Masterly <span className="text-gold-500">Air Academy</span>
               </span>
@@ -302,7 +302,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3">
-              <Image src="/mast.svg" alt="MAA" width={28} height={28} className="opacity-70" />
+              <Image src="/mast.svg" alt="MAA" width={60} height={60} className="opacity-80" />
               <span>Masterly Air Academy, Approved Training Organization</span>
             </div>
             <div className="flex gap-4">
