@@ -29,8 +29,7 @@ export function LanguageSwitcher() {
     const path = segments.filter(s => !langs.some(l => l.code === s)).join("/");
     const newPath = code === "en" ? `/${path || ""}` : `/${code}/${path || ""}`;
     document.cookie = `locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
-    router.push(newPath || "/");
-    setOpen(false);
+    window.location.href = newPath || "/";
   };
 
   return (
