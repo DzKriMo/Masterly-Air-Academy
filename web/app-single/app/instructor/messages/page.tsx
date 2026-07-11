@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 
-interface Message { id: string; sender_name: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
+interface Msg { id: string; sender_name: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
 
 export default function InstructorMessagesPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [received, setReceived] = useState<Message[]>([]);
-  const [sent, setSent] = useState<Message[]>([]);
-  const [tab, setTab] = useState<"inbox"|"sent"|"compose">("inbox");
+  const [received, setReceived] = useState<Msg[]>([]);
+  const [sent, setSent] = useState<Msg[]>([]);
+  const [tab, setTab] = useState("inbox");
   const [form, setForm] = useState({ receiver: "", subject: "", body: "" });
   const [msg, setMsg] = useState("");
   const [users, setUsers] = useState<any[]>([]);
@@ -38,19 +38,20 @@ export default function InstructorMessagesPage() {
     } catch { setMsg("Connection error"); }
   };
 
+  const display = tab === "inbox" ? received : sent;
+
   return (
     <div className="min-h-screen bg-navy-900">
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
-            <div><h1 className="text-lg font-bold text-white">Messages</h1>
-              <button onClick={() => router.push("/instructor/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Dashboard</button></div>
+            <div><h1 className="text-lg font-bold text-white">Messages</h1><button onClick={() => router.push("/instructor/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Dashboard</button></div>
           </div>
           <div className="flex gap-2">
-            {(["inbox","sent","compose"] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize ${tab === t ? "bg-gold-500 text-navy-900" : "bg-navy-800 text-gray-400 border border-navy-700"}`}>{t}</button>
-            ))}
+            <button onClick={() => setTab("inbox")} className={`px-4 py-1.5 rounded-lg text-sm font-medium ${tab === "inbox" ? "bg-gold-500 text-navy-900" : "bg-navy-800 text-gray-400 border border-navy-700"}`}>Inbox</button>
+            <button onClick={() => setTab("sent")} className={`px-4 py-1.5 rounded-lg text-sm font-medium ${tab === "sent" ? "bg-gold-500 text-navy-900" : "bg-navy-800 text-gray-400 border border-navy-700"}`}>Sent</button>
+            <button onClick={() => setTab("compose")} className={`px-4 py-1.5 rounded-lg text-sm font-medium ${tab === "compose" ? "bg-gold-500 text-navy-900" : "bg-navy-800 text-gray-400 border border-navy-700"}`}>Compose</button>
           </div>
         </div>
       </nav>
@@ -66,11 +67,9 @@ export default function InstructorMessagesPage() {
             </div>
           </form>
         )}
-        {loading ? <p className="text-gray-500">Loading...</p> : (
+        {loading ? <p className="text-gray-500">Loading...</p> : display.length === 0 ? <p className="text-gray-500 text-center py-8">{tab === "inbox" ? "No messages received." : "No messages sent."}</p> : (
           <div className="space-y-2">
-            {tab === "inbox" && received.length === 0 && <p className="text-gray-500 text-center py-8">No messages received.</p>}
-            {tab === "sent" && sent.length === 0 && <p className="text-gray-500 text-center py-8">No messages sent.</p>}
-            {(tab === "inbox" ? received : sent).map(m => (
+            {display.map(m => (
               <div key={m.id} className={`bg-navy-800 border border-navy-700 rounded-xl p-4 ${!m.is_read && tab === "inbox" ? "border-l-4 border-l-gold-500" : ""}`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-white font-medium text-sm">{tab === "inbox" ? m.sender_name : m.receiver_name}</span>
