@@ -47,6 +47,7 @@ export default function StudentDashboard() {
               <QuickTile href="/student/flights" label="Flight Log" />
               <QuickTile href="/student/courses" label="Courses" />
               <QuickTile href="/student/schedule" label="Schedule" />
+              <QuickTile href="/student/messages" label="Messages" />
             </div>
           </>
         )}

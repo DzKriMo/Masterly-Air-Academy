@@ -2,7 +2,7 @@
 
 ## How to Access
 
-The platform is running at `http://localhost`. Open any modern browser (Chrome, Edge, Firefox, Safari).
+The platform is running at `http://185.185.80.188:7788`. Open any modern browser (Chrome, Edge, Firefox, Safari).
 
 All data is 100% on-premise. Nothing leaves the server.
 
@@ -24,7 +24,7 @@ All data is 100% on-premise. Nothing leaves the server.
 
 ---
 
-## 1. Landing Page — `http://localhost`
+## 1. Landing Page — `http://185.185.80.188:7788`
 
 The public-facing page. No login required.
 
@@ -45,14 +45,14 @@ The public-facing page. No login required.
 
 ## 2. Student Portal
 
-### 2.1 Login — `http://localhost/student/login`
+### 2.1 Login — `http://185.185.80.188:7788/student/login`
 
 - [ ] Enter `ahmed@student.maa.dz` / `student123`
 - [ ] Click "Sign In" — redirected to student dashboard
 - [ ] Try wrong password — red error appears
 - [ ] Try logging in with `fi@masterly-air-academy.dz` — error: "This portal is for students only"
 
-### 2.2 Student Dashboard — `http://localhost/student/dashboard`
+### 2.2 Student Dashboard — `http://185.185.80.188:7788/student/dashboard`
 
 - [ ] Shows real stats: enrolled courses, flight hours, exam average
 - [ ] Four quick tiles: Exams, Flight Log, Courses, Schedule
@@ -74,16 +74,16 @@ The public-facing page. No login required.
 - [ ] Results page shows percentage, pass/fail, per-question breakdown
 - [ ] If auto-submitted: red banner says "This exam was auto-submitted by the anti-cheat system"
 
-### 2.5 Flight Log — `http://localhost/student/flights`
+### 2.5 Flight Log — `http://185.185.80.188:7788/student/flights`
 
 - [ ] Shows total flight hours, completed lessons, average per lesson
 - [ ] Table with date, aircraft, duration, grade per completed flight
 
-### 2.6 My Courses — `http://localhost/student/courses`
+### 2.6 My Courses — `http://185.185.80.188:7788/student/courses`
 
 - [ ] Lists enrolled courses with dates, times, room, status
 
-### 2.7 My Schedule — `http://localhost/student/schedule`
+### 2.7 My Schedule — `http://185.185.80.188:7788/student/schedule`
 
 - [ ] Upcoming events grouped with date, time, aircraft/course info
 - [ ] Past events shown below in lower opacity
@@ -92,7 +92,7 @@ The public-facing page. No login required.
 
 ## 3. Instructor Portal
 
-### 3.1 Login — `http://localhost/login`
+### 3.1 Login — `http://185.185.80.188:7788/login`
 
 - [ ] Enter `fi@masterly-air-academy.dz` / `instructor123`
 - [ ] Redirected to `/instructor/dashboard`
@@ -198,7 +198,7 @@ The public-facing page. No login required.
 
 ## 7. Django Admin Panel
 
-### 7.1 `http://localhost/admin`
+### 7.1 `http://185.185.80.188:7788/admin`
 
 - [ ] Login page shows "Masterly Administration" with gold/navy styling
 - [ ] Login as `admin@masterly-air-academy.dz` / `admin123`
@@ -240,6 +240,3 @@ The public-facing page. No login required.
 
 ---
 
-*Platform: Django 5.1 + Next.js 15 + PostgreSQL 17 + Redis 8*
-*Deployment: 100% on-premise, 8 Docker services*
-*Test data: 5 students, 2 instructors, 3 aircraft, 3 subjects, 8 modules, 2 courses, 3 flights, 3 invoices, 2 audits, 6 questions*

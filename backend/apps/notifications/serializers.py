@@ -12,6 +12,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     receiver_name = serializers.SerializerMethodField()
+    receiver = serializers.PrimaryKeyRelatedField(queryset=Message._meta.get_field('receiver').remote_field.model.objects.all(), required=True)
 
     class Meta:
         model = Message

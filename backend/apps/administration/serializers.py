@@ -17,6 +17,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
     balance = serializers.SerializerMethodField()
+    invoice_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = Invoice
