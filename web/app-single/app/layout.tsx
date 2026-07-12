@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-navy-900 text-white min-h-screen antialiased">
         <LocaleProvider>
           <Providers>
-            <div className="fixed top-0 right-0 z-[10000] h-16 flex items-center gap-2 px-4"><NotificationBell /><LanguageSwitcher /></div>
+            <div className="fixed bottom-6 right-6 z-[10000] flex items-center gap-3"><NotificationBell /><LanguageSwitcher /></div>
             {children}
           </Providers>
         </LocaleProvider>
