@@ -119,6 +119,7 @@ export default function AttendancePage() {
               className="px-6 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg text-sm transition-colors">
               {saving ? "Saving..." : saved ? "Saved" : "Save Attendance"}
             </button>
+            <a href={`/api/attendance/${courseId}/pdf/`} className="px-4 py-2 border border-navy-600 text-gray-400 rounded-lg text-sm hover:border-gold-500 hover:text-gold-500">Download PDF</a>
           </div>
         </div>
 
