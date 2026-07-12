@@ -107,3 +107,9 @@ class InstructorAvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = InstructorAvailability
         fields = ['id', 'instructor', 'day_of_week', 'start_time', 'end_time', 'is_available']
+
+
+class MaintenanceRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MaintenanceRecord
+        fields = ['id', 'aircraft', 'type', 'description', 'start_date', 'end_date', 'status', 'notes', 'created_at']
