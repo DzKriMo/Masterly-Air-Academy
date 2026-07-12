@@ -33,6 +33,8 @@ export default function InvoicesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.student) { setMsg("Please select a student."); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { setMsg("Please enter a valid amount."); return; }
     try {
       const res = await fetch("/api/invoices/", {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },

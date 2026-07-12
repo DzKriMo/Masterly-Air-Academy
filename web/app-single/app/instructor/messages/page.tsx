@@ -30,6 +30,9 @@ export default function InstructorMessagesPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.receiver) { setMsg("Please select a recipient."); return; }
+    if (!form.subject.trim()) { setMsg("Please enter a subject."); return; }
+    if (!form.body.trim()) { setMsg("Please enter a message."); return; }
     try {
       const res = await fetch("/api/messages/", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` }, body: JSON.stringify(form) });
       if (res.ok) { setMsg("Message sent."); setForm({ receiver: "", subject: "", body: "" }); setTab("sent"); }
