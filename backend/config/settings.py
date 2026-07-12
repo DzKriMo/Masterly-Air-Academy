@@ -114,8 +114,8 @@ TIME_ZONE = 'Africa/Algiers'
 USE_I18N = True
 USE_TZ = True
 
-# i18n is handled at the frontend level via useTranslation hook
-# Model translations (django-modeltranslation) can be added in a future migration
+# i18n: Models use manual title_en/title_fr/title_ar fields (not django-modeltranslation)
+# Frontend uses useTranslation() hook with inline key/value pairs
 
 # Static files
 STATIC_URL = '/static/'
