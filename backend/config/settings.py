@@ -114,6 +114,9 @@ TIME_ZONE = 'Africa/Algiers'
 USE_I18N = True
 USE_TZ = True
 
+# i18n is handled at the frontend level via useTranslation hook
+# Model translations (django-modeltranslation) can be added in a future migration
+
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
