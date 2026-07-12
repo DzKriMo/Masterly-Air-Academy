@@ -5,6 +5,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev curl \
+    libpango-1.0-0 libpangocairo-1.0-0 \
+    libcairo2 libgobject-2.0-0 \
+    shared-mime-info fonts-noto-core \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
