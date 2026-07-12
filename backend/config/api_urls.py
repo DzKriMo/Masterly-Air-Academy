@@ -32,6 +32,7 @@ from apps.notifications.views import NotificationViewSet, MessageViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
 from apps.administration.exports import export_students, export_invoices, export_flights
 
 
@@ -48,6 +49,42 @@ class DashboardKPIView(APIView):
         return Response({"students": Student.objects.count(), "courses": Course.objects.count(), "aircraft": Aircraft.objects.count(), "flights": fl.count(), "flight_hours": round(sum(float(f.flight_duration or 0) for f in fl), 1), "revenue": round(sum(float(i.amount) for i in inv.filter(status="paid")), 2), "outstanding": round(sum(float(i.amount) for i in inv.filter(status__in=["issued","partially_paid"])), 2), "audits": Audit.objects.filter(status="planned").count(), "ncrs": NonConformity.objects.filter(status="open").count()})
 from apps.ground_training.pdf import generate_attendance_pdf
 from apps.quality_safety.pdf import generate_audit_report_pdf
+from apps.exams.pdf import generate_certificate_pdf as _cert_pdf, generate_invoice_pdf as _inv_pdf
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def certificate_pdf(request, cert_id):
+    from apps.exams.models import Certificate
+    cert = Certificate.objects.get(id=cert_id)
+    return _cert_pdf(cert)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def invoice_pdf(request, inv_id):
+    from apps.administration.models import Invoice
+    inv = Invoice.objects.get(id=inv_id)
+    return _inv_pdf(inv)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_view(request):
+    q = request.query_params.get('q', '')
+    if not q: return Response({'results': []})
+    from apps.students.models import Student
+    from apps.ground_training.models import Course, Subject
+    from apps.flight_training.models import Aircraft
+    from apps.administration.models import Invoice
+    results = []
+    for s in Student.objects.filter(first_name__icontains=q)[:5]:
+        results.append({'type': 'student', 'title': s.full_name, 'id': str(s.id)})
+    for c in Course.objects.filter(title__icontains=q)[:5]:
+        results.append({'type': 'course', 'title': c.title, 'id': str(c.id)})
+    for a in Aircraft.objects.filter(registration__icontains=q)[:3]:
+        results.append({'type': 'aircraft', 'title': a.registration, 'id': str(a.id)})
+    return Response({'results': results})
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -98,6 +135,9 @@ urlpatterns = [
     path('export/flights/', export_flights, name='export-flights'),
     path('attendance/<uuid:course_id>/pdf/', generate_attendance_pdf, name='attendance-pdf'),
     path('audits/<uuid:audit_id>/pdf/', generate_audit_report_pdf, name='audit-pdf'),
+    path('certificates/<uuid:cert_id>/pdf/', certificate_pdf, name='certificate-pdf'),
+    path('invoices/<uuid:inv_id>/pdf/', invoice_pdf, name='invoice-pdf'),
+    path('search/', search_view, name='search'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
