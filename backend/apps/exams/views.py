@@ -171,7 +171,8 @@ class QuizViewSet(viewsets.ModelViewSet):
 
 
 class CertificateViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
 
     def get_queryset(self):
         qs = Certificate.objects.select_related('student').all()

@@ -78,7 +78,8 @@ class ModuleViewSet(viewsets.ModelViewSet):
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.view'
     filterset_fields = ['status']
     search_fields = ['name', 'location']
 
