@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/lib/use-translation";
 
 interface Question { id: string; question_text: string; question_type: string; options: string[]; }
 interface Result { score: number; total: number; percentage: number; is_passed: boolean; passing_grade: number; details: { question_id: string; question: string; your_answer: string; correct_answer: string; is_correct: boolean }[]; }
 
 export default function TakeExamPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useParams();
   const examId = params?.id as string;

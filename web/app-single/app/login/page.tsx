@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { usesFilamentAdmin, getDefaultPortal } from "@/lib/portal-access";
+import { useTranslation } from "@/lib/use-translation";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -51,7 +53,7 @@ export default function LoginPage() {
             className="mx-auto rounded-xl shadow-lg"
             priority
           />
-          <h1 className="text-2xl font-bold text-white mt-4">Staff Login</h1>
+          <h1 className="text-2xl font-bold text-white mt-4">{t.login_title || "Staff Login"}</h1>
           <p className="text-gray-400 mt-1">Masterly Air Academy</p>
         </div>
 
@@ -91,11 +93,11 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg transition-colors"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? (t.login_signing || "Signing in...") : (t.login_signin || "Sign In")}
           </button>
 
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Admin? <a href="/admin" className="text-gold-500 hover:underline">Go to Admin Panel</a>
+            {t.login_admin_link || "Admin? Go to Admin Panel"}
           </p>
         </form>
       </div>
