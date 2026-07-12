@@ -148,7 +148,7 @@ ROLE_DEFINITIONS = {
             'dashboard': ['view'],
             'students': ['view'],
             'finance': ['manage'],
-            'invoicing': ['manage'],
+            'invoicing': ['view', 'create', 'update', 'manage'],
             'documents': ['view'],
             'academic_years': ['view'],
             'audit_logs': ['view'],

@@ -24,6 +24,8 @@ from apps.administration.views import (
 from apps.students.views import StudentViewSet
 from apps.notifications.views import NotificationViewSet, MessageViewSet
 from apps.administration.exports import export_students, export_invoices, export_flights
+from apps.ground_training.pdf import generate_attendance_pdf
+from apps.quality_safety.pdf import generate_audit_report_pdf
 from apps.quality_safety.views import (
     AuditViewSet, NonConformityViewSet, CAPAViewSet,
     RiskAssessmentViewSet, SafetyEventViewSet,
@@ -72,6 +74,8 @@ urlpatterns = [
     path('export/students/', export_students, name='export-students'),
     path('export/invoices/', export_invoices, name='export-invoices'),
     path('export/flights/', export_flights, name='export-flights'),
+    path('attendance/<uuid:course_id>/pdf/', generate_attendance_pdf, name='attendance-pdf'),
+    path('audits/<uuid:audit_id>/pdf/', generate_audit_report_pdf, name='audit-pdf'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

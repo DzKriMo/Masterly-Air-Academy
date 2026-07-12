@@ -75,11 +75,13 @@ export default function InstructorDashboard() {
 
         <div className="bg-navy-800 rounded-xl border border-navy-700 p-6 mb-10">
           <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <ActionBtn onClick={() => router.push("/instructor/schedule")} label="Calendar" />
             <ActionBtn onClick={() => router.push("/instructor/flights")} label="Flight Schedule" />
             <ActionBtn onClick={() => router.push("/instructor/courses")} label="My Courses" />
             <ActionBtn onClick={() => router.push("/instructor/modules")} label="Module Content" />
+            <ActionBtn onClick={() => router.push("/instructor/students")} label="My Students" />
+            <ActionBtn onClick={() => router.push("/instructor/messages")} label="Messages" />
           </div>
         </div>
 
