@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'storages',
+    'django_celery_beat',
     # Local apps
     'apps.core',
     'apps.accounts',
@@ -178,6 +179,17 @@ CELERY_RESULT_BACKEND = os.environ.get('CELERY_BROKER_URL', f'{REDIS_URL}/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Africa/Algiers'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULE = {
+    'check-overdue-invoices': {
+        'task': 'apps.administration.tasks.check_overdue_invoices',
+        'schedule': 86400.0,  # daily
+    },
+    'check-expiring-medicals': {
+        'task': 'apps.students.tasks.check_expiring_medicals',
+        'schedule': 86400.0,
+    },
+}
 
 # Meilisearch
 MEILISEARCH_HOST = os.environ.get('MEILI_HOST', 'http://meilisearch:7700')
