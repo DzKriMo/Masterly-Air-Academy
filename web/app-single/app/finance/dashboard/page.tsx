@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-const COLORS = ["#22c55e","#3b82f6","#ef4444","#f59e0b"];
-
-
-const COLORS = ["#22c55e", "#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6"];
+const FCOLORS = ["#22c55e","#3b82f6","#ef4444","#f59e0b"];
 
 interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 
@@ -76,7 +73,7 @@ export default function FinanceDashboard() {
         {invoices.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Revenue (DZD)</h3><ResponsiveContainer width="100%" height={220}><BarChart data={[{name:"Collected",value:totalPaid},{name:"Outstanding",value:outstanding},{name:"Overdue",value:overdue}]}><CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={12}/><YAxis stroke="#94a3b8" fontSize={12}/><Tooltip/><Bar dataKey="value" fill="#c4943c" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Invoice Status</h3><ResponsiveContainer width="100%" height={220}><PieChart><Pie data={[{name:"Paid",value:invoices.filter(i=>i.status==="paid").length},{name:"Issued",value:invoices.filter(i=>i.status==="issued").length},{name:"Overdue",value:invoices.filter(i=>i.status==="overdue").length},{name:"Draft",value:invoices.filter(i=>i.status==="draft").length}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({name,value}:any)=>`${name}: ${value}`}>{[0,1,2,3].map(i=><Cell key={i} fill={COLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer></div>
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Invoice Status</h3><ResponsiveContainer width="100%" height={220}><PieChart><Pie data={[{name:"Paid",value:invoices.filter(i=>i.status==="paid").length},{name:"Issued",value:invoices.filter(i=>i.status==="issued").length},{name:"Overdue",value:invoices.filter(i=>i.status==="overdue").length},{name:"Draft",value:invoices.filter(i=>i.status==="draft").length}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({name,value}:any)=>`${name}: ${value}`}>{[0,1,2,3].map(i=><Cell key={i} fill={FCOLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer></div>
         </div>
         )}
 

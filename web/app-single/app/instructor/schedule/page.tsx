@@ -3,9 +3,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
 
 export default function SchedulePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -30,6 +27,6 @@ export default function SchedulePage() {
     <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg"/><div><h1 className="text-lg font-bold text-white">Schedule</h1><button onClick={()=>router.push("/instructor/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Dashboard</button></div></div><button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button></div></nav>
     <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="flex gap-4 mb-4"><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">Flights</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">Courses</span></div></div>
-      {loading?<p className="text-gray-500">Loading...</p>:<div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><FullCalendar plugins={[dayGridPlugin,timeGridPlugin]} initialView="timeGridWeek" events={events} height="auto" headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek,timeGridDay"}} eventClick={(info:any)=>{alert(`${info.event.title}\n${info.event.extendedProps.status||""}`)}}/></div>}
+      {loading?<p className="text-gray-500">Loading...</p>:<div className="space-y-2">{events.sort((a:any,b:any)=>new Date(a.start).getTime()-new Date(b.start).getTime()).slice(0,50).map((e:any,i:number)=>(<div key={i} className="flex items-center gap-3 p-3 bg-navy-800 border border-navy-700 rounded-lg"><div className="w-1.5 h-10 rounded" style={{backgroundColor:e.backgroundColor}}/><div className="flex-1"><p className="text-white text-sm font-medium">{e.title}</p><p className="text-xs text-gray-500">{new Date(e.start).toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} - {new Date(e.end).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit"})}</p></div><span className="text-xs text-gray-500">{e.extendedProps?.type}</span></div>))}{events.length===0&&<p className="text-gray-500 text-center py-8">No events scheduled.</p>}</div>}
     </main></div>);
 }
