@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { invoiceSchema } from "@/lib/validators";
 
 interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 interface Student { id: string; first_name: string; last_name: string; student_number: string; }
@@ -33,8 +34,8 @@ export default function InvoicesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.student) { setMsg("Please select a student."); return; }
-    if (!form.amount || parseFloat(form.amount) <= 0) { setMsg("Please enter a valid amount."); return; }
+    const v = invoiceSchema.safeParse(form);
+    if (!v.success) { setMsg(v.error.errors[0].message); return; }
     try {
       const res = await fetch("/api/invoices/", {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },

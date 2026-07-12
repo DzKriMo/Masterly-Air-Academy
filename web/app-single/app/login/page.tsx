@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { usesFilamentAdmin, getDefaultPortal } from "@/lib/portal-access";
 import { useTranslation } from "@/lib/use-translation";
+import { loginSchema } from "@/lib/validators";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +19,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.includes("@")) { setError("Please enter a valid email address."); return; }
-    if (!password) { setError("Please enter your password."); return; }
+    const v = loginSchema.safeParse({ email, password });
+    if (!v.success) { setError(v.error.errors[0].message); return; }
     setLoading(true);
     setError("");
 

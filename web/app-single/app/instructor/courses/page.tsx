@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { courseSchema } from "@/lib/validators";
 
 interface Subject { id: string; code: string; title_en: string; }
 interface Room { id: string; name: string; capacity: number; }
@@ -57,6 +58,8 @@ export default function CoursesPage() {
     e.preventDefault();
     setSaving(true);
     setMsg("");
+    const v = courseSchema.safeParse(form);
+    if (!v.success) { setMsg(v.error.errors[0].message); setSaving(false); return; }
     try {
       const res = await fetch("/api/courses/", {
         method: "POST",
