@@ -1,31 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
-import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User } from "lucide-react";
-
-const NAV = [
-  { href: "/student/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/student/exams", label: "Exams", Icon: ClipboardCheck },
-  { href: "/student/flights", label: "Flight Log", Icon: Plane },
-  { href: "/student/courses", label: "My Courses", Icon: BookOpen },
-  { href: "/student/schedule", label: "Schedule", Icon: Calendar },
-  { href: "/student/certificates", label: "Certificates", Icon: Award },
-  { href: "/student/messages", label: "Messages", Icon: MessageSquare },
-  { href: "/student/profile", label: "Profile", Icon: User },
-];
 
 export default function StudentDashboard() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState<any>({courses:0,completed:0,attendance:0,flightHours:0,examAvg:0,flights:0});
   const [flightData, setFlightData] = useState<any[]>([]);
   const [compData, setCompData] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
   const token = () => { try { return JSON.parse(sessionStorage.getItem("maa_session") || "{}").token; } catch { return ""; } };
   useEffect(() => { if (!isAuthenticated) return;
     Promise.all([fetch("/api/students/progress/",{headers:{Authorization:`Bearer ${token()}`}}).then(r=>r.json()).catch(()=>({})),fetch("/api/students/flight-log/",{headers:{Authorization:`Bearer ${token()}`}}).then(r=>r.json()).catch(()=>({})),fetch("/api/exams/my_attempts/",{headers:{Authorization:`Bearer ${token()}`}}).then(r=>r.json()).catch(()=>[])]).then(([prog,log,attempts])=>{
@@ -37,16 +20,17 @@ export default function StudentDashboard() {
     }).finally(()=>setDataLoading(false));
   },[isAuthenticated]);
 
-  return (<div className="min-h-screen bg-navy-900 flex">
-    <aside className="w-56 bg-navy-800 border-r border-navy-700 min-h-screen hidden lg:block shrink-0"><div className="p-4 border-b border-navy-700"><Image src="/mast.svg" alt="MAA" width={80} height={80} className="rounded-lg mx-auto"/><p className="text-white font-bold text-center mt-2 text-sm">Student Portal</p><p className="text-xs text-gold-500 text-center">{user?.name||user?.email}</p></div><nav className="p-2">{NAV.map(item=><a key={item.href} href={item.href} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm mb-1 transition-colors ${pathname===item.href?"bg-gold-500/20 text-gold-500 font-medium":"text-gray-400 hover:text-white hover:bg-navy-700"}`}><item.Icon className="w-4 h-4 shrink-0"/>{item.label}</a>)}</nav><div className="p-4 border-t border-navy-700"><button onClick={async()=>{await logout();router.push("/student/login")}} className="w-full py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Logout</button></div></aside>
-    <div className="flex-1 min-w-0"><nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-6xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">Dashboard</h1></div></nav>
-    <main className="px-6 py-8"><h2 className="text-2xl font-bold text-white mb-2">Welcome back, {user?.name?.split(" ")[0]||"Student"}</h2><p className="text-gray-400 mb-8">Your training overview</p>
-      {dataLoading?<p className="text-gray-500">Loading stats...</p>:<>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><SCard label="Enrolled" value={stats.courses} sub="Courses"/><SCard label="Flight Hours" value={`${stats.flightHours}h`} sub={`${stats.flights} flights`}/><SCard label="Exam Avg" value={stats.examAvg>0?`${stats.examAvg}%`:"-"} sub={`${stats.attendance}% attendance`}/><SCard label="Completed" value={stats.completed} sub="Courses done"/></div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Flight Hours</h3>{flightData.length>0?<ResponsiveContainer width="100%" height={220}><LineChart data={flightData}><CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={11}/><YAxis stroke="#94a3b8" fontSize={11}/><Tooltip/><Line type="monotone" dataKey="hours" stroke="#c4943c" strokeWidth={2} dot={{r:4}}/></LineChart></ResponsiveContainer>:<p className="text-gray-500 text-sm text-center py-8">No flight data yet</p>}</div>
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Competencies</h3><ResponsiveContainer width="100%" height={220}><RadarChart data={compData}><PolarGrid stroke="#1a2332"/><PolarAngleAxis dataKey="name" stroke="#94a3b8" fontSize={10}/><PolarRadiusAxis stroke="#94a3b8" fontSize={10}/><Radar dataKey="value" stroke="#c4943c" fill="#c4943c" fillOpacity={0.2}/></RadarChart></ResponsiveContainer></div>
-        </div>
-      </>}</main></div></div>);
+  return (
+    <div className="flex-1 min-w-0">
+      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-6xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">Dashboard</h1></div></nav>
+      <main className="px-6 py-8"><h2 className="text-2xl font-bold text-white mb-2">Welcome back, {user?.name?.split(" ")[0]||"Student"}</h2><p className="text-gray-400 mb-8">Your training overview</p>
+        {dataLoading?<p className="text-gray-500">Loading stats...</p>:<>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><SCard label="Enrolled" value={stats.courses} sub="Courses"/><SCard label="Flight Hours" value={`${stats.flightHours}h`} sub={`${stats.flights} flights`}/><SCard label="Exam Avg" value={stats.examAvg>0?`${stats.examAvg}%`:"-"} sub={`${stats.attendance}% attendance`}/><SCard label="Completed" value={stats.completed} sub="Courses done"/></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Flight Hours</h3>{flightData.length>0?<ResponsiveContainer width="100%" height={220}><LineChart data={flightData}><CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={11}/><YAxis stroke="#94a3b8" fontSize={11}/><Tooltip/><Line type="monotone" dataKey="hours" stroke="#c4943c" strokeWidth={2} dot={{r:4}}/></LineChart></ResponsiveContainer>:<p className="text-gray-500 text-sm text-center py-8">No flight data yet</p>}</div>
+            <div className="bg-navy-800 border border-navy-700 rounded-xl p-6"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Competencies</h3><ResponsiveContainer width="100%" height={220}><RadarChart data={compData}><PolarGrid stroke="#1a2332"/><PolarAngleAxis dataKey="name" stroke="#94a3b8" fontSize={10}/><PolarRadiusAxis stroke="#94a3b8" fontSize={10}/><Radar dataKey="value" stroke="#c4943c" fill="#c4943c" fillOpacity={0.2}/></RadarChart></ResponsiveContainer></div>
+          </div>
+        </>}</main></div>
+  );
 }
 function SCard({label,value,sub}:{label:string;value:string|number;sub:string}){return <div className="bg-navy-800 border border-navy-700 rounded-xl p-5"><p className="text-3xl font-bold text-white">{value}</p><p className="text-sm text-gray-400 mt-1">{label}</p><p className="text-xs text-gray-500">{sub}</p></div>}
