@@ -65,9 +65,9 @@ export default function DirectorDashboard() {
               <a href="/finance/dashboard" className="block p-5 bg-navy-800 border border-navy-700 rounded-xl hover:border-gold-500 transition-all text-center"><p className="text-white font-semibold">Finance</p><p className="text-xs text-gray-400 mt-1">Revenue and invoices</p></a>
             </div>
             <div className="grid grid-cols-3 gap-4 mt-4">
-              <a href="/api/export/students/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Students (Excel)</a>
-              <a href="/api/export/invoices/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Invoices (Excel)</a>
-              <a href="/api/export/flights/" className="block p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">Export Flights (Excel)</a>
+              <ExportBtn endpoint="/api/export/students/" label="Export Students (Excel)" />
+              <ExportBtn endpoint="/api/export/invoices/" label="Export Invoices (Excel)" />
+              <ExportBtn endpoint="/api/export/flights/" label="Export Flights (Excel)" />
             </div>
           </>
         )}
@@ -77,4 +77,19 @@ export default function DirectorDashboard() {
 }
 function KpiCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   return <div className="bg-navy-800 border border-navy-700 rounded-xl p-5"><p className={`text-2xl font-bold ${color}`}>{value}</p><p className="text-xs text-gray-400 mt-1">{label}</p></div>;
+}
+
+function ExportBtn({ endpoint, label }: { endpoint: string; label: string }) {
+  const handleDownload = async () => {
+    try {
+      const session = JSON.parse(sessionStorage.getItem("maa_session") || "{}");
+      const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${session.token}` } });
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = endpoint.split("/").pop() + ".xlsx"; a.click();
+      window.URL.revokeObjectURL(url);
+    } catch { alert("Download failed. Please log in again."); }
+  };
+  return <button onClick={handleDownload} className="w-full p-3 bg-navy-800 border border-navy-700 rounded-lg hover:border-gold-500 transition-all text-center text-xs text-gray-400 hover:text-gold-500">{label}</button>;
 }
