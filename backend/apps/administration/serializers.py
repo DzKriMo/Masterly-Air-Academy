@@ -50,3 +50,14 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = ['id', 'name', 'type', 'category', 'file_url', 'mime_type', 'file_size', 'version', 'status', 'created_at']
+
+
+class ContractSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Contract
+        fields = ['id', 'contract_number', 'student', 'student_name', 'type', 'start_date', 'end_date', 'file_url', 'status', 'signed_at', 'created_at']
+
+    def get_student_name(self, obj):
+        return obj.student.full_name

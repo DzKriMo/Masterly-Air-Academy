@@ -13,6 +13,7 @@ from .serializers import (
     FlightPreparationSerializer, FlightEvaluationSerializer,
     ResourceBookingSerializer, InstructorAvailabilitySerializer,
 )
+from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
 
 
@@ -168,3 +169,10 @@ class FlightLogViewSet(viewsets.ViewSet):
 
         log = FlightLogService.get_student_log(student_id)
         return Response(log)
+
+
+class MaintenanceRecordViewSet(viewsets.ModelViewSet):
+    queryset = MaintenanceRecord.objects.select_related('aircraft').all()
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'fleet.view'
+    filterset_fields = ['aircraft', 'type', 'status']

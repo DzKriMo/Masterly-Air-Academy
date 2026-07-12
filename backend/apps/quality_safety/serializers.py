@@ -57,3 +57,9 @@ class SafetyEventSerializer(serializers.ModelSerializer):
 
     def get_reporter_name(self, obj):
         return obj.reported_by.email if obj.reported_by and not obj.confidential else 'Anonymous'
+
+
+class QualityDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QualityDocument
+        fields = ['id', 'number', 'title', 'type', 'version', 'issue_date', 'revision_date', 'status', 'file_url']

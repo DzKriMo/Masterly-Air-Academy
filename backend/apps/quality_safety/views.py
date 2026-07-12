@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import Audit, NonConformity, CAPA, RiskAssessment, SafetyEvent, QualityDocument
-from .serializers import AuditSerializer, NonConformitySerializer, CAPASerializer, RiskAssessmentSerializer, SafetyEventSerializer
+from .serializers import AuditSerializer, NonConformitySerializer, CAPASerializer, RiskAssessmentSerializer, SafetyEventSerializer, QualityDocumentSerializer
 
 
 class AuditViewSet(viewsets.ModelViewSet):
@@ -71,8 +71,16 @@ class RiskAssessmentViewSet(viewsets.ModelViewSet):
 class SafetyEventViewSet(viewsets.ModelViewSet):
     queryset = SafetyEvent.objects.select_related('reported_by').all()
     serializer_class = SafetyEventSerializer
-    permission_classes = [IsAuthenticated]  # Any authenticated user can report
+    permission_classes = [IsAuthenticated]
     filterset_fields = ['type', 'status']
 
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)
+
+
+class QualityDocumentViewSet(viewsets.ModelViewSet):
+    queryset = QualityDocument.objects.all()
+    serializer_class = QualityDocumentSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'quality.view'
+    filterset_fields = ['type', 'status']

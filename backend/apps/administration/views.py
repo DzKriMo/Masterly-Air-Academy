@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from apps.accounts.permissions import HasRolePermission
 from .models import Application, Invoice, Payment, Contract, Document
-from .serializers import ApplicationSerializer, InvoiceSerializer, PaymentSerializer, DocumentSerializer
+from .serializers import ApplicationSerializer, InvoiceSerializer, PaymentSerializer, DocumentSerializer, ContractSerializer
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
@@ -116,3 +116,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
             student_id=request.data.get('student_id') or None,
         )
         return Response(DocumentSerializer(doc).data, status=201)
+
+
+class ContractViewSet(viewsets.ModelViewSet):
+    queryset = Contract.objects.select_related('student').all()
+    serializer_class = ContractSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'documents.view'
+    filterset_fields = ['student', 'status', 'type']

@@ -13,23 +13,41 @@ from apps.ground_training.views import (
 from apps.flight_training.views import (
     AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
     ResourceBookingViewSet, InstructorAvailabilityViewSet, FlightLogViewSet,
+    MaintenanceRecordViewSet,
 )
 from apps.exams.views import (
     QuestionBankViewSet, ExamViewSet, QuizViewSet,
     CertificateViewSet, StudentCompetencyViewSet,
 )
 from apps.administration.views import (
-    ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
+    ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet, ContractViewSet,
 )
-from apps.students.views import StudentViewSet
-from apps.notifications.views import NotificationViewSet, MessageViewSet
-from apps.administration.exports import export_students, export_invoices, export_flights
-from apps.ground_training.pdf import generate_attendance_pdf
-from apps.quality_safety.pdf import generate_audit_report_pdf
 from apps.quality_safety.views import (
     AuditViewSet, NonConformityViewSet, CAPAViewSet,
-    RiskAssessmentViewSet, SafetyEventViewSet,
+    RiskAssessmentViewSet, SafetyEventViewSet, QualityDocumentViewSet,
 )
+from apps.quality_safety.serializers import QualityDocumentSerializer
+from apps.students.views import StudentViewSet
+from apps.notifications.views import NotificationViewSet, MessageViewSet
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from apps.administration.exports import export_students, export_invoices, export_flights
+
+
+class DashboardKPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        from apps.students.models import Student
+        from apps.ground_training.models import Course
+        from apps.flight_training.models import Aircraft, FlightLesson
+        from apps.administration.models import Invoice
+        from apps.quality_safety.models import Audit, NonConformity
+        fl = FlightLesson.objects.all()
+        inv = Invoice.objects.all()
+        return Response({"students": Student.objects.count(), "courses": Course.objects.count(), "aircraft": Aircraft.objects.count(), "flights": fl.count(), "flight_hours": round(sum(float(f.flight_duration or 0) for f in fl), 1), "revenue": round(sum(float(i.amount) for i in inv.filter(status="paid")), 2), "outstanding": round(sum(float(i.amount) for i in inv.filter(status__in=["issued","partially_paid"])), 2), "audits": Audit.objects.filter(status="planned").count(), "ncrs": NonConformity.objects.filter(status="open").count()})
+from apps.ground_training.pdf import generate_attendance_pdf
+from apps.quality_safety.pdf import generate_audit_report_pdf
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -65,12 +83,16 @@ router.register(r'capas', CAPAViewSet)
 router.register(r'risk-assessments', RiskAssessmentViewSet)
 router.register(r'safety-events', SafetyEventViewSet)
 router.register(r'students', StudentViewSet)
+router.register(r'contracts', ContractViewSet)
+router.register(r'quality-documents', QualityDocumentViewSet, basename='qdoc')
+router.register(r'maintenance-records', MaintenanceRecordViewSet, basename='maint')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'messages', MessageViewSet, basename='message')
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
     path('students/flight-log/', FlightLogViewSet.as_view({'get': 'list'}), name='flight-log'),
+    path('dashboard/kpis/', DashboardKPIView.as_view(), name='dashboard-kpis'),
     path('export/students/', export_students, name='export-students'),
     path('export/invoices/', export_invoices, name='export-invoices'),
     path('export/flights/', export_flights, name='export-flights'),
