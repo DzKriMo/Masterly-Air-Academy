@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 interface Msg { id: string; sender_name: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
 
 export default function InstructorMessagesPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [received, setReceived] = useState<Msg[]>([]);
   const [sent, setSent] = useState<Msg[]>([]);

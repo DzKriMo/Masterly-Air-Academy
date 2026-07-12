@@ -9,7 +9,7 @@ interface Invoice { id: string; invoice_number: string; student_name: string; am
 interface Student { id: string; first_name: string; last_name: string; student_number: string; }
 
 export default function InvoicesPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [students, setStudents] = useState<Student[]>([]);

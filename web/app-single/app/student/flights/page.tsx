@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; }
 
 export default function StudentFlightsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [log, setLog] = useState<{ total_flight_hours: number; total_lessons: number; lessons: FlightEntry[] } | null>(null);
   const [loading, setLoading] = useState(true);

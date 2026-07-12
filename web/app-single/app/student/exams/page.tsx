@@ -9,7 +9,7 @@ interface Exam { id: string; code: string; title: string; program: string; type:
 interface Attempt { id: string; exam_code: string; attempt: number; score: number | null; is_passed: boolean | null; completed_at: string | null; }
 
 export default function StudentExamsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);

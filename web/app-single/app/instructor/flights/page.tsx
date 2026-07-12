@@ -15,7 +15,7 @@ interface Flight {
 interface Aircraft { id: string; registration: string; model: string; }
 
 export default function FlightsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);

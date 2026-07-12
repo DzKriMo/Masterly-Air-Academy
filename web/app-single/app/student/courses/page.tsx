@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 interface Course { id: string; title: string; subject_code: string; scheduled_date: string; start_time: string; end_time: string; status: string; room_name: string | null; enrollment_count: number; }
 
 export default function StudentCoursesPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);

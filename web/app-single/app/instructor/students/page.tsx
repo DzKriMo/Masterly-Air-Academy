@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 interface Student { id: string; student_number: string; first_name: string; last_name: string; full_name: string; program: string; status: string; enrollment_date: string; }
 
 export default function InstructorStudentsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");

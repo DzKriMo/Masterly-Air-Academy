@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 
 export default function StudentSchedulePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
