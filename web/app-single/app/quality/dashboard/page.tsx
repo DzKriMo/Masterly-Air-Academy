@@ -35,7 +35,7 @@ export default function QualityDashboard() {
     try{const r=await api.post("/safety-events/",reportForm);if(r.success){setMsg(t('quality.reported', 'Reported.'));setShowReport(false);setReportForm({title:"",type:"incident",description:"",confidential:false})}else{setMsg(r.message||t('common.error', 'Failed'))}}catch{setMsg(t('common.error', 'Connection error'))}};
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
+    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <h1 className="text-lg font-bold text-white">{tabLabels[tab]}</h1>
         <div className="flex items-center gap-3">

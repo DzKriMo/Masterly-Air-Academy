@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Masterly Air Academy",
+    "slug": "masterly-air-academy",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/logo.png",
+    "scheme": "masterly-air-academy",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dz.masterly.airacademy",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera is needed to scan documents",
+        "NSFaceIDUsageDescription": "Face ID is used for quick sign-in"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-local-authentication",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Masterly Air Academy to access your camera."
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

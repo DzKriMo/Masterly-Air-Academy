@@ -148,7 +148,7 @@ export default function TakeExamPage() {
   if (submitted && result) {
     return (
       <div className="min-h-screen bg-navy-900">
-        <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
+        <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
           <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-3">
             <Image src="/logo.png" alt="MAA" width={110} height={110} />
             <div><h1 className="text-lg font-bold text-white">{t("exam.resultsTitle")}</h1>
@@ -186,7 +186,7 @@ export default function TakeExamPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {error && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50"><ErrorCard message={error} onRetry={startExam} /></div>}
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
+      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="MAA" width={110} height={110} />

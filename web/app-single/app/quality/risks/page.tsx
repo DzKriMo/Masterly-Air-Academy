@@ -53,7 +53,7 @@ export default function RisksPage() {
     },
   ];
 
-  return (<div><nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('quality.riskAssessments', 'Risk Assessments')}</h1></div></nav>
+  return (<div><nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('quality.riskAssessments', 'Risk Assessments')}</h1></div></nav>
     <main className="px-6 py-8">{isLoading?<LoadingSkeleton type="table" rows={5}/>:<>
       <div className="mb-8"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('quality.riskMatrix', 'Risk Matrix (Probability × Severity)')}</h3>
         <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">

@@ -41,7 +41,7 @@ services:
       MINIO_BUCKET: masterly-documents
       MEILI_HOST: http://meilisearch:7700
       MEILI_KEY: ${MEILI_KEY:-masterkey}
-      ALLOWED_HOSTS: 185.185.80.188,localhost,127.0.0.1,api
+      ALLOWED_HOSTS: 185.185.80.188,localhost,127.0.0.1,api,172.20.10.2
       CORS_ALLOWED_ORIGINS: http://185.185.80.188:7788,http://localhost,http://127.0.0.1
     depends_on:
       db:

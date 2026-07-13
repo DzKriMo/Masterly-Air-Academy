@@ -87,7 +87,7 @@ export default function SafetyPage() {
   );
 
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><h1 className="text-lg font-bold text-white">{t('quality.safetyEvents', 'Safety Events')}</h1><button onClick={()=>setShow(!show)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm hover:bg-red-500 hover:text-white">{show ? t('common.cancel', 'Cancel') : t('quality.reportEvent', '+ Report Event')}</button></div></nav>
+    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><h1 className="text-lg font-bold text-white">{t('quality.safetyEvents', 'Safety Events')}</h1><button onClick={()=>setShow(!show)} className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm hover:bg-red-500 hover:text-white">{show ? t('common.cancel', 'Cancel') : t('quality.reportEvent', '+ Report Event')}</button></div></nav>
     <main className="px-6 py-8">
       <ModalForm open={show} onClose={()=>setShow(false)} title={t('quality.reportSafetyEvent', 'Report Safety Event')} footer={modalFooter}>
         <form id="safety-form" onSubmit={handleReport} className="space-y-4">

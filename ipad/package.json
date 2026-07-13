@@ -1,0 +1,42 @@
+{
+  "name": "masterly-air-academy-ipad",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "lint": "expo lint"
+  },
+  "dependencies": {
+    "@react-native-community/netinfo": "11.4.1",
+    "@tanstack/react-query": "^5.62.0",
+    "axios": "^1.7.0",
+    "expo": "~52.0.0",
+    "expo-asset": "~11.0.5",
+    "expo-camera": "~16.0.0",
+    "expo-image": "~2.0.0",
+    "expo-local-authentication": "~14.0.0",
+    "expo-notifications": "~0.29.0",
+    "expo-print": "~13.0.0",
+    "expo-router": "~4.0.0",
+    "expo-secure-store": "~14.0.0",
+    "expo-sharing": "~13.0.0",
+    "i18next": "^24.0.0",
+    "lucide-react-native": "^0.460.0",
+    "react": "18.3.1",
+    "react-i18next": "^15.1.0",
+    "react-native": "0.76.7",
+    "react-native-gesture-handler": "~2.20.2",
+    "react-native-mmkv": "^3.1.0",
+    "react-native-reanimated": "~3.16.1",
+    "react-native-safe-area-context": "4.14.1",
+    "react-native-screens": "~4.4.0",
+    "zod": "^3.23.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.0",
+    "typescript": "^5.3.0",
+    "@babel/core": "^7.25.0"
+  }
+}

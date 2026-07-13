@@ -46,7 +46,7 @@ export default function QualityDocumentsPage() {
     },
   ];
 
-  return (<div><nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('quality.documents', 'Quality Documents')}</h1></div></nav>
+  return (<div><nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('quality.documents', 'Quality Documents')}</h1></div></nav>
     <main className="px-6 py-8">{isLoading?<LoadingSkeleton type="table" rows={5}/>:docs.length===0?<EmptyState message={t('quality.noDocuments', 'No documents found.')}/>:<>
       <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchDocuments', 'Search documents...')}/>
       <DataTable columns={columns} data={filtered} keyField="id"/>

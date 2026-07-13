@@ -104,7 +104,7 @@ export default function StudentCertificatesPage() {
   ];
 
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
+    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <h1 className="text-lg font-bold text-white">{t('student.certificates')}</h1>
         <ExportButton
