@@ -2,133 +2,166 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoiceSchema } from "@/lib/validators";
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { ErrorCard } from "@/components/error-card";
+import { EmptyState } from "@/components/empty-state";
+import { DataTable } from "@/components/data-table";
+import type { Column } from "@/components/data-table";
+import { FilterBar } from "@/components/filter-bar";
+import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { useToast } from "@/components/toast";
+import { useTranslation } from "@/lib/use-translation";
 
 interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
-interface Student { id: string; first_name: string; last_name: string; student_number: string; }
 
 export default function InvoicesPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filter, setFilter] = useState("");
+  const qc = useQueryClient();
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
-  const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const { t } = useTranslation();
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/login"); } }, [isLoading, isAuthenticated, router]);
+  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
 
-  const token = () => { try { return JSON.parse(sessionStorage.getItem("maa_session") || "{}").token; } catch { return ""; } };
+  const { data: invoicesData, isLoading: loading } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => api.get<any>("/invoices/"),
+    enabled: isAuthenticated,
+  });
+  const invoices: Invoice[] = invoicesData?.results || [];
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetch("/api/invoices/", { headers: { Authorization: `Bearer ${token()}` } })
-      .then(r => r.json()).then(d => setInvoices(d.results || [])).finally(() => setLoading(false));
-    fetch("/api/students/", { headers: { Authorization: `Bearer ${token()}` } })
-      .then(r => r.json()).then(d => setStudents(d.results || d || []));
-  }, [isAuthenticated]);
+  const { data: studentsData } = useQuery({
+    queryKey: ["students"],
+    queryFn: () => api.get<any>("/students/"),
+    enabled: isAuthenticated,
+  });
+  const students = studentsData?.results || [];
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const createInvoice = useMutation({
+    mutationFn: async (data: typeof form) => {
+      return await api.post("/invoices/", { ...data, amount: parseFloat(data.amount) });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      setShowForm(false);
+      setForm({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
+      showToast("success", t('finance.invoiceCreated', 'Invoice created.'));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
+  const recordPayment = useMutation({
+    mutationFn: async ({ inv, amount }: { inv: Invoice; amount: number }) => {
+      await api.post("/payments/", { student: "", invoice: inv.id, amount, currency: inv.currency, method: "bank_transfer" });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      showToast("success", t('finance.paymentRecorded', 'Payment recorded.'));
+    },
+    onError: () => showToast("error", t('finance.paymentFailed', 'Failed to record payment')),
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     const v = invoiceSchema.safeParse(form);
-    if (!v.success) { setMsg(v.error.errors[0].message); return; }
-    try {
-      const res = await fetch("/api/invoices/", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setInvoices([data, ...invoices]);
-        setShowForm(false); setMsg("Invoice created.");
-        setForm({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
-      } else {
-        const d = await res.json();
-        setMsg(d.message || Object.values(d).flat().join(", ") || "Failed");
-      }
-    } catch { setMsg("Connection error"); }
+    if (!v.success) { showToast("error", v.error.errors[0].message); return; }
+    createInvoice.mutate(form);
   };
 
-  const handleRecordPayment = async (inv: Invoice) => {
-    const amt = prompt(`Enter payment amount for ${inv.invoice_number} (Balance: ${parseFloat(inv.balance).toLocaleString()} ${inv.currency}):`, inv.balance);
+  const handleRecordPayment = (inv: Invoice) => {
+    const amt = prompt(`${t('finance.enterPaymentAmount', 'Enter payment amount for')} ${inv.invoice_number} (${t('finance.balance', 'Balance')}: ${parseFloat(inv.balance).toLocaleString()} ${inv.currency}):`, inv.balance);
     if (!amt) return;
-    try {
-      const res = await fetch("/api/payments/", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ student: "", invoice: inv.id, amount: parseFloat(amt), currency: inv.currency, method: "bank_transfer" }),
-      });
-      if (res.ok) {
-        const updated = await fetch("/api/invoices/", { headers: { Authorization: `Bearer ${token()}` } }).then(r => r.json());
-        setInvoices(updated.results || []);
-        setMsg("Payment recorded.");
-      }
-    } catch { setMsg("Failed to record payment"); }
+    recordPayment.mutate({ inv, amount: parseFloat(amt) });
   };
 
-  const filtered = filter ? invoices.filter(i => i.status === filter) : invoices;
+  const filterOptions: FilterOption[] = [
+    { key: "status", label: t('finance.allStatuses', 'All Statuses'), options: [
+      { value: "draft", label: t('finance.draft', 'Draft') },
+      { value: "issued", label: t('finance.issued', 'Issued') },
+      { value: "paid", label: t('finance.paid', 'Paid') },
+      { value: "partially_paid", label: t('finance.partiallyPaid', 'Partially Paid') },
+      { value: "overdue", label: t('finance.overdue', 'Overdue') },
+      { value: "cancelled", label: t('finance.cancelled', 'Cancelled') },
+    ]},
+  ];
+
+  const filtered = invoices.filter((i: Invoice) => {
+    if (filters.status && i.status !== filters.status) return false;
+    if (search && !i.invoice_number?.toLowerCase().includes(search.toLowerCase()) && !i.student_name?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const columns: Column<any>[] = [
+    { key: "invoice_number", header: t('finance.invoice', 'Invoice'), render: (inv) => (
+      <div>
+        <span className="text-white font-medium text-sm">{inv.invoice_number}</span>
+        <span className={`ml-2 text-xs px-2 py-0.5 rounded font-medium ${inv.status === 'paid' ? 'bg-green-500/10 text-green-400' : inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' : inv.status === 'cancelled' ? 'bg-gray-500/10 text-gray-400' : 'bg-blue-500/10 text-blue-400'}`}>{inv.status}</span>
+      </div>
+    )},
+    { key: "student_name", header: t('finance.student', 'Student'), render: (inv) => <span className="text-gray-400 text-sm">{inv.student_name}</span> },
+    { key: "due_at", header: t('finance.dueDate', 'Due Date'), render: (inv) => <span className="text-xs text-gray-400">{inv.due_at || t('common.na', 'N/A')}</span> },
+    { key: "balance", header: t('finance.balance', 'Balance'), render: (inv) => <span className="text-xs text-gray-400">{parseFloat(inv.balance).toLocaleString()} {inv.currency}</span> },
+    { key: "amount", header: t('finance.amount', 'Amount'), render: (inv) => <span className="text-white font-bold">{parseFloat(inv.amount).toLocaleString()} {inv.currency}</span> },
+    {
+      key: "actions",
+      header: "",
+      sortable: false,
+      render: (inv) => (
+        <div className="flex items-center gap-2">
+          <button onClick={(e)=>{e.stopPropagation(); const a=document.createElement("a"); a.href=`/api/invoices/${inv.id}/pdf/`; a.target="_blank"; a.click();}} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
+          {inv.status !== 'paid' && inv.status !== 'cancelled' && (
+            <button onClick={(e)=>{e.stopPropagation(); handleRecordPayment(inv);}} disabled={recordPayment.isPending} className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded text-xs hover:bg-green-500 hover:text-white transition-colors">{t('finance.pay', 'Pay')}</button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const modalFooter = (
+    <>
+      <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">{t('common.cancel', 'Cancel')}</button>
+      <button type="submit" form="invoice-form" disabled={createInvoice.isPending} className="px-6 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">{createInvoice.isPending ? t('common.loading', 'Creating...') : t('finance.createInvoice', 'Create Invoice')}</button>
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-navy-900">
+    <div className="flex-1 min-w-0">
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/mast.svg" alt="MAA" width={110} height={110} className="rounded-lg" />
-            <div><h1 className="text-lg font-bold text-white">Invoices</h1>
-              <button onClick={() => router.push("/finance/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">Back to Finance</button></div>
-          </div>
-          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">{showForm ? "Cancel" : "+ New Invoice"}</button>
+          <h1 className="text-lg font-bold text-white">{t('finance.invoices', 'Invoices')}</h1>
+          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">{showForm ? t('common.cancel', 'Cancel') : t('finance.createInvoice', '+ New Invoice')}</button>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {msg && <div className="mb-4 p-3 rounded-lg text-sm bg-navy-800 border border-navy-700 text-gray-300">{msg}</div>}
+        {error && <ErrorCard message={error} onRetry={() => setError(null)}/>}
 
-        {showForm && (
-          <form onSubmit={handleCreate} className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8">
-            <h3 className="text-lg font-semibold text-white mb-4">Create Invoice</h3>
+        <ModalForm open={showForm} onClose={() => setShowForm(false)} title={t('finance.createInvoice', 'Create Invoice')} wide footer={modalFooter}>
+          <form id="invoice-form" onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><label className="block text-sm text-gray-400 mb-1">Student</label><select value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="">Select...</option>{students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_number})</option>)}</select></div>
-              <div><label className="block text-sm text-gray-400 mb-1">Type</label><select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="tuition">Tuition</option><option value="exam_fee">Exam Fee</option><option value="flight_hours">Flight Hours</option><option value="other">Other</option></select></div>
-              <div><label className="block text-sm text-gray-400 mb-1">Amount (DZD)</label><input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
-              <div><label className="block text-sm text-gray-400 mb-1">Description</label><input value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
-              <div><label className="block text-sm text-gray-400 mb-1">Due Date</label><input type="date" value={form.due_at} onChange={e => setForm({...form, due_at: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">{t('finance.student', 'Student')}</label><select value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="">{t('common.select', 'Select...')}</option>{students.map((s:any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_number})</option>)}</select></div>
+              <div><label className="block text-sm text-gray-400 mb-1">{t('finance.type', 'Type')}</label><select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="tuition">{t('finance.tuition', 'Tuition')}</option><option value="exam_fee">{t('finance.examFee', 'Exam Fee')}</option><option value="flight_hours">{t('finance.flightHours', 'Flight Hours')}</option><option value="other">{t('finance.other', 'Other')}</option></select></div>
+              <div><label className="block text-sm text-gray-400 mb-1">{t('finance.amountDZD', 'Amount (DZD)')}</label><input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">{t('finance.description', 'Description')}</label><input value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">{t('finance.dueDate', 'Due Date')}</label><input type="date" value={form.due_at} onChange={e => setForm({...form, due_at: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
             </div>
-            <button type="submit" className="mt-4 px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">Create Invoice</button>
           </form>
-        )}
+        </ModalForm>
 
-        <div className="flex gap-2 mb-6">
-          {["", "draft", "issued", "paid", "partially_paid", "overdue"].map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === f ? "bg-gold-500 text-navy-900" : "bg-navy-800 text-gray-400 border border-navy-700"}`}>{f || "All"}</button>
-          ))}
-        </div>
-
-        {loading ? <p className="text-gray-500 text-sm">Loading...</p> : (
-          <div className="space-y-2">
-            {filtered.map(inv => (
-              <div key={inv.id} className="bg-navy-800 border border-navy-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-white font-medium text-sm">{inv.invoice_number}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${inv.status === 'paid' ? 'bg-green-500/10 text-green-400' : inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'}`}>{inv.status}</span>
-                  </div>
-                  <p className="text-sm text-gray-400">{inv.student_name} | Due: {inv.due_at || "N/A"} | Balance: {parseFloat(inv.balance).toLocaleString()} {inv.currency}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-white font-bold">{parseFloat(inv.amount).toLocaleString()} {inv.currency}</span>
-                  {inv.status !== 'paid' && inv.status !== 'cancelled' && (
-                    <button onClick={() => handleRecordPayment(inv)} className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded text-xs hover:bg-green-500 hover:text-white transition-colors">Record Payment</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && <p className="text-gray-500 text-center py-8">No invoices found.</p>}
-          </div>
-        )}
+        {loading ? <LoadingSkeleton type="table" rows={8}/> : filtered.length === 0 && invoices.length === 0 ? <EmptyState message={t('finance.noInvoices', 'No invoices found.')} /> : <>
+          <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('finance.searchInvoices', 'Search invoices...')}/>
+          <DataTable columns={columns} data={filtered} keyField="id"/>
+        </>}
       </main>
     </div>
   );

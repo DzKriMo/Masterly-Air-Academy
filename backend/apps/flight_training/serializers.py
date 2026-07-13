@@ -6,6 +6,22 @@ from .models import (
 )
 
 
+class FlightProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlightProgram
+        fields = ['id', 'code', 'title', 'description', 'program', 'status']
+
+
+class FlightLessonTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlightLessonTemplate
+        fields = [
+            'id', 'program', 'lesson_number', 'title', 'title_ar', 'title_fr', 'objective',
+            'competencies', 'planned_duration', 'briefing_time',
+            'flight_time', 'debriefing_time', 'success_criteria',
+        ]
+
+
 class AircraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = Aircraft
@@ -62,11 +78,24 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        request = self.context.get('request')
+
+        if not data.get('instructor') and request:
+            from apps.students.models import FlightInstructor
+            try:
+                fi = FlightInstructor.objects.get(user=request.user)
+                data['instructor'] = fi
+            except FlightInstructor.DoesNotExist:
+                raise serializers.ValidationError({'instructor': 'No flight instructor profile found for this user.'})
+
+        if not data.get('instructor'):
+            raise serializers.ValidationError({'instructor': 'This field is required.'})
+
         from .services import ConflictDetectionService
         conflicts = ConflictDetectionService.resolve_all(
-            student_id=data.get('student').id,
-            instructor_id=data.get('instructor').id,
-            aircraft_id=data.get('aircraft').id,
+            student_id=data['student'].id,
+            instructor_id=data['instructor'].id,
+            aircraft_id=data['aircraft'].id,
             start_time=data.get('start_time'),
             end_time=data.get('end_time'),
         )

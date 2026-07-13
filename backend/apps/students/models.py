@@ -25,7 +25,7 @@ class Student(models.Model):
     status = models.CharField(max_length=20, default='active')
     program = models.CharField(max_length=10, choices=TrainingProgram.choices)
     academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.SET_NULL, null=True, blank=True)
-    main_instructor = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_students')
+    main_instructor = models.ForeignKey('FlightInstructor', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_students')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

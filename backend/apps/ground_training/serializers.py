@@ -23,7 +23,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Module
-        fields = ['id', 'subject', 'title', 'description', 'duration', 'order', 'status', 'lessons', 'documents']
+        fields = ['id', 'subject', 'title', 'title_ar', 'title_fr', 'description', 'description_ar', 'description_fr', 'duration', 'order', 'status', 'lessons', 'documents']
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -67,7 +67,7 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             'id', 'subject', 'subject_code', 'instructor', 'instructor_name',
-            'academic_year', 'title', 'scheduled_date', 'start_time', 'end_time',
+            'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time',
             'room', 'room_name', 'status', 'notes', 'enrollment_count',
             'created_at', 'updated_at',
         ]
@@ -80,12 +80,29 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class CourseCreateSerializer(serializers.ModelSerializer):
-    """Used for creating courses — validates room availability."""
+    """Used for creating courses — auto-assigns instructor and academic_year."""
     class Meta:
         model = Course
-        fields = ['subject', 'instructor', 'academic_year', 'title', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes']
+        fields = ['subject', 'instructor', 'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes']
 
     def validate(self, data):
+        request = self.context.get('request')
+
+        if not data.get('instructor') and request:
+            from apps.students.models import GroundInstructor
+            try:
+                gi = GroundInstructor.objects.get(user=request.user)
+                data['instructor'] = gi
+            except GroundInstructor.DoesNotExist:
+                raise serializers.ValidationError({'instructor': 'No instructor profile found for this user.'})
+
+        if not data.get('academic_year'):
+            from apps.core.models import AcademicYear
+            ay = AcademicYear.objects.filter(is_active=True).first()
+            if not ay:
+                raise serializers.ValidationError({'academic_year': 'No active academic year configured.'})
+            data['academic_year'] = ay
+
         from .services import RoomConflictService
         room = data.get('room')
         date = data.get('scheduled_date')
@@ -96,6 +113,12 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             conflicts = RoomConflictService.check_room_conflicts(room, date, start, end)
             if conflicts:
                 raise serializers.ValidationError({'room': f'Room is already booked: {conflicts[0].title}'})
+
+        if not data.get('instructor'):
+            raise serializers.ValidationError({'instructor': 'This field is required.'})
+        if not data.get('academic_year'):
+            raise serializers.ValidationError({'academic_year': 'This field is required.'})
+
         return data
 
 
@@ -123,11 +146,11 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
 
 class BulkAttendanceSerializer(serializers.Serializer):
     """Accepts a list of attendance records for bulk creation."""
-    course_id = serializers.UUIDField()
-    date = serializers.DateField()
+    course_id = serializers.UUIDField(required=False)
+    date = serializers.DateField(required=False)
     records = serializers.ListField(
         child=serializers.DictField(
-            child=serializers.CharField(),
+            child=serializers.CharField(allow_blank=True),
             allow_empty=False,
         )
     )

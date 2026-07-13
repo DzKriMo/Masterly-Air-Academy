@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 
 const langs = [
@@ -10,8 +9,6 @@ const langs = [
 ];
 
 export function LanguageSwitcher() {
-  const router = useRouter();
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,12 +18,25 @@ export function LanguageSwitcher() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const segments = pathname.split("/").filter(Boolean);
-  const currentLocale = langs.find(l => l.code === segments[0]) ? segments[0] : "en";
+  function readCookieLocale(): string {
+    try {
+      const m = document.cookie.match(/(?:^|; )locale=([^;]*)/);
+      if (m && (m[1] === "fr" || m[1] === "ar")) return m[1];
+    } catch {}
+    return "en";
+  }
+
+  const [currentLocale, setCurrentLocale] = useState("en");
+
+  useEffect(() => {
+    setCurrentLocale(readCookieLocale());
+  }, []);
+
   const active = langs.find(l => l.code === currentLocale) || langs[0];
 
   const switchTo = (code: string) => {
     document.cookie = `locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
+    setCurrentLocale(code);
     window.location.reload();
   };
 

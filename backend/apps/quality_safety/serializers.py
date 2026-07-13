@@ -8,7 +8,11 @@ class AuditSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Audit
-        fields = ['id', 'title', 'type', 'scope', 'scheduled_date', 'completed_date', 'status', 'lead_auditor', 'lead_auditor_name', 'findings', 'ncr_count', 'created_at']
+        fields = [
+            'id', 'title', 'type', 'scope', 'scheduled_date', 'completed_date',
+            'status', 'lead_auditor', 'lead_auditor_name', 'findings',
+            'report_url', 'ncr_count', 'created_at',
+        ]
 
     def get_lead_auditor_name(self, obj):
         return obj.lead_auditor.email if obj.lead_auditor else None
@@ -24,7 +28,11 @@ class NonConformitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = NonConformity
-        fields = ['id', 'audit', 'audit_title', 'title', 'description', 'severity', 'responsible', 'responsible_name', 'due_date', 'status', 'root_cause', 'closing_notes', 'capa_count', 'created_at']
+        fields = [
+            'id', 'audit', 'audit_title', 'title', 'description', 'severity',
+            'responsible', 'responsible_name', 'due_date', 'status',
+            'root_cause', 'closing_notes', 'closed_at', 'capa_count', 'created_at',
+        ]
 
     def get_responsible_name(self, obj):
         return obj.responsible.email if obj.responsible else None
@@ -38,13 +46,21 @@ class CAPASerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CAPA
-        fields = ['id', 'non_conformity', 'ncr_title', 'type', 'title', 'description', 'responsible', 'due_date', 'status', 'closing_notes', 'created_at']
+        fields = [
+            'id', 'non_conformity', 'ncr_title', 'type', 'title', 'description',
+            'responsible', 'due_date', 'status', 'closing_notes',
+            'validation_date', 'created_at',
+        ]
 
 
 class RiskAssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = RiskAssessment
-        fields = ['id', 'hazard', 'description', 'probability', 'severity', 'risk_level', 'mitigation_measures', 'status', 'reeval_date']
+        fields = [
+            'id', 'hazard', 'description', 'probability', 'severity',
+            'risk_level', 'mitigation_measures', 'responsible', 'status',
+            'reeval_date',
+        ]
 
 
 class SafetyEventSerializer(serializers.ModelSerializer):
@@ -53,7 +69,10 @@ class SafetyEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SafetyEvent
-        fields = ['id', 'title', 'type', 'description', 'reported_by', 'reporter_name', 'confidential', 'status', 'analysis', 'created_at']
+        fields = [
+            'id', 'title', 'type', 'description', 'reported_by',
+            'reporter_name', 'confidential', 'status', 'analysis', 'created_at',
+        ]
 
     def get_reporter_name(self, obj):
         return obj.reported_by.email if obj.reported_by and not obj.confidential else 'Anonymous'
@@ -62,4 +81,7 @@ class SafetyEventSerializer(serializers.ModelSerializer):
 class QualityDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = QualityDocument
-        fields = ['id', 'number', 'title', 'type', 'version', 'issue_date', 'revision_date', 'status', 'file_url']
+        fields = [
+            'id', 'number', 'title', 'type', 'version', 'issue_date',
+            'revision_date', 'status', 'file_url',
+        ]

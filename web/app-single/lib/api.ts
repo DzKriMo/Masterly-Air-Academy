@@ -4,7 +4,7 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
-interface ApiResponse<T = unknown> {
+interface ApiResponse<T = any> {
   success: boolean;
   data: T;
   message?: string;
@@ -14,6 +14,7 @@ interface ApiResponse<T = unknown> {
 class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private onLogoutHandler: (() => void) | null = null;
 
   setTokens(access: string, refresh: string | null): void {
     this.accessToken = access;
@@ -33,10 +34,15 @@ class ApiClient {
     this.refreshToken = null;
   }
 
-  async request<T = unknown>(
+  /** Register a callback invoked when the session is forcibly cleared (e.g. 401 after failed refresh). */
+  onLogout(handler: () => void): void {
+    this.onLogoutHandler = handler;
+  }
+
+  async request<T = any>(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     const url = `${API_BASE}/api${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -69,19 +75,25 @@ class ApiClient {
 
     if (response.status === 401) {
       this.clearAuth();
+      this.onLogoutHandler?.();
     }
 
-    const data = await response.json();
+    const raw = await response.json();
 
     if (!response.ok) {
       throw new ApiError(
-        data.message || data.detail || `Request failed (${response.status})`,
+        raw.message || raw.detail || `Request failed (${response.status})`,
         response.status,
-        data.errors
+        raw.errors
       );
     }
 
-    return data;
+    // Unwrap standard API envelope {success, data, meta} if present
+    if (raw && typeof raw === 'object' && raw.success === true && 'data' in raw) {
+      return raw.data;
+    }
+
+    return raw;
   }
 
   private async tryRefreshToken(): Promise<boolean> {
@@ -107,25 +119,25 @@ class ApiClient {
     return false;
   }
 
-  async get<T = unknown>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T = unknown>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+  async post<T = any>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     });
   }
 
-  async put<T = unknown>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+  async put<T = any>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
     });
   }
 
-  async delete<T = unknown>(endpoint: string): Promise<ApiResponse<T>> {
+  async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 }

@@ -56,6 +56,19 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 pass
         serializer.save(invoice_number=f'INV-{timezone.now().year}-{num:04d}')
 
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        from django.utils import timezone as tz
+        overdue_invoices = self.get_queryset().filter(
+            status='overdue'
+        ).order_by('-due_at')
+        page = self.paginate_queryset(overdue_invoices)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(overdue_invoices, many=True)
+        return Response(serializer.data)
+
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('student', 'invoice').all()
@@ -65,15 +78,26 @@ class PaymentViewSet(viewsets.ModelViewSet):
     filterset_fields = ['student', 'invoice', 'method', 'currency']
 
     def perform_create(self, serializer):
+        from apps.notifications.services import NotificationService
         payment = serializer.save()
         # Auto-update invoice status
         invoice = payment.invoice
         if invoice:
             paid = sum(float(p.amount) for p in invoice.payments.all())
+            was_overdue = invoice.status == 'overdue'
             if paid >= float(invoice.amount):
                 invoice.status = 'paid'
                 invoice.paid_at = timezone.now()
                 invoice.save()
+                # If was overdue and now paid, notify finance
+                if was_overdue:
+                    NotificationService.notify_roles(
+                        ['finance_manager', 'system_admin'],
+                        'payment_received',
+                        'Overdue Invoice Paid',
+                        f'Invoice #{invoice.invoice_number} ({invoice.student.full_name}) was overdue and is now fully paid.',
+                        {'invoice_id': str(invoice.id), 'student': invoice.student.full_name}
+                    )
             elif paid > 0:
                 invoice.status = 'partially_paid'
                 invoice.save()

@@ -33,6 +33,8 @@ class FlightLessonTemplate(models.Model):
     program = models.ForeignKey(FlightProgram, on_delete=models.CASCADE, related_name='lesson_templates')
     lesson_number = models.IntegerField()
     title = models.CharField(max_length=255)
+    title_ar = models.CharField(max_length=255, blank=True, null=True)
+    title_fr = models.CharField(max_length=255, blank=True, null=True)
     objective = models.TextField(blank=True, null=True)
     competencies = models.JSONField(default=list, blank=True)
     planned_duration = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)

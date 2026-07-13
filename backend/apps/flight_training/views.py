@@ -5,10 +5,12 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
+    FlightProgram, FlightLessonTemplate,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
 )
 from .serializers import (
     AircraftSerializer, AircraftListSerializer,
+    FlightProgramSerializer, FlightLessonTemplateSerializer,
     FlightLessonSerializer, FlightLessonCreateSerializer,
     FlightPreparationSerializer, FlightEvaluationSerializer,
     ResourceBookingSerializer, InstructorAvailabilitySerializer,
@@ -16,6 +18,21 @@ from .serializers import (
 )
 from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
+
+
+class FlightProgramViewSet(viewsets.ModelViewSet):
+    queryset = FlightProgram.objects.all()
+    serializer_class = FlightProgramSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+
+
+class FlightLessonTemplateViewSet(viewsets.ModelViewSet):
+    queryset = FlightLessonTemplate.objects.all()
+    serializer_class = FlightLessonTemplateSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['program']
 
 
 class AircraftViewSet(viewsets.ModelViewSet):
@@ -118,6 +135,64 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         )
         return Response({'has_conflicts': len(conflicts) > 0, 'conflicts': conflicts})
 
+    @action(detail=True, methods=['post'])
+    def authorize_solo(self, request, pk=None):
+        lesson = self.get_object()
+
+        # Validate student has valid medical certificate
+        from apps.students.models import MedicalCertificate
+        from django.utils import timezone
+        valid_medical = MedicalCertificate.objects.filter(
+            student=lesson.student, status='valid',
+            expiry_date__gte=timezone.now().date()
+        ).exists()
+        if not valid_medical:
+            return Response({'error': 'Student does not have a valid medical certificate'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate minimum 15 flight hours
+        from django.db.models import Sum
+        total_hours = FlightLesson.objects.filter(
+            student=lesson.student, status=FlightStatus.COMPLETED
+        ).aggregate(total=Sum('flight_duration'))['total'] or 0
+        if float(total_hours) < 15:
+            return Response({'error': 'Student must have at least 15 flight hours'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate competencies acquired exist
+        if not lesson.competencies_acquired or len(lesson.competencies_acquired) == 0:
+            return Response({'error': 'No competencies acquired recorded for this lesson'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update pedagogical note
+        lesson.pedagogical_note = (lesson.pedagogical_note or '') + ' | SOLO AUTHORIZED'
+        lesson.save()
+
+        # Create notifications
+        from apps.notifications.services import NotificationService
+        NotificationService.notify(
+            lesson.student.user, 'solo_authorized',
+            'Solo Flight Authorized',
+            f'You have been authorized for solo flight by {lesson.instructor.first_name} {lesson.instructor.last_name}',
+            {'lesson_id': str(lesson.id)}
+        )
+        NotificationService.notify_role('chief_flight_instructor', 'solo_authorized',
+            'Solo Flight Authorized',
+            f'Solo authorized for {lesson.student.full_name}',
+            {'lesson_id': str(lesson.id)}
+        )
+
+        # Log to AuditLog
+        from apps.core.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action='validate',
+            entity='FlightLesson',
+            entity_id=lesson.id,
+            new_values={'pedagogical_note': lesson.pedagogical_note, 'solo_authorized': True},
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+        )
+
+        return Response({'status': 'solo_authorized', 'lesson_id': str(lesson.id)})
+
 
 class FlightPreparationViewSet(viewsets.ModelViewSet):
     queryset = FlightPreparation.objects.select_related('flight_lesson').all()
@@ -135,7 +210,8 @@ class ResourceBookingViewSet(viewsets.ModelViewSet):
 
 
 class InstructorAvailabilityViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'schedule.view'
 
     def get_queryset(self):
         qs = InstructorAvailability.objects.all()

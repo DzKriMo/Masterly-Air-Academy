@@ -4,7 +4,7 @@ from io import BytesIO
 from .models import AttendanceRecord, Course
 
 
-def generate_attendance_pdf(course_id):
+def generate_attendance_pdf(request, course_id):
     """Generate a PDF attendance report for a specific course."""
     course = Course.objects.get(id=course_id)
     records = AttendanceRecord.objects.filter(course=course).select_related('student')
@@ -39,7 +39,7 @@ td {{ padding: 8px; border-bottom: 1px solid #eee; font-size: 11px; }}
         from weasyprint import HTML
         pdf = HTML(string=html).write_pdf()
         resp = HttpResponse(pdf, content_type="application/pdf")
-        resp["Content-Disposition"] = f'attachment; filename="attendance-{course.id[:8]}.pdf"'
+        resp["Content-Disposition"] = f'attachment; filename="attendance-{str(course.id)[:8]}.pdf"'
         return resp
     except ImportError:
         return HttpResponse("PDF generation not available", status=501)

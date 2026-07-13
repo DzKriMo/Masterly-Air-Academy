@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from .models import Audit, NonConformity
 
 
-def generate_audit_report_pdf(audit_id):
+def generate_audit_report_pdf(request, audit_id):
     audit = Audit.objects.get(id=audit_id)
     ncrs = NonConformity.objects.filter(audit=audit).select_related('responsible')
 
@@ -31,7 +31,7 @@ td {{ padding: 8px; border-bottom: 1px solid #eee; font-size: 11px; }}
         from weasyprint import HTML
         pdf = HTML(string=html).write_pdf()
         resp = HttpResponse(pdf, content_type="application/pdf")
-        resp["Content-Disposition"] = f'attachment; filename="audit-{audit_id[:8]}.pdf"'
+        resp["Content-Disposition"] = f'attachment; filename="audit-{str(audit_id)[:8]}.pdf"'
         return resp
     except ImportError:
         return HttpResponse("PDF generation not available", status=501)

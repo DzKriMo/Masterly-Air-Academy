@@ -42,8 +42,8 @@ export function getDefaultPortal(role: string): string {
   return PORTAL_MAP[role]?.defaultPath ?? '/dashboard';
 }
 
-/** Check if this role should use Django Admin (was Filament) */
-export function usesFilamentAdmin(role: string): boolean {
+/** Check if this role should use Django Admin */
+export function usesDjangoAdmin(role: string): boolean {
   return PORTAL_MAP[role]?.usesDjangoAdmin ?? false;
 }
 

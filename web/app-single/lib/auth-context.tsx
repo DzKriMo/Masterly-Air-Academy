@@ -7,6 +7,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api } from './api';
+import { useAuthStore } from './auth-store';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -81,8 +82,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(session.token);
       setUser(session.user);
       api.setTokens(session.token, session.refresh);
+      useAuthStore.getState().setAuth(session.user, session.token);
     }
     setIsLoading(false);
+  }, []);
+
+  // Register forced-logout redirect handler on mount
+  useEffect(() => {
+    api.onLogout(() => {
+      setToken(null);
+      setUser(null);
+      clearSession();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    });
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -108,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
     api.setTokens(access, refresh);
     saveSession(access, refresh, userData);
+    useAuthStore.getState().setAuth(userData, access);
 
     return { user: userData, token: access };
   }, []);
@@ -122,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     api.clearAuth();
     clearSession();
+    useAuthStore.getState().clearAuth();
   }, []);
 
   const hasPermission = useCallback(

@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import { getPortalLabel, usesFilamentAdmin } from "@/lib/portal-access";
+import { useTranslation } from "@/lib/use-translation";
+import { getPortalLabel, usesDjangoAdmin } from "@/lib/portal-access";
 
 interface QuickLink {
   href: string;
@@ -14,6 +15,7 @@ interface QuickLink {
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function DashboardPage() {
       router.push("/login");
     }
     // Admin users should use Django Admin, not this dashboard
-    if (!isLoading && user && usesFilamentAdmin(user.role)) {
+    if (!isLoading && user && usesDjangoAdmin(user.role)) {
       window.location.href = "/admin";
     }
   }, [isLoading, isAuthenticated, user, router]);
@@ -29,13 +31,13 @@ export default function DashboardPage() {
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-navy-900 flex items-center justify-center text-white">
-        <div className="text-gold-500 text-lg animate-pulse">Loading...</div>
+        <div className="text-gold-500 text-lg animate-pulse">{t("dashboard.loading")}</div>
       </div>
     );
   }
 
   const roleLabel = getPortalLabel(user.role);
-  const links = getQuickLinks(user.role);
+  const links = getQuickLinks(user.role, t);
 
   const handleLogout = async () => {
     await logout();
@@ -48,7 +50,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
             <Image
-              src="/mast.svg"
+              src="/logo.png"
               alt="MAA"
               width={40}
               height={40}
@@ -56,7 +58,7 @@ export default function DashboardPage() {
             />
             <div>
               <h1 className="text-lg font-bold text-white">
-                Masterly Air Academy
+                {t("dashboard.masterlyAirAcademy")}
               </h1>
               <p className="text-xs text-gray-400">{roleLabel}</p>
             </div>
@@ -67,7 +69,7 @@ export default function DashboardPage() {
               onClick={handleLogout}
               className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
             >
-              Logout
+              {t("common.signOut")}
             </button>
           </div>
         </div>
@@ -75,12 +77,12 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <h2 className="text-2xl font-bold text-white mb-6">
-          Welcome, {user.name?.split(" ")[0] || "User"}
+          {t("dashboard.welcome")} {user.name?.split(" ")[0] || "User"}
         </h2>
 
         {/* Stats cards | role appropriate */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          {getRoleCards(user.role).map((card, i) => (
+          {getRoleCards(user.role, t).map((card, i) => (
             <div
               key={i}
               className="bg-navy-800 rounded-xl p-6 border border-navy-700"
@@ -98,7 +100,7 @@ export default function DashboardPage() {
 
         {/* Quick links */}
         <div className="bg-navy-800 rounded-xl p-6 border border-navy-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Links</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">{t("dashboard.quickLinks")}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {links.map((link) =>
               link.external ? (
@@ -128,115 +130,115 @@ export default function DashboardPage() {
 
 /* ── Role-based cards ──────────────────────────── */
 
-function getRoleCards(role: string): { title: string; value: string; icon: string }[] {
+function getRoleCards(role: string, t: (key: string) => string): { title: string; value: string; icon: string }[] {
   switch (true) {
     case role.startsWith("flight_instructor") || role.startsWith("chief_flight"):
       return [
-        { title: "Today's Flights", value: "|", icon: "✈️" },
-        { title: "My Students", value: "|", icon: "🎓" },
-        { title: "Hours This Month", value: "|", icon: "⏱️" },
-        { title: "Pending Reports", value: "|", icon: "📝" },
+        { title: t("dashboard.todaysFlights"), value: "|", icon: "✈️" },
+        { title: t("dashboard.myStudents"), value: "|", icon: "🎓" },
+        { title: t("dashboard.hoursThisMonth"), value: "|", icon: "⏱️" },
+        { title: t("dashboard.pendingReports"), value: "|", icon: "📝" },
       ];
     case role.startsWith("ground_instructor") || role.startsWith("chief_ground"):
       return [
-        { title: "Today's Courses", value: "|", icon: "📚" },
-        { title: "My Students", value: "|", icon: "🎓" },
-        { title: "Attendance", value: "|", icon: "✓" },
-        { title: "Pending Evaluations", value: "|", icon: "📝" },
+        { title: t("dashboard.todaysCourses"), value: "|", icon: "📚" },
+        { title: t("dashboard.myStudents"), value: "|", icon: "🎓" },
+        { title: t("instructor.attendance"), value: "|", icon: "✓" },
+        { title: t("dashboard.pendingEvaluations"), value: "|", icon: "📝" },
       ];
     case role === "quality_manager" || role === "safety_manager" || role === "compliance_monitoring_manager":
       return [
-        { title: "Open NCRs", value: "|", icon: "⚠️" },
-        { title: "Audits Planned", value: "|", icon: "🔍" },
-        { title: "CAPA Due", value: "|", icon: "📋" },
-        { title: "Safety Events", value: "|", icon: "🛡️" },
+        { title: t("dashboard.openNCRs"), value: "|", icon: "⚠️" },
+        { title: t("dashboard.auditsPlanned"), value: "|", icon: "🔍" },
+        { title: t("dashboard.capaDue"), value: "|", icon: "📋" },
+        { title: t("quality.safetyEvents"), value: "|", icon: "🛡️" },
       ];
     case role === "finance_responsible" || role === "accounting_agent":
       return [
-        { title: "Outstanding", value: "|", icon: "💰" },
-        { title: "Paid This Month", value: "|", icon: "✅" },
-        { title: "Overdue", value: "|", icon: "⚠️" },
-        { title: "Revenue MTD", value: "|", icon: "📈" },
+        { title: t("finance.outstanding"), value: "|", icon: "💰" },
+        { title: t("dashboard.paidThisMonth"), value: "|", icon: "✅" },
+        { title: t("finance.overdue"), value: "|", icon: "⚠️" },
+        { title: t("dashboard.revenueMTD"), value: "|", icon: "📈" },
       ];
     case role === "director_general" || role === "head_of_training":
       return [
-        { title: "Active Students", value: "|", icon: "🎓" },
-        { title: "Flight Hours MTD", value: "|", icon: "✈️" },
-        { title: "Revenue MTD", value: "|", icon: "💰" },
-        { title: "Compliance", value: "|", icon: "🛡️" },
+        { title: t("dashboard.activeStudents"), value: "|", icon: "🎓" },
+        { title: t("dashboard.flightHoursMTD"), value: "|", icon: "✈️" },
+        { title: t("dashboard.revenueMTD"), value: "|", icon: "💰" },
+        { title: t("dashboard.compliance"), value: "|", icon: "🛡️" },
       ];
     case role === "scheduler":
       return [
-        { title: "Today's Bookings", value: "|", icon: "📅" },
-        { title: "Aircraft Available", value: "|", icon: "✈️" },
-        { title: "Conflicts", value: "|", icon: "⚠️" },
-        { title: "Pending Requests", value: "|", icon: "📋" },
+        { title: t("dashboard.todaysBookings"), value: "|", icon: "📅" },
+        { title: t("dashboard.aircraftAvailable"), value: "|", icon: "✈️" },
+        { title: t("dashboard.conflicts"), value: "|", icon: "⚠️" },
+        { title: t("dashboard.pendingRequests"), value: "|", icon: "📋" },
       ];
     default:
       return [
-        { title: "Overview", value: "|", icon: "📊" },
-        { title: "Tasks", value: "|", icon: "📋" },
-        { title: "Messages", value: "|", icon: "💬" },
-        { title: "Activity", value: "|", icon: "🔔" },
+        { title: t("dashboard.overview"), value: "|", icon: "📊" },
+        { title: t("dashboard.tasks"), value: "|", icon: "📋" },
+        { title: t("student.messages"), value: "|", icon: "💬" },
+        { title: t("dashboard.activity"), value: "|", icon: "🔔" },
       ];
   }
 }
 
 /* ── Role-based quick links ────────────────────── */
 
-function getQuickLinks(role: string): QuickLink[] {
+function getQuickLinks(role: string, t: (key: string) => string): QuickLink[] {
   switch (true) {
     case role.startsWith("flight_instructor"):
       return [
-        { href: "/instructor/schedule", label: "My Schedule" },
-        { href: "/instructor/students", label: "My Students" },
-        { href: "/instructor/flights", label: "Flight Reports" },
+        { href: "/instructor/schedule", label: t("dashboard.mySchedule") },
+        { href: "/instructor/students", label: t("dashboard.myStudents") },
+        { href: "/instructor/flights", label: t("dashboard.flightReports") },
       ];
     case role === "chief_flight_instructor":
       return [
-        { href: "/instructor/schedule", label: "Schedule" },
-        { href: "/instructor/students", label: "Students" },
-        { href: "/instructor/aircraft", label: "Aircraft" },
-        { href: "/instructor/reports", label: "Reports" },
+        { href: "/instructor/schedule", label: t("dashboard.schedule") },
+        { href: "/instructor/students", label: t("dashboard.students") },
+        { href: "/instructor/aircraft", label: t("dashboard.aircraft") },
+        { href: "/instructor/reports", label: t("dashboard.reports") },
       ];
     case role.startsWith("ground_instructor"):
       return [
-        { href: "/instructor/schedule", label: "My Courses" },
-        { href: "/instructor/students", label: "Students" },
-        { href: "/instructor/attendance", label: "Attendance" },
+        { href: "/instructor/schedule", label: t("instructor.myCourses") },
+        { href: "/instructor/students", label: t("dashboard.students") },
+        { href: "/instructor/attendance", label: t("instructor.attendance") },
       ];
     case role === "chief_ground_instructor":
       return [
-        { href: "/instructor/schedule", label: "Schedule" },
-        { href: "/instructor/students", label: "Students" },
-        { href: "/instructor/subjects", label: "Subjects & Modules" },
+        { href: "/instructor/schedule", label: t("dashboard.schedule") },
+        { href: "/instructor/students", label: t("dashboard.students") },
+        { href: "/instructor/subjects", label: t("dashboard.subjectsModules") },
       ];
     case role === "quality_manager" || role === "safety_manager" || role === "compliance_monitoring_manager":
       return [
-        { href: "/quality/dashboard", label: "Quality Dashboard" },
-        { href: "/quality/audits", label: "Audits" },
-        { href: "/quality/ncrs", label: "Non-Conformities" },
-        { href: "/quality/safety", label: "Safety Events" },
+        { href: "/quality/dashboard", label: t("dashboard.qualityDashboard") },
+        { href: "/quality/audits", label: t("quality.audits") },
+        { href: "/quality/ncrs", label: t("quality.nonConformities") },
+        { href: "/quality/safety", label: t("quality.safetyEvents") },
       ];
     case role === "finance_responsible" || role === "accounting_agent":
       return [
-        { href: "/finance/dashboard", label: "Finance Dashboard" },
-        { href: "/finance/invoices", label: "Invoices" },
-        { href: "/finance/payments", label: "Payments" },
-        { href: "/finance/reports", label: "Reports" },
+        { href: "/finance/dashboard", label: t("dashboard.financeDashboard") },
+        { href: "/finance/invoices", label: t("finance.invoices") },
+        { href: "/finance/payments", label: t("finance.payments") },
+        { href: "/finance/reports", label: t("finance.reports") },
       ];
     case role === "director_general" || role === "head_of_training":
       return [
-        { href: "/dashboard", label: "KPI Dashboard" },
-        { href: "/reports/students", label: "Student Reports" },
-        { href: "/reports/financial", label: "Financial Reports" },
-        { href: "/reports/operations", label: "Operations Reports" },
+        { href: "/dashboard", label: t("dashboard.kpiDashboard") },
+        { href: "/reports/students", label: t("dashboard.studentReports") },
+        { href: "/reports/financial", label: t("dashboard.financialReports") },
+        { href: "/reports/operations", label: t("dashboard.operationsReports") },
       ];
     case role === "scheduler":
       return [
-        { href: "/instructor/schedule", label: "Calendar" },
-        { href: "/instructor/aircraft", label: "Aircraft Status" },
-        { href: "/instructor/bookings", label: "Bookings" },
+        { href: "/instructor/schedule", label: t("dashboard.schedule") },
+        { href: "/instructor/aircraft", label: t("dashboard.aircraftStatus") },
+        { href: "/instructor/bookings", label: t("dashboard.bookings") },
       ];
     default:
       return [];

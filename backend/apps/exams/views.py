@@ -1,3 +1,4 @@
+import random
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,8 @@ from .serializers import (
     QuestionSerializer, QuestionWithAnswerSerializer,
     ExamSerializer, ExamAttemptSerializer,
     QuizSerializer, QuizAttemptSerializer,
+    ProgressCheckSerializer, SkillTestSerializer,
+    PracticalEvaluationSerializer,
     ExamStartSerializer, ExamSubmitSerializer,
     CertificateSerializer,
 )
@@ -53,14 +56,17 @@ class ExamViewSet(viewsets.ModelViewSet):
         if existing >= exam.max_attempts:
             return Response({'error': f'Maximum {exam.max_attempts} attempts reached'}, status=400)
 
-        # Get questions (random subset)
-        questions = QuestionBank.objects.filter(subject=exam.subject)[:exam.question_count or 20]
-        if not questions:
-            return Response({'error': 'No questions available for this exam'}, status=400)
+        # Get questions (random subset, snapshot IDs in attempt)
+        all_questions = list(QuestionBank.objects.filter(subject=exam.subject))
+        count = exam.question_count or 20
+        if len(all_questions) < count:
+            return Response({'error': f'Not enough questions. Need {count}, have {len(all_questions)}.'}, status=400)
+        questions = random.sample(all_questions, count)
 
         attempt = ExamAttempt.objects.create(
             exam=exam, student=student,
             attempt=existing + 1, started_at=timezone.now(),
+            answers={'question_ids': [str(q.id) for q in questions]},
         )
 
         return Response({
@@ -87,7 +93,8 @@ class ExamViewSet(viewsets.ModelViewSet):
         if attempt.completed_at:
             return Response({'error': 'This attempt is already completed'}, status=400)
 
-        result = AutoGradingService.grade_exam(exam, answers)
+        question_ids = attempt.answers.get('question_ids') if isinstance(attempt.answers, dict) else None
+        result = AutoGradingService.grade_exam(exam, answers, question_ids=question_ids)
 
         attempt.score = result['percentage']
         attempt.is_passed = result['is_passed']
@@ -141,9 +148,14 @@ class QuizViewSet(viewsets.ModelViewSet):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
 
-        questions = QuestionBank.objects.filter(subject__modules=quiz.module)[:10]
-        if not questions:
-            questions = QuestionBank.objects.all()[:10]
+        existing = QuizAttempt.objects.filter(quiz=quiz, student=student).count()
+        if existing >= quiz.max_attempts:
+            return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
+
+        all_questions = list(QuestionBank.objects.filter(subject__modules=quiz.module))
+        if not all_questions:
+            return Response({'error': 'No questions available for this quiz module'}, status=400)
+        questions = random.sample(all_questions, min(10, len(all_questions)))
 
         return Response({
             'quiz_id': str(quiz.id),
@@ -194,3 +206,106 @@ class StudentCompetencyViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'exams.view'
     filterset_fields = ['student', 'program', 'status']
+
+
+class ProgressCheckViewSet(viewsets.ModelViewSet):
+    queryset = ProgressCheck.objects.select_related('student', 'examiner').all()
+    serializer_class = ProgressCheckSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+
+    @action(detail=True, methods=['post'])
+    def validate(self, request, pk=None):
+        progress_check = self.get_object()
+        progress_check.status = 'completed'
+        progress_check.completed_date = timezone.now()
+        progress_check.result = request.data.get('result', progress_check.result)
+        progress_check.observations = request.data.get('observations', progress_check.observations)
+        progress_check.lessons_to_repeat = request.data.get('lessons_to_repeat', progress_check.lessons_to_repeat)
+        progress_check.save()
+        return Response(ProgressCheckSerializer(progress_check).data)
+
+    @action(detail=False, methods=['post'])
+    def schedule(self, request, pk=None):
+        serializer = ProgressCheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        check = serializer.save()
+
+        from apps.notifications.services import NotificationService
+        NotificationService.progress_check_scheduled(check)
+
+        return Response(ProgressCheckSerializer(check).data, status=status.HTTP_201_CREATED)
+
+
+class SkillTestViewSet(viewsets.ModelViewSet):
+    queryset = SkillTest.objects.select_related('student', 'examiner', 'authorized_by').all()
+    serializer_class = SkillTestSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+
+    @action(detail=True, methods=['post'])
+    def authorize(self, request, pk=None):
+        skill_test = self.get_object()
+        skill_test.status = 'authorized'
+        skill_test.authorized_by = request.data.get('authorized_by', None)
+        if skill_test.authorized_by:
+            from apps.students.models import FlightInstructor
+            try:
+                skill_test.authorized_by = FlightInstructor.objects.get(id=skill_test.authorized_by)
+            except FlightInstructor.DoesNotExist:
+                pass
+        skill_test.save()
+
+        from apps.notifications.services import NotificationService
+        NotificationService.skill_test_authorized(skill_test)
+
+        return Response(SkillTestSerializer(skill_test).data)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        skill_test = self.get_object()
+        skill_test.status = 'completed'
+        skill_test.completed_date = timezone.now()
+        skill_test.result = request.data.get('result', skill_test.result)
+        skill_test.report_url = request.data.get('report_url', skill_test.report_url)
+        skill_test.observations = request.data.get('observations', skill_test.observations)
+        skill_test.recommendations = request.data.get('recommendations', skill_test.recommendations)
+        skill_test.save()
+
+        # If passed, auto-issue certificate
+        if skill_test.result == 'passed':
+            from .services import CertificateService
+            certificate = CertificateService.issue_certificate(
+                skill_test.student,
+                skill_test.student.program,
+                'skill_test',
+                title=f'Skill Test - Passed'
+            )
+            from apps.notifications.services import NotificationService
+            NotificationService.certificate_issued(certificate)
+
+        return Response(SkillTestSerializer(skill_test).data)
+
+
+class PracticalEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = PracticalEvaluation.objects.select_related('student', 'instructor').all()
+    serializer_class = PracticalEvaluationSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+
+
+class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = QuizAttempt.objects.select_related('quiz', 'student').all()
+    serializer_class = QuizAttemptSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        return qs

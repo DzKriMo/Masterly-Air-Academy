@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { api } from "@/lib/api";
 
 interface Notif { id: string; type: string; title: string; message: string; is_read: boolean; created_at: string; }
 
@@ -7,19 +8,29 @@ export function NotificationBell() {
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const token = () => { try { return JSON.parse(sessionStorage.getItem("maa_session") || "{}").token; } catch { return ""; } };
+
+  const fetchNotifications = () => {
+    if (!api.isAuthenticated()) return;
+    api.get<{ results: Notif[] }>("/notifications/")
+      .then(d => setNotifs((d as unknown as { results: Notif[] }).results || []))
+      .catch(() => {});
+  };
 
   useEffect(() => {
-    if (!token()) return;
-    fetch("/api/notifications/", { headers: { Authorization: `Bearer ${token()}` } }).then(r => r.json()).then(d => setNotifs(d.results || [])).catch(() => {});
-    const interval = setInterval(() => { fetch("/api/notifications/", { headers: { Authorization: `Bearer ${token()}` } }).then(r => r.json()).then(d => setNotifs(d.results || [])).catch(() => {}); }, 30000);
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
 
   const unread = notifs.filter(n => !n.is_read).length;
-  const markAllRead = async () => { await fetch("/api/notifications/mark_all_read/", { method: "PUT", headers: { Authorization: `Bearer ${token()}` } }); setNotifs(notifs.map(n => ({ ...n, is_read: true }))); };
+  const markAllRead = async () => {
+    try {
+      await api.put("/notifications/mark_all_read/");
+      setNotifs(notifs.map(n => ({ ...n, is_read: true })));
+    } catch {}
+  };
 
   return (
     <div ref={ref} className="relative">

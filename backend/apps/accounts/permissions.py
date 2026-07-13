@@ -16,18 +16,27 @@ class HasRolePermission(BasePermission):
         if not required:
             return True
 
-        # System admin has all permissions
-        if request.user.role == 'system_admin':
+        # System admin and superusers bypass all checks
+        if request.user.role == 'system_admin' or request.user.is_superuser:
             return True
 
-        if request.user.is_superuser:
-            return True
-
-        # Check across all user permissions (group + user)
-        # Our custom permissions use codenames like 'exams.view'
-        # Django stores them as 'accounts.exams.view'
         all_perms = request.user.get_all_permissions()
-        return required in all_perms or any(p.endswith(f'.{required}') for p in all_perms)
+
+        # Exact match
+        if required in all_perms or any(p.endswith(f'.{required}') for p in all_perms):
+            return True
+
+        # view_own, evaluate, manage all satisfy view (queryset scoping handles restriction)
+        if '.' in required:
+            domain, action = required.rsplit('.', 1)
+            if action in ('view', 'manage'):
+                # Check for any domain permission that implies access
+                implied = [f'{domain}.view_own', f'{domain}.evaluate', f'{domain}.manage']
+                for perm in implied:
+                    if perm in all_perms or any(p.endswith(f'.{perm}') for p in all_perms):
+                        return True
+
+        return False
 
 
 class IsOwnerOrAdmin(BasePermission):

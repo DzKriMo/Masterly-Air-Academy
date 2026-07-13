@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-change-me')
 
 DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,api').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,api,172.20.10.2').split(',')
 
 INSTALLED_APPS = [
     'unfold',
@@ -44,6 +44,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'apps.core.middleware.RequestIdMiddleware',
     'apps.core.middleware.RequestLogMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -163,8 +164,16 @@ REST_FRAMEWORK = {
         'anon': '20/minute',
         'user': '100/minute',
         'login': '5/minute',
+        'password_change': '3/hour',
+        'certificate_download': '30/hour',
+        'export': '10/hour',
+        'file_upload': '20/hour',
     },
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
+    'DEFAULT_RENDERER_CLASSES': (
+        'apps.core.renderers.ApiResponseRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
 }
 
 # SimpleJWT
@@ -172,7 +181,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
@@ -192,6 +201,10 @@ CELERY_BEAT_SCHEDULE = {
     'check-expiring-medicals': {
         'task': 'apps.students.tasks.check_expiring_medicals',
         'schedule': 86400.0,
+    },
+    'check-upcoming-deadlines': {
+        'task': 'apps.quality_safety.tasks.check_upcoming_deadlines',
+        'schedule': 86400.0,  # daily
     },
 }
 

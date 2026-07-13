@@ -5,9 +5,12 @@ class AutoGradingService:
     """Handles automatic grading of QCM/quiz answers."""
 
     @staticmethod
-    def grade_exam(exam, answers):
+    def grade_exam(exam, answers, question_ids=None):
         from .models import QuestionBank
-        questions = QuestionBank.objects.filter(subject=exam.subject)[:exam.question_count or 20]
+        if question_ids:
+            questions = QuestionBank.objects.filter(id__in=question_ids)
+        else:
+            questions = QuestionBank.objects.filter(subject=exam.subject)[:exam.question_count or 20]
         if not questions.exists():
             return {'score': 0, 'total': 0, 'percentage': 0, 'is_passed': False, 'details': []}
 
@@ -44,7 +47,7 @@ class AutoGradingService:
         from .models import QuestionBank
         questions = QuestionBank.objects.filter(subject__modules=quiz.module)[:10]
         if not questions.exists():
-            questions = QuestionBank.objects.all()[:10]
+            return {'score': 0, 'total': 0, 'percentage': 0, 'is_passed': False}
 
         correct = 0
         for q in questions:

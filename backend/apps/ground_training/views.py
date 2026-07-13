@@ -18,6 +18,47 @@ from .serializers import (
 )
 
 
+class ModuleLessonViewSet(viewsets.ModelViewSet):
+    queryset = ModuleLesson.objects.all()
+    serializer_class = ModuleLessonSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.view'
+    filterset_fields = ['module']
+
+
+class ModuleDocumentViewSet(viewsets.ModelViewSet):
+    queryset = ModuleDocument.objects.all()
+    serializer_class = ModuleDocumentSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.view'
+    filterset_fields = ['module', 'type']
+
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        file = request.FILES.get('file')
+        module_id = request.data.get('module')
+        name = request.data.get('name', file.name if file else 'Document')
+        doc_type = request.data.get('type', 'pdf')
+
+        if not file or not module_id:
+            return Response(
+                {'error': 'file and module are required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'module_docs/{module_id}/{file.name}', file)
+        file_url = f'/media/{path}'
+
+        doc = ModuleDocument.objects.create(
+            module_id=module_id,
+            name=name,
+            file_url=file_url,
+            type=doc_type,
+        )
+        return Response(ModuleDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.prefetch_related('modules__lessons').all()
     permission_classes = [IsAuthenticated, HasRolePermission]
@@ -110,12 +151,15 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = BulkAttendanceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        from django.utils import timezone
+        att_date = serializer.validated_data.get('date') or timezone.now().date()
+
         created = []
         for record in serializer.validated_data['records']:
             att, _ = AttendanceRecord.objects.update_or_create(
                 student_id=record['student_id'],
                 course=course,
-                date=serializer.validated_data['date'],
+                date=att_date,
                 defaults={
                     'status': record['status'],
                     'notes': record.get('notes', ''),
@@ -133,6 +177,20 @@ class CourseViewSet(viewsets.ModelViewSet):
         course = self.get_object()
         enrollments = course.enrollments.select_related('student').all()
         return Response(CourseEnrollmentSerializer(enrollments, many=True).data)
+
+    @action(detail=True, methods=['get'])
+    def materials(self, request, pk=None):
+        course = self.get_object()
+        modules = course.subject.modules.all()
+        materials = []
+        for m in modules:
+            materials.append({
+                'module_id': str(m.id),
+                'module_title': m.title,
+                'lessons': list(m.lessons.values('lesson_no', 'title', 'content')),
+                'documents': list(m.documents.values('name', 'file_url', 'type')),
+            })
+        return Response({'course_id': str(course.id), 'modules': materials})
 
 
 class CourseEnrollmentViewSet(viewsets.ModelViewSet):
