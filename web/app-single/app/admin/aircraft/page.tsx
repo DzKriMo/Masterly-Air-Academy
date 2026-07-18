@@ -102,7 +102,7 @@ export default function AdminAircraftPage() {
     queryKey: ["admin-aircraft"],
     queryFn: async () => {
       const d = await api.get<any>("/aircraft/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

@@ -74,8 +74,8 @@
 
 ### 3.1 Dashboard
 - [ ] Sidebar with 12 nav items: Dashboard, Exams, Flight Log, My Courses, Schedule, Certificates, Messages, Profile, Documents, Payments, Results, History, Notifications
-- [ ] Welcome message with student name
-- [ ] Stat cards: Flight Hours, Lessons Completed, Exam Average, Unpaid Invoices
+- [x] Welcome message with student name
+- [x] Stat cards: Flight Hours, Lessons Completed, Exam Average, Unpaid Invoices
 - [ ] Flight hours line chart
 - [ ] Competencies radar chart
 - [ ] Progress bars (Theory/Flight %)

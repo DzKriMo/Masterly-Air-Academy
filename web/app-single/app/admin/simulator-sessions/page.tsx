@@ -110,7 +110,7 @@ export default function AdminSimulatorSessionsPage() {
     queryKey: ["admin-simulator-sessions"],
     queryFn: async () => {
       const d = await api.get<any>("/simulator-sessions/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -120,7 +120,7 @@ export default function AdminSimulatorSessionsPage() {
     queryKey: ["admin-simulators-list"],
     queryFn: async () => {
       const d = await api.get<any>("/simulators/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -130,7 +130,7 @@ export default function AdminSimulatorSessionsPage() {
     queryKey: ["admin-students-list"],
     queryFn: async () => {
       const d = await api.get<any>("/students/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -140,7 +140,7 @@ export default function AdminSimulatorSessionsPage() {
     queryKey: ["admin-instructors-list"],
     queryFn: async () => {
       const d = await api.get<any>("/flight-instructors/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

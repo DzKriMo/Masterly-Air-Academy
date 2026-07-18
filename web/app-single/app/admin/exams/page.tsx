@@ -73,7 +73,7 @@ export default function AdminExamsPage() {
     queryKey: ["admin-exams"],
     queryFn: async () => {
       const d = await api.get<any>("/exams/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

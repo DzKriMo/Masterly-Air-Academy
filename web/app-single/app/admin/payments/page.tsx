@@ -98,7 +98,7 @@ export default function AdminPaymentsPage() {
     queryKey: ["admin-payments"],
     queryFn: async () => {
       const d = await api.get<any>("/payments/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -107,7 +107,7 @@ export default function AdminPaymentsPage() {
     queryKey: ["admin-students-dropdown"],
     queryFn: async () => {
       const d = await api.get<any>("/students/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated && createOpen,
   });
@@ -116,7 +116,7 @@ export default function AdminPaymentsPage() {
     queryKey: ["admin-invoices-dropdown"],
     queryFn: async () => {
       const d = await api.get<any>("/invoices/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated && createOpen,
   });

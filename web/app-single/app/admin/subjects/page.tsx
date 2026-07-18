@@ -76,7 +76,7 @@ export default function AdminSubjectsPage() {
     queryKey: ["admin-subjects"],
     queryFn: async () => {
       const d = await api.get<any>("/subjects/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

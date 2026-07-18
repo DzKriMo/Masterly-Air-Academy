@@ -101,7 +101,7 @@ export default function AdminDocumentsPage() {
     queryKey: ["admin-documents"],
     queryFn: async () => {
       const d = await api.get<any>("/documents/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

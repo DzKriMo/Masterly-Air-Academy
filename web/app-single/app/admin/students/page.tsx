@@ -109,7 +109,7 @@ export default function AdminStudentsPage() {
     queryKey: ["admin-students"],
     queryFn: async () => {
       const d = await api.get<any>("/students/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });

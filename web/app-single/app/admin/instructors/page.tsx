@@ -65,7 +65,7 @@ export default function AdminInstructorsPage() {
     queryKey: ["admin-ground-instructors"],
     queryFn: async () => {
       const d = await api.get<any>("/ground-instructors/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -74,7 +74,7 @@ export default function AdminInstructorsPage() {
     queryKey: ["admin-flight-instructors"],
     queryFn: async () => {
       const d = await api.get<any>("/flight-instructors/");
-      return (d as any) || (d as any) || [];
+      return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
