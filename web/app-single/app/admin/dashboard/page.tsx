@@ -45,8 +45,8 @@ export default function AdminDashboard() {
   // ── Fallback activity if audit-logs fails ────────────────────────
   const recentActivity = (() => {
     const raw = activityQuery.data;
-    if (raw && (raw || Array.isArray(raw))) {
-      const list = raw || raw;
+    const list = Array.isArray(raw) ? raw : (raw as any)?.results;
+    if (list && Array.isArray(list)) {
       return list.slice(0, 10);
     }
     // Blank until /users/ data is available for fallback
@@ -438,8 +438,7 @@ export default function AdminDashboard() {
               </div>
               {(() => {
                 const raw = inquiriesQuery.data;
-                const allNotifications = raw && (raw || Array.isArray(raw) ? raw : null);
-                const list = allNotifications ? (allNotifications || allNotifications) : [];
+                const list = Array.isArray(raw) ? raw : (raw as any)?.results || [];
                 const inquiries = list
                   .filter((n: any) => n.type === "contact_form" || n.type === "application")
                   .slice(0, 5);
