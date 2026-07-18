@@ -479,7 +479,7 @@ def submit_contact(request):
                 user = UserModel.objects.create_user(
                     username=cand_username,
                     email=cand_email,
-                    password=UserModel.objects.make_random_password(),
+                    password=uuid.uuid4().hex[:12],
                     role='candidate',
                     status='pending',
                     first_name=first,
@@ -489,7 +489,7 @@ def submit_contact(request):
             user = UserModel.objects.create_user(
                 username=cand_username,
                 email=cand_email,
-                password=UserModel.objects.make_random_password(),
+                password=uuid.uuid4().hex[:12],
                 role='candidate',
                 status='pending',
                 first_name=first,
