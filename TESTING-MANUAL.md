@@ -55,16 +55,16 @@
   - [x] "General Inquiry" tab: fill name, email, phone, subject, message → Submit
   - [x] "Apply Now" tab: fill name, email, phone, select program, message → Submit
   - [x] Success message appears after submission
-  - [ ] Admin receives notification (log in as admin to verify)
+  - [x] Admin receives notification (log in as admin to verify)
 
 ### 2.2 Certificate Verification
 **URL:** `http://185.185.80.188:7788/verify-certificate?number=CERT-A897199A`
 
-- [ ] Page loads without login required (public)
-- [ ] Shows "Verified" badge with green checkmark
-- [ ] Shows certificate details: student name, certificate number, issue date, program, status
-- [ ] QR code displayed
-- [ ] Try an invalid number: `?number=INVALID` → shows "Not Found"
+- [x] Page loads without login required (public)
+- [x] Shows "Verified" badge with green checkmark
+- [x] Shows certificate details: student name, certificate number, issue date, program, status
+- [x] QR code displayed
+- [x] Try an invalid number: `?number=INVALID` → shows "Not Found"
 
 ---
 
