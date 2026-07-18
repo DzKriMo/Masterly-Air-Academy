@@ -22,10 +22,6 @@ export default function DashboardPage() {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
-    // Admin users should use Django Admin, not this dashboard
-    if (!isLoading && user && usesDjangoAdmin(user.role)) {
-      window.location.href = "/admin";
-    }
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading || !user) {

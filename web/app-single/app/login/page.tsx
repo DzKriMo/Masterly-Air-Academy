@@ -31,7 +31,7 @@ export default function LoginPage() {
       const { user } = await login(data.email, data.password);
 
       if (usesDjangoAdmin(user.role)) {
-        window.location.href = "/admin";
+        window.location.href = "/admin/dashboard";
         return;
       }
 

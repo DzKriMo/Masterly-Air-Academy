@@ -45,16 +45,16 @@
 ### 2.1 Landing Page
 **URL:** `http://185.185.80.188:7788/`
 
-- [ ] Page loads with navy/gold design
-- [ ] Hero section shows logo, tagline, "Explore Programs" and "Contact Us" buttons
-- [ ] Programs section (PPL, CPL, IR, MEP, MCC) with duration and prerequisites
-- [ ] About Us section with academy information
-- [ ] Why Us section with 3 feature cards
-- [ ] Language switcher (EN/FR/AR) in bottom-right corner — switch and verify page translates
-- [ ] **NEW: Contact/Application form** at bottom of page
-  - [ ] "General Inquiry" tab: fill name, email, phone, subject, message → Submit
-  - [ ] "Apply Now" tab: fill name, email, phone, select program, message → Submit
-  - [ ] Success message appears after submission
+- [x] Page loads with navy/gold design
+- [x] Hero section shows logo, tagline, "Explore Programs" and "Contact Us" buttons
+- [x] Programs section (PPL, CPL, IR, MEP, MCC) with duration and prerequisites
+- [x] About Us section with academy information
+- [x] Why Us section with 3 feature cards
+- [x] Language switcher (EN/FR/AR) in bottom-right corner — switch and verify page translates
+- [x] **NEW: Contact/Application form** at bottom of page
+  - [x] "General Inquiry" tab: fill name, email, phone, subject, message → Submit
+  - [x] "Apply Now" tab: fill name, email, phone, select program, message → Submit
+  - [x] Success message appears after submission
   - [ ] Admin receives notification (log in as admin to verify)
 
 ### 2.2 Certificate Verification
