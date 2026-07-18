@@ -1,12 +1,11 @@
-import { MMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '@/types/api';
 
-export const mmkv = new MMKV({
-  id: 'masterly-air-academy',
-});
-
-// --- SecureStore token helpers ---
+const STORAGE_KEYS = {
+  USER: '@masterly:user',
+  LOCALE: '@masterly:locale',
+};
 
 export async function storeTokens(access: string, refresh: string): Promise<void> {
   await SecureStore.setItemAsync('access_token', access);
@@ -26,14 +25,12 @@ export async function clearTokens(): Promise<void> {
   await SecureStore.deleteItemAsync('refresh_token');
 }
 
-// --- MMKV user helpers ---
-
-export function storeUser(user: User): void {
-  mmkv.set('user', JSON.stringify(user));
+export async function storeUser(user: User): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
 }
 
-export function getUser(): User | null {
-  const raw = mmkv.getString('user');
+export async function getUser(): Promise<User | null> {
+  const raw = await AsyncStorage.getItem(STORAGE_KEYS.USER);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as User;
@@ -42,23 +39,20 @@ export function getUser(): User | null {
   }
 }
 
-export function removeUser(): void {
-  mmkv.delete('user');
+export async function removeUser(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEYS.USER);
 }
 
-// --- MMKV locale helpers ---
-
-export function storeLocale(locale: string): void {
-  mmkv.set('locale', locale);
+export async function storeLocale(locale: string): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.LOCALE, locale);
 }
 
-export function getLocale(): string {
-  return mmkv.getString('locale') ?? 'en';
+export async function getLocale(): Promise<string> {
+  const locale = await AsyncStorage.getItem(STORAGE_KEYS.LOCALE);
+  return locale ?? 'en';
 }
-
-// --- Clear everything ---
 
 export async function clearAll(): Promise<void> {
   await clearTokens();
-  mmkv.clearAll();
+  await AsyncStorage.clear();
 }

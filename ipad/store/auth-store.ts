@@ -17,7 +17,7 @@ interface AuthState {
 interface AuthActions {
   setUser: (user: User | null) => void;
   logout: () => Promise<void>;
-  hydrate: () => void;
+  hydrate: () => Promise<void>;
   setLoading: (loading: boolean) => void;
 }
 
@@ -43,8 +43,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
-  hydrate: () => {
-    const user = getUser();
+  hydrate: async () => {
+    const user = await getUser();
     if (user) {
       set({ user, isAuthenticated: true, isLoading: false });
     } else {

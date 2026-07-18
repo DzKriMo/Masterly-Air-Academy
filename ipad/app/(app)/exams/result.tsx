@@ -1,17 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
 import { Trophy, ArrowLeft } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { colors } from '@/constants/colors';
@@ -19,61 +8,68 @@ import { colors } from '@/constants/colors';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function ConfettiPiece({ delay, x, color }: { delay: number; x: number; color: string }) {
-  const translateY = useSharedValue(-20);
-  const rotate = useSharedValue(0);
-  const opacity = useSharedValue(0);
+  const translateY = useRef(new Animated.Value(-20)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(SCREEN_HEIGHT + 40, { duration: 2000, easing: Easing.in(Easing.ease) }),
-          withTiming(-20, { duration: 0 }),
-        ),
-        -1,
-        false,
-      ),
+    const tyAnim = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(translateY, {
+          toValue: SCREEN_HEIGHT + 40,
+          duration: 2000,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: -20,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
     );
-    rotate.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(360 * 5, { duration: 2000, easing: Easing.linear }),
-        -1,
-        false,
-      ),
-    );
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 100 }),
-          withTiming(1, { duration: 1800 }),
-          withTiming(0, { duration: 100 }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [delay, translateY, rotate, opacity]);
 
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value },
-      { rotate: `${rotate.value}deg` },
-    ],
-    opacity: opacity.value,
-  }));
+    const rotAnim = Animated.loop(
+      Animated.timing(rotate, {
+        toValue: 360 * 5,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+
+    const opAnim = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(opacity, { toValue: 1, duration: 100, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      ]),
+    );
+
+    tyAnim.start();
+    rotAnim.start();
+    opAnim.start();
+
+    return () => {
+      tyAnim.stop();
+      rotAnim.stop();
+      opAnim.stop();
+    };
+  }, [delay]);
+
+  const rotateStr = rotate.interpolate({
+    inputRange: [0, 360],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <Animated.View
       style={[
         styles.confettiPiece,
-        {
-          left: x,
-          backgroundColor: color,
-        },
-        style,
+        { left: x, backgroundColor: color },
+        { transform: [{ translateY }, { rotate: rotateStr }], opacity },
       ]}
     />
   );
@@ -100,21 +96,26 @@ export default function ExamResultScreen() {
   const passedBool = passed === 'true';
   const percentage = Math.round((scoreNum / totalNum) * 100);
 
-  const scale = useSharedValue(0);
-  const scoreScale = useSharedValue(0);
+  const scale = useRef(new Animated.Value(0)).current;
+  const scoreScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 100 });
-    scoreScale.value = withDelay(300, withSpring(1, { damping: 8, stiffness: 80 }));
-  }, [scale, scoreScale]);
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 10,
+      stiffness: 100,
+      useNativeDriver: true,
+    }).start();
 
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const scoreStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scoreScale.value }],
-  }));
+    Animated.delay(300).start(() => {
+      Animated.spring(scoreScale, {
+        toValue: 1,
+        damping: 8,
+        stiffness: 80,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, []);
 
   const confettiPieces = passedBool
     ? Array.from({ length: 30 }, (_, i) => ({
@@ -130,7 +131,9 @@ export default function ExamResultScreen() {
         <ConfettiPiece key={index} {...piece} />
       ))}
 
-      <Animated.View style={[styles.content, containerStyle]}>
+      <Animated.View
+        style={[styles.content, { transform: [{ scale }] }]}
+      >
         <View
           style={[
             styles.iconContainer,
@@ -150,7 +153,7 @@ export default function ExamResultScreen() {
             : 'You did not pass this time. Review and try again.'}
         </Text>
 
-        <Animated.View style={[styles.scoreCard, scoreStyle]}>
+        <Animated.View style={[styles.scoreCard, { transform: [{ scale: scoreScale }] }]}>
           <Text style={[styles.scoreNumber, { color: passedBool ? colors.status.success : colors.status.error }]}>
             {percentage}%
           </Text>

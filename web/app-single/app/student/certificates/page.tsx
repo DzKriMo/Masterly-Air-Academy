@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/toast";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -24,6 +25,7 @@ export default function StudentCertificatesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
 
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
@@ -49,7 +51,7 @@ export default function StudentCertificatesPage() {
       const a = document.createElement("a");
       a.href = u; a.download = `certificate-${id}.pdf`; a.click();
       window.URL.revokeObjectURL(u);
-    } catch { alert(t('student.downloadFailed', 'Download failed')); }
+    } catch { showToast("error", t('student.downloadFailed', 'Download failed')); }
   };
 
   const filterOptions: FilterOption[] = [

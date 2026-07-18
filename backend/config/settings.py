@@ -161,8 +161,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/minute',
-        'user': '100/minute',
+        'anon': '200/minute',
+        'user': '500/minute',
         'login': '5/minute',
         'password_change': '3/hour',
         'certificate_download': '30/hour',
@@ -224,6 +224,28 @@ STORAGES = {
     "default": {"BACKEND": "storages.backends.s3.S3Storage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# Invoice number format
+INVOICE_NUMBER_FORMAT = 'INV-{year}-{num:04d}'
+
+# Medical certificate expiry notification period (days)
+MEDICAL_EXPIRY_NOTICE_DAYS = 30
+
+# ── Email Configuration ────────────────────────────────
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Dev: prints to console
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.example.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@masterly-air-academy.dz')
+
+# Inactivity auto-logout (seconds, 0 = disabled)
+INACTIVITY_TIMEOUT_SECONDS = int(os.environ.get('INACTIVITY_TIMEOUT', 1800))  # 30 min default
+
+# Quality & safety deadline monitoring
+QUALITY_SAFETY_DEADLINE_DAYS_AHEAD = 30
+QUALITY_SAFETY_DAYS_REMAINING = 7
 
 # django-unfold admin theme
 UNFOLD = {

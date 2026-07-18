@@ -21,6 +21,7 @@ export default function EvaluateFlightPage() {
   const [form, setForm] = useState({
     flight_duration: "", exercises_completed: "", competencies_acquired: "",
     difficulties: "", observations: "", recommendations: "", grade: "", result: "", pedagogical_note: "",
+    departure_time: "", arrival_time: "", signed_by_instructor: false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +35,17 @@ export default function EvaluateFlightPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setError(null);
     try {
-      const body = {
+      const body: Record<string, any> = {
         ...form,
         flight_duration: parseFloat(form.flight_duration),
         grade: parseFloat(form.grade),
         exercises_completed: form.exercises_completed.split(",").map(s => s.trim()).filter(Boolean),
         competencies_acquired: form.competencies_acquired.split(",").map(s => s.trim()).filter(Boolean),
       };
+      // Only include departure/arrival if provided
+      if (!body.departure_time) delete body.departure_time;
+      if (!body.arrival_time) delete body.arrival_time;
+
       await api.post(`/flight-lessons/${flightId}/evaluate/`, body);
       showToast("success", t("instructor.evaluationSubmitted", "Evaluation submitted successfully"));
       setTimeout(() => router.push("/instructor/flights"), 1500);
@@ -82,6 +87,13 @@ export default function EvaluateFlightPage() {
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.grade", "Grade (0-10)")}</label><input type="number" step="0.1" min="0" max="10" value={form.grade} onChange={e => setForm({...form, grade: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.result", "Result")}</label><select value={form.result} onChange={e => setForm({...form, result: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white"><option value="">{t("instructor.select", "Select...")}</option><option value="passed">{t("instructor.passed", "Passed")}</option><option value="failed">{t("instructor.failed", "Failed")}</option><option value="partial">{t("instructor.partial", "Partial")}</option></select></div>
           </div>
+
+          {/* Departure & Arrival Time Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.departureTime", "Departure Time")}</label><input type="datetime-local" value={form.departure_time} onChange={e => setForm({...form, departure_time: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.arrivalTime", "Arrival Time")}</label><input type="datetime-local" value={form.arrival_time} onChange={e => setForm({...form, arrival_time: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.exercisesCompleted", "Exercises Completed (comma separated)")}</label><input value={form.exercises_completed} onChange={e => setForm({...form, exercises_completed: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" placeholder={t("instructor.exercisesPlaceholder", "e.g. Takeoff, Landing, Steep turns")} /></div>
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.competenciesAcquired", "Competencies Acquired")}</label><input value={form.competencies_acquired} onChange={e => setForm({...form, competencies_acquired: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" placeholder={t("instructor.competenciesPlaceholder", "e.g. Radio communication, Crosswind landing")} /></div>
@@ -92,6 +104,18 @@ export default function EvaluateFlightPage() {
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.recommendations", "Recommendations")}</label><textarea value={form.recommendations} onChange={e => setForm({...form, recommendations: e.target.value})} rows={2} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
           </div>
           <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.pedagogicalNote", "Pedagogical Note")}</label><textarea value={form.pedagogical_note} onChange={e => setForm({...form, pedagogical_note: e.target.value})} rows={2} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
+
+          {/* Signed by Instructor checkbox */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.signed_by_instructor}
+              onChange={e => setForm({...form, signed_by_instructor: e.target.checked})}
+              className="w-5 h-5 rounded border-navy-600 bg-navy-900 text-gold-500 focus:ring-gold-500"
+            />
+            <span className="text-sm text-gray-300">{t("instructor.signedByInstructor", "Signed by Instructor")}</span>
+          </label>
+
           <button type="submit" disabled={saving} className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg">{saving ? t("common.loading", "Submitting...") : t("instructor.submitEvaluation", "Submit Evaluation")}</button>
         </form>
 

@@ -7,6 +7,7 @@ from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
     FlightProgram, FlightLessonTemplate,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
+    Simulator, SimulatorSession,
 )
 from .serializers import (
     AircraftSerializer, AircraftListSerializer,
@@ -15,6 +16,7 @@ from .serializers import (
     FlightPreparationSerializer, FlightEvaluationSerializer,
     ResourceBookingSerializer, InstructorAvailabilitySerializer,
     MaintenanceRecordSerializer,
+    SimulatorSerializer, SimulatorSessionSerializer,
 )
 from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
@@ -109,6 +111,9 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         lesson.grade = data['grade']
         lesson.result = data['result']
         lesson.pedagogical_note = data.get('pedagogical_note', '')
+        lesson.departure_time = data.get('departure_time')
+        lesson.arrival_time = data.get('arrival_time')
+        lesson.signed_by_instructor = data.get('signed_by_instructor', False)
         lesson.status = FlightStatus.COMPLETED
         lesson.end_time = __import__('django.utils.timezone').utils.timezone.now()
         lesson.save()
@@ -242,7 +247,8 @@ class FlightLogViewSet(viewsets.ViewSet):
                 return Response({'error': 'Student profile not found'}, status=404)
 
         if not student_id:
-            return Response({'error': 'student_id required'}, status=400)
+            # Non-student users: return empty log
+            return Response({'total_flight_hours': 0, 'total_lessons': 0, 'lessons': []})
 
         log = FlightLogService.get_student_log(student_id)
         return Response(log)
@@ -254,3 +260,21 @@ class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'fleet.view'
     filterset_fields = ['aircraft', 'type', 'status']
+
+
+class SimulatorViewSet(viewsets.ModelViewSet):
+    queryset = Simulator.objects.all()
+    serializer_class = SimulatorSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['status', 'qualification_type']
+    search_fields = ['name', 'manufacturer', 'model_name']
+
+
+class SimulatorSessionViewSet(viewsets.ModelViewSet):
+    queryset = SimulatorSession.objects.select_related('simulator', 'student', 'instructor').all()
+    serializer_class = SimulatorSessionSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['simulator', 'student', 'instructor', 'status']
+    search_fields = ['simulator__name', 'student__first_name', 'student__last_name']

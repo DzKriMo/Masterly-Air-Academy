@@ -18,6 +18,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { ExportButton } from "@/components/export-button";
 import { useToast } from "@/components/toast";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -48,6 +49,12 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // Cancel state
+  const [cancelCourseId, setCancelCourseId] = useState<string | null>(null);
+  // Reschedule state
+  const [rescheduleCourse, setRescheduleCourse] = useState<Course | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({ scheduled_date: "", start_time: "", end_time: "" });
 
   const {
     register,
@@ -95,6 +102,31 @@ export default function CoursesPage() {
     onError: (e: Error) => showToast("error", e.message),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      return api.patch<any>(`/courses/${courseId}/`, { status: "cancelled" });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["instructor-courses"] });
+      setCancelCourseId(null);
+      showToast("success", t("instructor.cancelledSuccess", "Cancelled successfully"));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: async ({ courseId, data }: { courseId: string; data: { scheduled_date: string; start_time: string; end_time: string } }) => {
+      return api.patch<any>(`/courses/${courseId}/`, data);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["instructor-courses"] });
+      setRescheduleCourse(null);
+      setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "" });
+      showToast("success", t("instructor.rescheduledSuccess", "Rescheduled successfully"));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
   const onSubmit = (data: CourseFormData) => {
     createCourse.mutate(data);
   };
@@ -130,12 +162,37 @@ export default function CoursesPage() {
     )},
     { key: "enrollment_count", header: t("instructor.students", "Students") },
     { key: "actions", header: "", sortable: false, render: (c) => (
-      <button
-        onClick={(e) => { e.stopPropagation(); router.push(`/instructor/courses/${c.id}/attendance`); }}
-        className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors"
-      >
-        {t("instructor.attendance", "Attendance")}
-      </button>
+      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => router.push(`/instructor/courses/${c.id}/attendance`)}
+          className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors"
+        >
+          {t("instructor.attendance", "Attendance")}
+        </button>
+        {c.status === "scheduled" && (
+          <>
+            <button
+              onClick={() => {
+                setRescheduleCourse(c);
+                setRescheduleForm({
+                  scheduled_date: c.scheduled_date || "",
+                  start_time: c.start_time?.slice(0,5) || "",
+                  end_time: c.end_time?.slice(0,5) || "",
+                });
+              }}
+              className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/20 transition-colors"
+            >
+              {t("instructor.reschedule", "Reschedule")}
+            </button>
+            <button
+              onClick={() => setCancelCourseId(c.id)}
+              className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-xs hover:bg-red-500/20 transition-colors"
+            >
+              {t("instructor.cancel", "Cancel")}
+            </button>
+          </>
+        )}
+      </div>
     )},
   ], [router, t]);
 
@@ -229,6 +286,79 @@ export default function CoursesPage() {
             </div>
           </form>
         </ModalForm>
+
+        {/* Reschedule Modal */}
+        <ModalForm
+          open={!!rescheduleCourse}
+          onClose={() => { setRescheduleCourse(null); setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "" }); }}
+          title={t("instructor.rescheduleCourse", "Reschedule Course")}
+          footer={
+            <button
+              type="submit"
+              form="reschedule-form"
+              disabled={rescheduleMutation.isPending}
+              className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm transition-colors"
+            >
+              {rescheduleMutation.isPending ? t("common.loading", "Saving...") : t("instructor.reschedule", "Reschedule")}
+            </button>
+          }
+        >
+          <form
+            id="reschedule-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!rescheduleCourse) return;
+              rescheduleMutation.mutate({ courseId: rescheduleCourse.id, data: rescheduleForm });
+            }}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t("instructor.date", "Date")}</label>
+                <input
+                  type="date"
+                  value={rescheduleForm.scheduled_date}
+                  onChange={e => setRescheduleForm(p => ({ ...p, scheduled_date: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">{t("instructor.startTime", "Start Time")}</label>
+                  <input
+                    type="time"
+                    value={rescheduleForm.start_time}
+                    onChange={e => setRescheduleForm(p => ({ ...p, start_time: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">{t("instructor.endTime", "End Time")}</label>
+                  <input
+                    type="time"
+                    value={rescheduleForm.end_time}
+                    onChange={e => setRescheduleForm(p => ({ ...p, end_time: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </form>
+        </ModalForm>
+
+        {/* Cancel Confirm Dialog */}
+        <ConfirmDialog
+          open={!!cancelCourseId}
+          onClose={() => setCancelCourseId(null)}
+          onConfirm={() => cancelCourseId && cancelMutation.mutate(cancelCourseId)}
+          title={t("instructor.cancelCourse", "Cancel Course")}
+          message={t("instructor.cancelCourseConfirm", "Are you sure you want to cancel this course?")}
+          confirmLabel={t("instructor.cancel", "Cancel Course")}
+          destructive
+          loading={cancelMutation.isPending}
+        />
 
         {isLoading ? (
           <LoadingSkeleton type="table" rows={8} />

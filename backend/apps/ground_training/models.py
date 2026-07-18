@@ -12,6 +12,7 @@ class Subject(models.Model):
     description_en = models.TextField(blank=True, null=True)
     description_fr = models.TextField(blank=True, null=True)
     description_ar = models.TextField(blank=True, null=True)
+    objectives = models.TextField(blank=True, null=True)
     total_hours = models.IntegerField()
     program = models.CharField(max_length=10, choices=TrainingProgram.choices)
     academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.SET_NULL, null=True, blank=True)
@@ -163,3 +164,23 @@ class AttendanceRecord(models.Model):
 
     def __str__(self):
         return f'{self.student.full_name} - {self.course.scheduled_date} - {self.status}'
+
+
+class GroundEvaluation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='evaluations')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='ground_evaluations')
+    grade = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    appreciation = models.TextField(blank=True, null=True)
+    module_validated = models.BooleanField(default=False)
+    recommend_remedial = models.BooleanField(default=False)
+    flagged = models.BooleanField(default=False)
+    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='given_evaluations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ground_evaluations'
+        unique_together = ['course', 'student']
+
+    def __str__(self):
+        return f'Eval: {self.student.full_name} - {self.course.title}'

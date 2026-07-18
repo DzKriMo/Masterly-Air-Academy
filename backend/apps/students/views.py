@@ -1,11 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile
 from .serializers import StudentListSerializer, MedicalCertificateSerializer, FlightInstructorSerializer, AdminProfileSerializer
 
 
-class StudentViewSet(viewsets.ReadOnlyModelViewSet):
+class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentListSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
@@ -18,6 +20,27 @@ class StudentViewSet(viewsets.ReadOnlyModelViewSet):
         if self.request.user.role == 'student':
             return qs.filter(user=self.request.user)
         return qs
+
+    @action(detail=True, methods=['post'])
+    def suspend(self, request, pk=None):
+        student = self.get_object()
+        student.status = 'suspended'
+        student.save()
+        return Response({'status': 'suspended'})
+
+    @action(detail=True, methods=['post'])
+    def reactivate(self, request, pk=None):
+        student = self.get_object()
+        student.status = 'active'
+        student.save()
+        return Response({'status': 'active'})
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        student = self.get_object()
+        student.status = 'archived'
+        student.save()
+        return Response({'status': 'archived'})
 
 
 class MedicalCertificateViewSet(viewsets.ModelViewSet):

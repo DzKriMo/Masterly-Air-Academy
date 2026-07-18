@@ -102,6 +102,9 @@ class FlightLesson(models.Model):
     grade = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     result = models.CharField(max_length=20, blank=True, null=True)
     pedagogical_note = models.TextField(blank=True, null=True)
+    departure_time = models.DateTimeField(null=True, blank=True)
+    arrival_time = models.DateTimeField(null=True, blank=True)
+    signed_by_instructor = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -201,3 +204,40 @@ class InstructorAvailability(models.Model):
     def __str__(self):
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         return f'{self.instructor.last_name} - {days[self.day_of_week]}'
+
+
+class Simulator(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    manufacturer = models.CharField(max_length=100, blank=True, null=True)
+    model_name = models.CharField(max_length=100, blank=True, null=True)
+    qualification_type = models.CharField(max_length=50, blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, default='available')
+    last_maintenance = models.DateTimeField(null=True, blank=True)
+    next_maintenance = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'simulators'
+
+    def __str__(self):
+        return f'{self.name} ({self.manufacturer} {self.model_name or ""})'
+
+
+class SimulatorSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    simulator = models.ForeignKey(Simulator, on_delete=models.CASCADE, related_name='sessions')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE)
+    instructor = models.ForeignKey('students.FlightInstructor', on_delete=models.CASCADE)
+    scheduled_date = models.DateTimeField()
+    duration = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    status = models.CharField(max_length=20, default='scheduled')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'simulator_sessions'
+
+    def __str__(self):
+        return f'{self.simulator.name} - {self.scheduled_date}'

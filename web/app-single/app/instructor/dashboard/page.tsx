@@ -21,6 +21,13 @@ export default function InstructorDashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: alertsData } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => api.get<any>("/notifications/?limit=5&type=alert").then(r => (r as unknown as any).results || []),
+    enabled: isAuthenticated,
+  });
+  const alerts: any[] = alertsData || [];
+
   const today = new Date().toISOString().split("T")[0];
   const todayCourses = courses.filter((c:any) => c.scheduled_date === today);
 
@@ -32,11 +39,16 @@ export default function InstructorDashboard() {
     courses.reduce((acc:any, c:any) => { acc[c.subject_code||"N/A"] = (acc[c.subject_code||"N/A"]||0) + 1; return acc; }, {})
   ).map(([name, value]) => ({ name, value }));
 
+  const isCGI = user?.role === 'chief_ground_instructor';
+  const isCFI = user?.role === 'chief_flight_instructor';
+
   return (
     <div className="flex-1 min-w-0">
       <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t('instructor.dashboard')}</h1>
+          <h1 className="text-lg font-bold text-white">
+            {isCGI ? t('instructor.dashboard') : isCFI ? t('instructor.dashboard') : t('instructor.dashboard')}
+          </h1>
           <ExportButton exports={[
             { label: `${t('instructor.totalCourses')} PDF`, url: "/courses/export/pdf/", filename: "courses.pdf", type: "pdf" },
             { label: `${t('instructor.totalCourses')} Excel`, url: "/courses/export/excel/", filename: "courses.xlsx", type: "excel" },
@@ -49,11 +61,99 @@ export default function InstructorDashboard() {
 
         {queryError && <ErrorCard message={queryError.message} />}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Stat title={t('instructor.totalCourses')} value={courses.length}/>
-          <Stat title={t('instructor.todaysCourses')} value={todayCourses.length}/>
-          <Stat title={t('instructor.activeStudents')} value="—"/>
-        </div>
+        {/* ── CGI Sections ── */}
+        {isCGI && (
+          <>
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Stat title={t('instructor.cgi.totalStudents')} value="—" />
+              <Stat title={t('instructor.cgi.todaysCourses')} value={todayCourses.length} />
+              <Stat title={t('instructor.cgi.availableInstructors')} value="—" />
+              <Stat title={t('instructor.cgi.passRate')} value="—" />
+            </div>
+
+            {/* Alerts Panel */}
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-6 mb-8">
+              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('instructor.cgi.alerts')}</h3>
+              {alerts.length === 0 ? (
+                <p className="text-sm text-gray-500">{t('common.noData', 'No alerts')}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {alerts.map((a: any, i: number) => (
+                    <li key={a.id || i} className="text-sm text-gray-300 flex items-start gap-2">
+                      <span className="text-gold-500 mt-0.5">&#9679;</span>
+                      <span>{a.title || a.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-3 text-xs text-gray-500">
+                <p>&#8226; {t('instructor.cgi.studentsAtRisk')}</p>
+                <p>&#8226; {t('instructor.cgi.failedExams')}</p>
+                <p>&#8226; {t('instructor.cgi.lowPerformingInstructors')}</p>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <QuickActionButton label={t('instructor.cgi.scheduleCourse')} />
+              <QuickActionButton label={t('instructor.cgi.manageSubjects')} />
+              <QuickActionButton label={t('instructor.cgi.manageInstructors')} />
+            </div>
+          </>
+        )}
+
+        {/* ── CFI Sections ── */}
+        {isCFI && (
+          <>
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Stat title={t('instructor.cfi.todaysFlights')} value="0/0/0" />
+              <Stat title={t('instructor.cfi.studentsInProgression')} value="—" />
+              <Stat title={t('instructor.cfi.readyForProgressCheck')} value="—" />
+              <Stat title={t('instructor.cfi.readyForSkillTest')} value="—" />
+            </div>
+
+            {/* Resource Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <ResourceCard title={t('instructor.cfi.availableAircraft')} value="—" />
+              <ResourceCard title={t('instructor.cfi.availableInstructors')} value="—" />
+              <ResourceCard title={t('instructor.cfi.aircraftInMaintenance')} value="—" />
+            </div>
+
+            {/* Alerts Panel */}
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-6 mb-8">
+              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('instructor.cfi.alerts')}</h3>
+              {alerts.length === 0 ? (
+                <p className="text-sm text-gray-500">{t('common.noData', 'No alerts')}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {alerts.map((a: any, i: number) => (
+                    <li key={a.id || i} className="text-sm text-gray-300 flex items-start gap-2">
+                      <span className="text-gold-500 mt-0.5">&#9679;</span>
+                      <span>{a.title || a.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-3 text-xs text-gray-500">
+                <p>&#8226; {t('instructor.cfi.expiringMedicals')}</p>
+                <p>&#8226; {t('instructor.cfi.expiringLicenses')}</p>
+                <p>&#8226; {t('instructor.cfi.upcomingMaintenance')}</p>
+                <p>&#8226; {t('instructor.cfi.lateProgressions')}</p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Default Stats (generic instructor) ── */}
+        {!isCGI && !isCFI && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Stat title={t('instructor.totalCourses')} value={courses.length}/>
+            <Stat title={t('instructor.todaysCourses')} value={todayCourses.length}/>
+            <Stat title={t('instructor.activeStudents')} value="—"/>
+          </div>
+        )}
 
         {courses.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -113,4 +213,16 @@ export default function InstructorDashboard() {
 
 function Stat({title,value}:{title:string;value:number|string}) {
   return <div className="bg-navy-800 rounded-xl border border-navy-700 p-6"><p className="text-3xl font-bold text-white">{value}</p><p className="text-sm text-gray-400 mt-1">{title}</p></div>;
+}
+
+function ResourceCard({title,value}:{title:string;value:number|string}) {
+  return <div className="bg-navy-800 rounded-xl border border-navy-700 p-6"><p className="text-2xl font-bold text-white">{value}</p><p className="text-sm text-gray-400 mt-1">{title}</p></div>;
+}
+
+function QuickActionButton({label}:{label:string}) {
+  return (
+    <button className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-xl text-sm text-gray-300 hover:bg-navy-700 hover:text-white transition-colors text-left">
+      {label}
+    </button>
+  );
 }

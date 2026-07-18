@@ -6,6 +6,7 @@ from apps.accounts.permissions import HasRolePermission
 from apps.students.models import Student
 from apps.administration.models import Invoice, Payment
 from apps.flight_training.models import FlightLesson
+from apps.core.models import AuditLog
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from io import BytesIO
@@ -89,3 +90,26 @@ class ExportFlightsView(APIView):
         wb.save(buf)
         return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             headers={"Content-Disposition": "attachment; filename=flights.xlsx"})
+
+
+class ExportAuditLogsView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'audit.export'
+
+    def get(self, request):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "AuditLogs"
+        _style_header(ws, ["Date", "User", "Action", "Entity", "Entity ID", "IP Address", "User Agent"])
+        for i, log in enumerate(AuditLog.objects.select_related('user').all(), 2):
+            ws.cell(row=i, column=1, value=str(log.created_at)[:19] if log.created_at else "")
+            ws.cell(row=i, column=2, value=log.user.email if log.user else "")
+            ws.cell(row=i, column=3, value=log.action)
+            ws.cell(row=i, column=4, value=log.entity)
+            ws.cell(row=i, column=5, value=str(log.entity_id) if log.entity_id else "")
+            ws.cell(row=i, column=6, value=log.ip_address or "")
+            ws.cell(row=i, column=7, value=str(log.user_agent or "")[:200])
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={"Content-Disposition": "attachment; filename=audit_logs.xlsx"})

@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
+import { useToast } from "@/components/toast";
 
 interface Question { id: string; question_text: string; question_type: string; options: string[]; }
 interface Result { score: number; total: number; percentage: number; is_passed: boolean; passing_grade: number; details: { question_id: string; question: string; your_answer: string; correct_answer: string; is_correct: boolean }[]; }
@@ -30,6 +31,7 @@ export default function TakeExamPage() {
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
   const submittedRef = useRef(false);
   const answersRef = useRef(answers);
   const attemptIdRef = useRef(attemptId);
@@ -43,7 +45,7 @@ export default function TakeExamPage() {
     setError(null);
     api.post(`/exams/${examId}/start/`)
       .then((d: any) => {
-        if (d.error) { alert(d.error); router.push("/student/exams"); return; }
+        if (d.error) { showToast("error", d.error); router.push("/student/exams"); return; }
         setQuestions(d.questions || []);
         setAttemptId(d.attempt_id);
         setDuration(d.duration || 30);

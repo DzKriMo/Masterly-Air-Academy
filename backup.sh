@@ -8,7 +8,7 @@ echo "=== Backup started: $(date) ==="
 
 # Database dump
 echo "Dumping database..."
-docker exec masterly-air-academy-db-1 pg_dump -U masterly masterly | gzip > "$BACKUP_DIR/database.sql.gz"
+cd /opt/masterly-air-academy && docker compose exec -T db pg_dump -U masterly masterly | gzip > "$BACKUP_DIR/database.sql.gz"
 
 # Application files
 echo "Backing up app files..."

@@ -1,14 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  cancelAnimation,
-  Easing,
-} from 'react-native-reanimated';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { colors } from '@/constants/colors';
 
 interface TimerProps {
@@ -34,7 +25,7 @@ export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
   const remainingRef = useRef(totalSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onTimeUpRef = useRef(onTimeUp);
-  const pulse = useSharedValue(1);
+  const pulse = useRef(new Animated.Value(1)).current;
 
   onTimeUpRef.current = onTimeUp;
 
@@ -46,8 +37,7 @@ export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
   useEffect(() => {
     if (isPaused) {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      cancelAnimation(pulse);
-      pulse.value = 1;
+      pulse.setValue(1);
       return;
     }
 
@@ -66,39 +56,43 @@ export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPaused, totalSeconds, pulse]);
+  }, [isPaused, totalSeconds]);
 
   useEffect(() => {
     if (isPaused || remaining > 300) {
-      cancelAnimation(pulse);
-      pulse.value = 1;
+      pulse.setValue(1);
       return;
     }
 
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1.08, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.08,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
     );
+    animation.start();
 
     return () => {
-      cancelAnimation(pulse);
-      pulse.value = 1;
+      animation.stop();
+      pulse.setValue(1);
     };
-  }, [isPaused, remaining > 300, pulse]);
+  }, [isPaused, remaining > 300]);
 
   const ratio = totalSeconds > 0 ? remaining / totalSeconds : 0;
   const timerColor = getTimerColor(ratio);
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
-
   return (
-    <Animated.View style={[styles.container, pulseStyle]}>
+    <Animated.View style={[styles.container, { transform: [{ scale: pulse }] }]}>
       <View style={[styles.ring, { borderColor: timerColor }]}>
         <Text style={[styles.time, { color: timerColor }]}>
           {formatTime(remaining)}

@@ -3,6 +3,7 @@ from .models import (
     FlightProgram, FlightLessonTemplate, Aircraft,
     FlightLesson, FlightPreparation, FlightStatus,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
+    Simulator, SimulatorSession,
 )
 
 
@@ -56,6 +57,7 @@ class FlightLessonSerializer(serializers.ModelSerializer):
             'debrief_duration', 'status', 'exercises_completed',
             'competencies_acquired', 'difficulties', 'observations',
             'recommendations', 'grade', 'result', 'pedagogical_note',
+            'departure_time', 'arrival_time', 'signed_by_instructor',
             'has_preparation', 'created_at', 'updated_at',
         ]
 
@@ -124,6 +126,9 @@ class FlightEvaluationSerializer(serializers.Serializer):
     grade = serializers.DecimalField(max_digits=4, decimal_places=1, required=True)
     result = serializers.CharField(required=True)
     pedagogical_note = serializers.CharField(required=False, allow_blank=True)
+    departure_time = serializers.DateTimeField(required=False, allow_null=True)
+    arrival_time = serializers.DateTimeField(required=False, allow_null=True)
+    signed_by_instructor = serializers.BooleanField(required=False, default=False)
 
 
 class ResourceBookingSerializer(serializers.ModelSerializer):
@@ -142,3 +147,29 @@ class MaintenanceRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceRecord
         fields = ['id', 'aircraft', 'type', 'description', 'start_date', 'end_date', 'status', 'notes', 'created_at']
+
+
+class SimulatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Simulator
+        fields = [
+            'id', 'name', 'manufacturer', 'model_name', 'qualification_type',
+            'location', 'status', 'last_maintenance', 'next_maintenance', 'created_at',
+        ]
+
+
+class SimulatorSessionSerializer(serializers.ModelSerializer):
+    simulator_name = serializers.CharField(source='simulator.name', read_only=True)
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    instructor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SimulatorSession
+        fields = [
+            'id', 'simulator', 'simulator_name', 'student', 'student_name',
+            'instructor', 'instructor_name', 'scheduled_date', 'duration',
+            'status', 'notes', 'created_at',
+        ]
+
+    def get_instructor_name(self, obj):
+        return f'{obj.instructor.first_name} {obj.instructor.last_name}'

@@ -28,12 +28,18 @@ export default function SchedulePage() {
     Promise.all([
       api.get<any>("/flight-lessons/"),
       api.get<any>("/courses/"),
-    ]).then(([flightsResp, coursesResp]) => {
+      api.get<any>("/exams/"),
+      api.get<any>("/simulator-sessions/"),
+    ]).then(([flightsResp, coursesResp, examsResp, simSessionsResp]) => {
       const flights = flightsResp as unknown as any;
       const courses = coursesResp as unknown as any;
+      const exams = examsResp as unknown as any;
+      const simSessions = simSessionsResp as unknown as any;
       const evts: any[] = [];
       (flights.results || []).forEach((f: any) => { if (f.start_time) evts.push({ title: `✈ ${f.student_name} - ${f.aircraft_reg}`, start: f.start_time, end: f.end_time || f.start_time, backgroundColor: "#3b82f6", borderColor: "#3b82f6", extendedProps: { type: "flight", id: f.id, status: f.status } }); });
       (courses.results || []).forEach((c: any) => { evts.push({ title: `📚 ${c.subject_code}: ${c.title}`, start: `${c.scheduled_date}T${c.start_time}`, end: `${c.scheduled_date}T${c.end_time}`, backgroundColor: "#c4943c", borderColor: "#c4943c", extendedProps: { type: "course", id: c.id, status: c.status } }); });
+      (exams.results || []).forEach((e: any) => { if (e.open_date) evts.push({ title: `📝 ${e.code}`, start: e.open_date, end: e.close_date || e.open_date, backgroundColor: "#8b5cf6", borderColor: "#8b5cf6", extendedProps: { type: "exam", id: e.id, status: e.status } }); });
+      (simSessions.results || []).forEach((s: any) => { if (s.scheduled_date) evts.push({ title: `🎮 ${s.simulator_name || 'Sim'}`, start: s.scheduled_date, backgroundColor: "#f59e0b", borderColor: "#f59e0b", extendedProps: { type: "simulator", id: s.id, status: s.status } }); });
       setEvents(evts); setError(null);
     }).catch(err => { console.error("Failed to load schedule:", err); setError(t("instructor.failedToLoadSchedule", "Failed to load schedule. Please try again.")); }).finally(() => setLoading(false));
   };
@@ -60,6 +66,8 @@ export default function SchedulePage() {
         <div className="flex gap-4 mb-4">
           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">{t("instructor.flights", "Flights")}</span></div>
           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">{t("instructor.courses", "Courses")}</span></div>
+          <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#8b5cf6"}}/><span className="text-xs text-gray-400">{t("instructor.exams", "Exams")}</span></div>
+          <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#f59e0b"}}/><span className="text-xs text-gray-400">{t("instructor.simulator", "Simulator")}</span></div>
         </div>
 
         {loading ? (
@@ -71,7 +79,7 @@ export default function SchedulePage() {
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin]}
               initialView="timeGridWeek"
-              headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek"}}
+              headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek,dayGridYear"}}
               events={events}
               height="auto"
               slotMinTime="06:00:00"

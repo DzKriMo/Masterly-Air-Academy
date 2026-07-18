@@ -1,12 +1,21 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Audit(models.Model):
+    AUDIT_TYPE_CHOICES = [
+        ('internal', 'Internal'),
+        ('regulatory', 'Regulatory'),
+        ('supplier', 'Supplier'),
+        ('pedagogical', 'Pedagogical'),
+        ('safety', 'Safety'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
-    type = models.CharField(max_length=50)
+    type = models.CharField(max_length=30, choices=AUDIT_TYPE_CHOICES)
     scope = models.TextField(blank=True, null=True)
     scheduled_date = models.DateTimeField()
     completed_date = models.DateTimeField(null=True, blank=True)
@@ -35,6 +44,7 @@ class NonConformity(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
     severity = models.CharField(max_length=20)
+    ncr_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
     responsible = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='assigned_ncrs')
     due_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, default='open')
@@ -52,6 +62,23 @@ class NonConformity(models.Model):
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if not self.ncr_number:
+            self.ncr_number = self._generate_number()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_number():
+        year = timezone.now().year
+        from django.db.models import Max
+        prefix = f'NCR-{year}-'
+        max_num = NonConformity.objects.filter(ncr_number__startswith=prefix).aggregate(m=Max('ncr_number'))['m']
+        if max_num:
+            seq = int(max_num.split('-')[-1]) + 1
+        else:
+            seq = 1
+        return f'NCR-{year}-{seq:04d}'
+
 
 class CAPA(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -59,6 +86,7 @@ class CAPA(models.Model):
     type = models.CharField(max_length=20, help_text='corrective or preventive')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    capa_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
     responsible = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     due_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, default='open')
@@ -74,6 +102,23 @@ class CAPA(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.capa_number:
+            self.capa_number = self._generate_number()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_number():
+        year = timezone.now().year
+        from django.db.models import Max
+        prefix = f'CAPA-{year}-'
+        max_num = CAPA.objects.filter(capa_number__startswith=prefix).aggregate(m=Max('capa_number'))['m']
+        if max_num:
+            seq = int(max_num.split('-')[-1]) + 1
+        else:
+            seq = 1
+        return f'CAPA-{year}-{seq:04d}'
 
 
 class RiskAssessment(models.Model):

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, Room,
-    Course, CourseEnrollment, AttendanceRecord,
+    Course, CourseEnrollment, AttendanceRecord, GroundEvaluation,
 )
 from .serializers import (
     SubjectSerializer, SubjectListSerializer,
@@ -14,7 +14,7 @@ from .serializers import (
     CourseSerializer, CourseCreateSerializer,
     CourseEnrollmentSerializer,
     AttendanceRecordSerializer, BulkAttendanceSerializer,
-    StudentProgressSerializer,
+    StudentProgressSerializer, GroundEvaluationSerializer,
 )
 
 
@@ -102,10 +102,22 @@ class ModuleViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Simple local storage (MinIO comes in Sprint 7)
-        from django.core.files.storage import default_storage
-        path = default_storage.save(f'module_docs/{module.id}/{file.name}', file)
-        file_url = f'/media/{path}'
+        try:
+            from django.core.files.storage import default_storage
+            path = default_storage.save(f'module_docs/{module.id}/{file.name}', file)
+            file_url = f'/media/{path}'
+        except Exception:
+            import os, uuid
+            from django.conf import settings
+            local_dir = os.path.join(settings.MEDIA_ROOT, 'module_docs', str(module.id))
+            os.makedirs(local_dir, exist_ok=True)
+            ext = os.path.splitext(file.name)[1]
+            local_name = f'{uuid.uuid4().hex}{ext}'
+            local_path = os.path.join(local_dir, local_name)
+            with open(local_path, 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            file_url = f'/media/module_docs/{module.id}/{local_name}'
 
         doc = ModuleDocument.objects.create(
             module=module,
@@ -187,7 +199,7 @@ class CourseViewSet(viewsets.ModelViewSet):
             materials.append({
                 'module_id': str(m.id),
                 'module_title': m.title,
-                'lessons': list(m.lessons.values('lesson_no', 'title', 'content')),
+                'lessons': list(m.lessons.values('id', 'lesson_no', 'title', 'content')),
                 'documents': list(m.documents.values('name', 'file_url', 'type')),
             })
         return Response({'course_id': str(course.id), 'modules': materials})
@@ -277,3 +289,11 @@ class StudentProgressViewSet(viewsets.ViewSet):
             'attendance_rate': round((present_att / total_att * 100) if total_att > 0 else 0, 1),
             'subjects': subjects_data,
         })
+
+
+class GroundEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = GroundEvaluation.objects.select_related('student', 'course').all()
+    serializer_class = GroundEvaluationSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.evaluate'
+    filterset_fields = ['course', 'student', 'flagged']

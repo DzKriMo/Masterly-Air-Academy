@@ -1,24 +1,82 @@
 "use client";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 
+const AUDIT_TYPES = [
+  { value: "internal", label: "Internal" },
+  { value: "regulatory", label: "Regulatory" },
+  { value: "supplier", label: "Supplier" },
+  { value: "pedagogical", label: "Pedagogical" },
+  { value: "safety", label: "Safety" },
+];
+
 export default function AuditsPage() {
+  const qc = useQueryClient();
+  const { showToast } = useToast();
   const [expanded, setExpanded] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [form, setForm] = useState({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
   const { t } = useTranslation();
+
   const { data: audits=[], isLoading } = useQuery({
     queryKey: ['quality-audits'],
     queryFn: () => api.get<any>("/audits/").then(d => d.results || []),
   });
+
+  const { data: usersData } = useQuery({
+    queryKey: ['quality-managers'],
+    queryFn: () => api.get("/users/?role=quality_manager").then(r => r.results || []),
+    enabled: showForm,
+  });
+  const qualityManagers = usersData || [];
+
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => editing ? api.put(`/audits/${editing.id}/`, data) : api.post("/audits/", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quality-audits"] });
+      setShowForm(false);
+      setEditing(null);
+      setForm({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
+      showToast("success", editing ? t('quality.auditUpdated', 'Audit updated.') : t('quality.auditCreated', 'Audit created.'));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
+    setShowForm(true);
+  };
+
+  const openEdit = (audit: any) => {
+    setEditing(audit);
+    setForm({
+      title: audit.title || "",
+      type: audit.type || "internal",
+      scope: audit.scope || "",
+      scheduled_date: audit.scheduled_date?.slice(0, 16) || "",
+      lead_auditor: audit.lead_auditor || "",
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMutation.mutate(form);
+  };
 
   const filterOptions: FilterOption[] = [
     { key: "status", label: t('common.allStatuses', 'All Statuses'), options: [
@@ -60,15 +118,41 @@ export default function AuditsPage() {
       header: "",
       sortable: false,
       render: (a) => (
-        <a href={`/api/audits/${a.id}/pdf/`} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</a>
+        <div className="flex gap-2">
+          <button onClick={(e) => { e.stopPropagation(); openEdit(a); }} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">{t('common.edit', 'Edit')}</button>
+          <a href={`/api/audits/${a.id}/pdf/`} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</a>
+        </div>
       ),
     },
   ];
 
+  const modalFooter = (
+    <>
+      <button type="button" onClick={() => { setShowForm(false); setEditing(null); }} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">{t('common.cancel', 'Cancel')}</button>
+      <button type="submit" form="audit-form" disabled={saveMutation.isPending} className="px-6 py-2 bg-gold-500 hover:bg-gold-400 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">{saveMutation.isPending ? t('common.loading', 'Loading...') : editing ? t('common.update', 'Update') : t('common.create', 'Create')}</button>
+    </>
+  );
+
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('quality.audits', 'Audits')}</h1></div></nav>
-    <main className="px-6 py-8">{isLoading?<LoadingSkeleton type="table" rows={5}/>:audits.length===0?<EmptyState message={t('quality.noAudits', 'No audits found.')}/>:<>
-      <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchAudits', 'Search audits...')}/>
-      <DataTable columns={columns} data={filtered} keyField="id"/>
-    </>}</main></div>);
+    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><h1 className="text-lg font-bold text-white">{t('quality.audits', 'Audits')}</h1><button onClick={openCreate} className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900">{t('quality.createAudit', '+ Create Audit')}</button></div></nav>
+    <main className="px-6 py-8">
+      <ModalForm open={showForm} onClose={() => { setShowForm(false); setEditing(null); }} title={editing ? t('quality.editAudit', 'Edit Audit') : t('quality.createAudit', 'Create Audit')} footer={modalFooter}>
+        <form id="audit-form" onSubmit={handleSubmit} className="space-y-4">
+          <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} required placeholder={t('common.title', 'Title')} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/>
+          <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+            {AUDIT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          <textarea value={form.scope} onChange={e=>setForm({...form,scope:e.target.value})} rows={3} placeholder={t('common.scope', 'Scope')} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/>
+          <input value={form.scheduled_date} onChange={e=>setForm({...form,scheduled_date:e.target.value})} required type="datetime-local" className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/>
+          <select value={form.lead_auditor} onChange={e=>setForm({...form,lead_auditor:e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+            <option value="">{t('common.selectLeadAuditor', 'Select lead auditor...')}</option>
+            {qualityManagers.map((u: any) => <option key={u.id} value={u.id}>{u.email}</option>)}
+          </select>
+        </form>
+      </ModalForm>
+
+      {isLoading?<LoadingSkeleton type="table" rows={5}/>:audits.length===0?<EmptyState message={t('quality.noAudits', 'No audits found.')}/>:<>
+        <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchAudits', 'Search audits...')}/>
+        <DataTable columns={columns} data={filtered} keyField="id"/>
+      </>}</main></div>);
 }

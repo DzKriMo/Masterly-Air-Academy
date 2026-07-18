@@ -30,7 +30,7 @@ class NonConformitySerializer(serializers.ModelSerializer):
         model = NonConformity
         fields = [
             'id', 'audit', 'audit_title', 'title', 'description', 'severity',
-            'responsible', 'responsible_name', 'due_date', 'status',
+            'ncr_number', 'responsible', 'responsible_name', 'due_date', 'status',
             'root_cause', 'closing_notes', 'closed_at', 'capa_count', 'created_at',
         ]
 
@@ -48,7 +48,7 @@ class CAPASerializer(serializers.ModelSerializer):
         model = CAPA
         fields = [
             'id', 'non_conformity', 'ncr_title', 'type', 'title', 'description',
-            'responsible', 'due_date', 'status', 'closing_notes',
+            'capa_number', 'responsible', 'due_date', 'status', 'closing_notes',
             'validation_date', 'created_at',
         ]
 
@@ -79,9 +79,19 @@ class SafetyEventSerializer(serializers.ModelSerializer):
 
 
 class QualityDocumentSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    approver_name = serializers.SerializerMethodField()
+
     class Meta:
         model = QualityDocument
         fields = [
             'id', 'number', 'title', 'type', 'version', 'issue_date',
-            'revision_date', 'status', 'file_url',
+            'revision_date', 'author', 'author_name', 'approver', 'approver_name',
+            'status', 'file_url',
         ]
+
+    def get_author_name(self, obj):
+        return obj.author.email if obj.author else None
+
+    def get_approver_name(self, obj):
+        return obj.approver.email if obj.approver else None

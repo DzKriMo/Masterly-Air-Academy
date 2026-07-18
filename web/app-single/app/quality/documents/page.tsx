@@ -22,9 +22,10 @@ export default function QualityDocumentsPage() {
   const filterOptions: FilterOption[] = [
     { key: "status", label: t('common.allStatuses', 'All Statuses'), options: [
       { value: "draft", label: t('quality.draft', 'Draft') },
-      { value: "review", label: t('quality.underReview', 'Under Review') },
+      { value: "in_revision", label: t('quality.underReview', 'Under Review') },
       { value: "approved", label: t('quality.approved', 'Approved') },
-      { value: "obsolete", label: t('quality.obsolete', 'Obsolete') },
+      { value: "archived", label: t('quality.archived', 'Archived') },
+      { value: "expired", label: t('quality.expired', 'Expired') },
     ]},
   ];
 
@@ -36,12 +37,17 @@ export default function QualityDocumentsPage() {
 
   const columns: Column<any>[] = [
     { key: "title", header: t('quality.document', 'Document'), render: (d) => <span className="text-white font-medium">{d.title||d.number}</span> },
-    { key: "type", header: t('common.type', 'Type'), render: (d) => <span className="text-sm text-gray-400">{d.type}</span> },
+    { key: "number", header: t('quality.docNumber', 'Number'), render: (d) => <span className="text-sm text-gray-400">{d.number}</span> },
+    { key: "version", header: t('quality.version', 'Version'), render: (d) => <span className="text-sm text-gray-400">{d.version||t('common.na', 'N/A')}</span> },
+    { key: "issue_date", header: t('quality.issueDate', 'Issue Date'), render: (d) => <span className="text-xs text-gray-400">{d.issue_date?.slice(0,10)||t('common.na', 'N/A')}</span> },
+    { key: "revision_date", header: t('quality.revisionDate', 'Revision Date'), render: (d) => <span className="text-xs text-gray-400">{d.revision_date?.slice(0,10)||t('common.na', 'N/A')}</span> },
+    { key: "author_name", header: t('quality.author', 'Author'), render: (d) => <span className="text-sm text-gray-400">{d.author_name||t('common.na', 'N/A')}</span> },
+    { key: "approver_name", header: t('quality.approver', 'Approver'), render: (d) => <span className="text-sm text-gray-400">{d.approver_name||t('common.na', 'N/A')}</span> },
     {
       key: "status",
       header: t('common.status', 'Status'),
       render: (d) => (
-        <span className={`text-xs px-2 py-0.5 rounded ${d.status==="approved"?"bg-green-500/10 text-green-400":"bg-yellow-500/10 text-yellow-400"}`}>{d.status||t('common.na', 'N/A')}</span>
+        <span className={`text-xs px-2 py-0.5 rounded ${d.status==="approved"?"bg-green-500/10 text-green-400":d.status==="draft"?"bg-yellow-500/10 text-yellow-400":d.status==="in_revision"?"bg-blue-500/10 text-blue-400":d.status==="archived"?"bg-gray-500/10 text-gray-400":"bg-red-500/10 text-red-400"}`}>{d.status||t('common.na', 'N/A')}</span>
       ),
     },
   ];

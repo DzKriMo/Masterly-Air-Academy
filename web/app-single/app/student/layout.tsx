@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, Menu, X } from "lucide-react";
+import { api } from "@/lib/api";
+import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, File, CreditCard, BarChart, Bell, Clock, Menu, X } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +14,19 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchUnread = () => {
+      api.get("/notifications/unread-count/")
+        .then((d: any) => setUnreadNotifCount(d.count ?? 0))
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const NAV = [
     { href: "/student/dashboard", label: t("student.dashboard"), Icon: LayoutDashboard },
@@ -20,6 +34,11 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/flights", label: t("student.flightLog"), Icon: Plane },
     { href: "/student/courses", label: t("student.myCourses"), Icon: BookOpen },
     { href: "/student/schedule", label: t("student.schedule"), Icon: Calendar },
+    { href: "/student/documents", label: t("student.documents", "Documents"), Icon: File },
+    { href: "/student/payments", label: t("student.payments", "Payments"), Icon: CreditCard },
+    { href: "/student/results", label: t("student.results", "Results"), Icon: BarChart },
+    { href: "/student/history", label: t("student.history", "History"), Icon: Clock },
+    { href: "/student/notifications", label: t("student.notifications", "Notifications"), Icon: Bell, badge: unreadNotifCount },
     { href: "/student/certificates", label: t("student.certificates"), Icon: Award },
     { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare },
     { href: "/student/profile", label: t("student.profile"), Icon: User },
@@ -56,7 +75,13 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                   ? "bg-gold-500/20 text-gold-500 font-semibold"
                   : "text-gray-400 hover:text-white hover:bg-navy-700"
               }`}>
-              <item.Icon className="w-5 h-5 shrink-0" />{item.label}
+              <item.Icon className="w-5 h-5 shrink-0" />
+              <span className="flex-1">{item.label}</span>
+              {"badge" in item && (item as any).badge > 0 && (
+                <span className="bg-gold-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                  {(item as any).badge > 99 ? "99+" : (item as any).badge}
+                </span>
+              )}
             </a>
           ))}
         </nav>

@@ -14,8 +14,12 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isCGI = user?.role === 'chief_ground_instructor';
+  const isCFI = user?.role === 'chief_flight_instructor';
+  const dashboardHref = isCGI ? "/instructor/cgi-dashboard" : isCFI ? "/instructor/cfi-dashboard" : "/instructor/dashboard";
+
   const NAV = [
-    { href: "/instructor/dashboard", label: t("instructor.dashboard"), Icon: LayoutDashboard },
+    { href: dashboardHref, label: t("instructor.dashboard"), Icon: LayoutDashboard },
     { href: "/instructor/schedule", label: t("instructor.calendar"), Icon: CalendarDays },
     { href: "/instructor/flights", label: t("instructor.flightSchedule"), Icon: PlaneTakeoff },
     { href: "/instructor/courses", label: t("instructor.myCourses"), Icon: BookOpen },

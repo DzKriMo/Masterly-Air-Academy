@@ -28,10 +28,12 @@ export default function StudentSchedulePage() {
     Promise.all([
       api.get("/flight-lessons/"),
       api.get("/courses/"),
-    ]).then(([flights,courses]: any) => {
+      api.get("/exams/"),
+    ]).then(([flights,courses,exams]: any) => {
       const evts:any[]=[];
       (flights.results||[]).forEach((f:any)=>{if(f.start_time)evts.push({title:`✈ ${f.aircraft_reg}`,start:f.start_time,end:f.end_time||f.start_time,backgroundColor:"#3b82f6",borderColor:"#3b82f6",extendedProps:{type:"flight",id:f.id,status:f.status}})});
       (courses.results||[]).forEach((c:any)=>{evts.push({title:`📚 ${c.subject_code}`,start:`${c.scheduled_date}T${c.start_time}`,end:`${c.scheduled_date}T${c.end_time}`,backgroundColor:"#c4943c",borderColor:"#c4943c",extendedProps:{type:"course",id:c.id,status:c.status}})});
+      (exams.results||[]).forEach((e:any)=>{if(e.open_date)evts.push({title:`📝 ${e.code}`,start:e.open_date,end:e.close_date||e.open_date,backgroundColor:"#8b5cf6",borderColor:"#8b5cf6",extendedProps:{type:"exam",id:e.id,status:e.status}})});
       setEvents(evts);
       setError(null);
     }).catch(err => { console.error("Failed to load schedule:", err); setError(t('student.scheduleLoadError', "Failed to load schedule. Please try again.")); }).finally(()=>setLoading(false));
@@ -41,13 +43,13 @@ export default function StudentSchedulePage() {
 
   return (<div className="min-h-screen bg-navy-900">
     <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110}/><div><h1 className="text-lg font-bold text-white">{t('student.schedule')}</h1><button onClick={()=>router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div></div><button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></div></nav>
-    <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={loadSchedule} />}<div className="flex gap-4 mb-4"><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">{t('student.scheduleFlights', 'Flights')}</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">{t('student.scheduleCourses', 'Courses')}</span></div></div>
+    <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={loadSchedule} />}<div className="flex gap-4 mb-4"><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">{t('student.scheduleFlights', 'Flights')}</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">{t('student.scheduleCourses', 'Courses')}</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#8b5cf6"}}/><span className="text-xs text-gray-400">{t('student.scheduleExams', 'Exams')}</span></div></div>
       {loading?<LoadingSkeleton type="table" rows={5} />:events.length===0?<EmptyState message={t('student.noEvents', 'No events scheduled.')} />:
       <div className="fc-wrapper">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="timeGridWeek"
-          headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek"}}
+          headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek,dayGridYear"}}
           events={events}
           height="auto"
           slotMinTime="06:00:00"

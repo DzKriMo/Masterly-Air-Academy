@@ -2,13 +2,23 @@ from rest_framework import serializers
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument,
     Room, Course, CourseEnrollment, AttendanceRecord,
+    GroundEvaluation,
 )
 
 
 class ModuleLessonSerializer(serializers.ModelSerializer):
+    module_title = serializers.SerializerMethodField()
+    subject_code = serializers.SerializerMethodField()
+
     class Meta:
         model = ModuleLesson
-        fields = ['id', 'module', 'lesson_no', 'title', 'content']
+        fields = ['id', 'module', 'lesson_no', 'title', 'content', 'module_title', 'subject_code']
+
+    def get_module_title(self, obj):
+        return obj.module.title if obj.module else ''
+
+    def get_subject_code(self, obj):
+        return obj.module.subject.code if obj.module and obj.module.subject else ''
 
 
 class ModuleDocumentSerializer(serializers.ModelSerializer):
@@ -175,3 +185,14 @@ class StudentProgressSerializer(serializers.Serializer):
     completed_courses = serializers.IntegerField()
     attendance_rate = serializers.FloatField()
     subjects = serializers.ListField()
+
+
+class GroundEvaluationSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GroundEvaluation
+        fields = '__all__'
+
+    def get_student_name(self, obj):
+        return obj.student.full_name

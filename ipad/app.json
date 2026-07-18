@@ -13,7 +13,8 @@
       "bundleIdentifier": "dz.masterly.airacademy",
       "infoPlist": {
         "NSCameraUsageDescription": "Camera is needed to scan documents",
-        "NSFaceIDUsageDescription": "Face ID is used for quick sign-in"
+        "NSFaceIDUsageDescription": "Face ID is used for quick sign-in",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "plugins": [
@@ -30,6 +31,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "214c454d-8171-4ca4-a894-669021d8d1d2"
+      }
     }
   }
 }

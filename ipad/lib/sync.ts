@@ -1,4 +1,4 @@
-import { mmkv } from '@/lib/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '@/lib/api';
 
 export interface SyncAction {
@@ -10,11 +10,11 @@ export interface SyncAction {
   retryCount: number;
 }
 
-const SYNC_QUEUE_KEY = 'sync_queue';
+const SYNC_QUEUE_KEY = '@masterly:sync_queue';
 const MAX_RETRIES = 3;
 
-export function getSyncQueue(): SyncAction[] {
-  const raw = mmkv.getString(SYNC_QUEUE_KEY);
+export async function getSyncQueue(): Promise<SyncAction[]> {
+  const raw = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
   if (!raw) return [];
   try {
     return JSON.parse(raw) as SyncAction[];
@@ -23,12 +23,12 @@ export function getSyncQueue(): SyncAction[] {
   }
 }
 
-function persistQueue(queue: SyncAction[]): void {
-  mmkv.set(SYNC_QUEUE_KEY, JSON.stringify(queue));
+async function persistQueue(queue: SyncAction[]): Promise<void> {
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
 }
 
-export function addToSyncQueue(action: Omit<SyncAction, 'id' | 'timestamp' | 'retryCount'>): void {
-  const queue = getSyncQueue();
+export async function addToSyncQueue(action: Omit<SyncAction, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
+  const queue = await getSyncQueue();
   const entry: SyncAction = {
     ...action,
     id: `sync_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -36,11 +36,11 @@ export function addToSyncQueue(action: Omit<SyncAction, 'id' | 'timestamp' | 're
     retryCount: 0,
   };
   queue.push(entry);
-  persistQueue(queue);
+  await persistQueue(queue);
 }
 
 export async function processSyncQueue(): Promise<{ processed: number; failed: number }> {
-  const queue = getSyncQueue();
+  const queue = await getSyncQueue();
   let processed = 0;
   let failed = 0;
   const remaining: SyncAction[] = [];
@@ -62,10 +62,10 @@ export async function processSyncQueue(): Promise<{ processed: number; failed: n
     }
   }
 
-  persistQueue(remaining);
+  await persistQueue(remaining);
   return { processed, failed };
 }
 
-export function clearSyncQueue(): void {
-  mmkv.delete(SYNC_QUEUE_KEY);
+export async function clearSyncQueue(): Promise<void> {
+  await AsyncStorage.removeItem(SYNC_QUEUE_KEY);
 }

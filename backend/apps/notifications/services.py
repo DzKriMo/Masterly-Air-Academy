@@ -1,6 +1,7 @@
 """Notification service — creates notifications triggered by key events."""
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from .models import Notification
 
 User = get_user_model()
@@ -98,7 +99,7 @@ class NotificationService:
     @staticmethod
     def document_expiring(user, document_type: str, doc_name: str, expiry_date):
         """Warn about an expiring document."""
-        days_left = (expiry_date - __import__('django.utils.timezone').utils.timezone.now().date()).days
+        days_left = (expiry_date - timezone.now().date()).days
         msg = f"{document_type} '{doc_name}' expires in {days_left} days ({expiry_date})"
         NotificationService.notify(
             user, 'document_expiring',
@@ -145,6 +146,19 @@ class NotificationService:
         NotificationService.notify(test.student.user, 'skill_test',
                                      'Skill Test Authorized', msg,
                                      {'test_id': str(test.id)})
+
+    @staticmethod
+    def exam_published(exam):
+        """Notify students when an exam is published."""
+        from apps.students.models import Student
+        students = Student.objects.filter(program=exam.program, status='active')
+        msg = f"Exam {exam.code} - {exam.title or 'Untitled'} has been published"
+        for student in students:
+            NotificationService.notify(
+                student.user, 'exam_published',
+                'Exam Published', msg,
+                {'exam_id': str(exam.id), 'exam_code': exam.code}
+            )
 
     @staticmethod
     def certificate_issued(certificate):

@@ -4,16 +4,18 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.accounts.serializers import CustomTokenObtainPairSerializer
-from apps.accounts.views import CurrentUserView, UpdateProfileView, LogoutView
+from apps.accounts.views import CurrentUserView, UpdateProfileView, LogoutView, UserViewSet
 from apps.ground_training.views import (
     SubjectViewSet, ModuleViewSet, RoomViewSet,
     CourseViewSet, CourseEnrollmentViewSet, AttendanceRecordViewSet,
     StudentProgressViewSet, ModuleLessonViewSet, ModuleDocumentViewSet,
+    GroundEvaluationViewSet,
 )
 from apps.flight_training.views import (
     AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
     ResourceBookingViewSet, InstructorAvailabilityViewSet, FlightLogViewSet,
     MaintenanceRecordViewSet, FlightProgramViewSet, FlightLessonTemplateViewSet,
+    SimulatorViewSet, SimulatorSessionViewSet,
 )
 from apps.exams.views import (
     QuestionBankViewSet, ExamViewSet, QuizViewSet,
@@ -38,21 +40,28 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView
+from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView
+from apps.quality_safety.exports import ExportAuditsView, ExportNCRsView, ExportCAPAsView, ExportSafetyEventsView, ExportRiskAssessmentsView
+from datetime import timedelta
+from django.utils import timezone
 
 
 from apps.accounts.permissions import HasRolePermission
+from apps.ground_training.pdf import generate_attendance_pdf
+from apps.quality_safety.pdf import generate_audit_report_pdf
+from apps.exams.pdf import generate_certificate_pdf as _cert_pdf, generate_invoice_pdf as _inv_pdf
+from apps.students.models import Student, MedicalCertificate, TrainingProgram
+from apps.ground_training.models import Course, CourseEnrollment, AttendanceRecord
+from apps.flight_training.models import Aircraft, FlightLesson
+from apps.administration.models import Invoice, Payment
+from apps.quality_safety.models import Audit, NonConformity
+from apps.exams.models import ExamAttempt, Certificate
 
 
 class DashboardKPIView(APIView):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'dashboard.view'
     def get(self, request):
-        from apps.students.models import Student
-        from apps.ground_training.models import Course
-        from apps.flight_training.models import Aircraft, FlightLesson
-        from apps.administration.models import Invoice
-        from apps.quality_safety.models import Audit, NonConformity
         fl = FlightLesson.objects.all()
         inv = Invoice.objects.all()
         return Response({"students": Student.objects.count(), "courses": Course.objects.count(), "aircraft": Aircraft.objects.count(), "flights": fl.count(), "flight_hours": round(sum(float(f.flight_duration or 0) for f in fl), 1), "revenue": round(sum(float(i.amount) for i in inv.filter(status="paid")), 2), "outstanding": round(sum(float(i.amount) for i in inv.filter(status__in=["issued","partially_paid"])), 2), "audits": Audit.objects.filter(status="planned").count(), "ncrs": NonConformity.objects.filter(status="open").count()})
@@ -63,19 +72,10 @@ class StudentDashboardView(APIView):
     required_permission = 'students.view_own'
 
     def get(self, request):
-        from apps.students.models import Student
-        from apps.ground_training.models import CourseEnrollment, AttendanceRecord, Course
-        from apps.flight_training.models import FlightLesson
-        from apps.administration.models import Invoice
-        from apps.exams.models import ExamAttempt, Certificate
-
         try:
             student = Student.objects.get(user=request.user)
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=404)
-
-        from datetime import timedelta
-        from django.utils import timezone
 
         # Flight hours
         flight_lessons = FlightLesson.objects.filter(student=student)
@@ -144,6 +144,24 @@ class StudentDashboardView(APIView):
                 'date': str(a.completed_at.date()) if a.completed_at else None,
             })
 
+        # Exam counts
+        passed_exams_count = ExamAttempt.objects.filter(student=student, is_passed=True).count()
+        failed_exams_count = ExamAttempt.objects.filter(student=student, is_passed=False).count()
+
+        # Notifications (last 5 unread)
+        from apps.notifications.models import Notification
+        notifications_qs = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:5]
+        notifications_data = []
+        for n in notifications_qs:
+            notifications_data.append({
+                'id': str(n.id),
+                'type': n.type,
+                'title': n.title,
+                'message': n.message,
+                'created_at': str(n.created_at),
+                'data': n.data,
+            })
+
         # Unpaid invoices count
         unpaid_invoices_count = Invoice.objects.filter(
             student=student,
@@ -151,7 +169,6 @@ class StudentDashboardView(APIView):
         ).count()
 
         # Expiring documents (medical certificates expiring within 30 days)
-        from apps.students.models import MedicalCertificate
         expiring_soon = MedicalCertificate.objects.filter(
             student=student,
             status='valid',
@@ -168,11 +185,16 @@ class StudentDashboardView(APIView):
         ]
 
         return Response({
+            'student_number': student.student_number,
+            'program': student.program,
             'total_flight_hours': total_flight_hours,
             'total_lessons_completed': total_lessons_completed,
             'theory_progress': theory_progress,
             'flight_progress': flight_progress,
             'exam_average': exam_average,
+            'passed_exams_count': passed_exams_count,
+            'failed_exams_count': failed_exams_count,
+            'notifications': notifications_data,
             'upcoming_schedule': upcoming_schedule,
             'recent_results': recent_results,
             'unpaid_invoices_count': unpaid_invoices_count,
@@ -181,11 +203,11 @@ class StudentDashboardView(APIView):
 
 
 @api_view(['GET'])
+@permission_classes([])  # Public endpoint — no auth required
 def verify_certificate(request):
     number = request.query_params.get('number', '')
     if not number:
         return Response({'valid': False, 'message': 'Certificate number required'}, status=400)
-    from apps.exams.models import Certificate
     try:
         cert = Certificate.objects.get(certificate_number=number)
         return Response({'valid': True, 'certificate': CertificateSerializer(cert).data})
@@ -196,12 +218,8 @@ def verify_certificate(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def finance_reports(request):
-    from datetime import timedelta
-    from django.utils import timezone
     from django.db.models import Sum
     from decimal import Decimal
-    from apps.administration.models import Invoice, Payment
-    from apps.students.models import Student
 
     period = request.query_params.get('period', 'month')
     year = int(request.query_params.get('year', timezone.now().year))
@@ -219,7 +237,6 @@ def finance_reports(request):
 
     # Revenue by program
     revenue_by_program = []
-    from apps.students.models import TrainingProgram
     for prog_code, prog_label in TrainingProgram.choices:
         prog_invoices = paid_invoices.filter(student__program=prog_code)
         rev = round(sum(float(i.amount) for i in prog_invoices), 2)
@@ -283,15 +300,103 @@ def finance_reports(request):
         'top_debtors': top_debtors,
         'collection_rate': collection_rate,
     })
-from apps.ground_training.pdf import generate_attendance_pdf
-from apps.quality_safety.pdf import generate_audit_report_pdf
-from apps.exams.pdf import generate_certificate_pdf as _cert_pdf, generate_invoice_pdf as _inv_pdf
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def student_report(request):
+    """GET /api/reports/students/ — aggregated student data"""
+    from django.db.models import Count
+    total = Student.objects.count()
+    by_program = list(Student.objects.values('program').annotate(count=Count('id')))
+    by_status = list(Student.objects.values('status').annotate(count=Count('id')))
+    new_this_month = Student.objects.filter(enrollment_date__month=timezone.now().month).count()
+    return Response({
+        'total': total, 'by_program': by_program, 'by_status': by_status,
+        'new_this_month': new_this_month,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def financial_report(request):
+    """GET /api/reports/financial/ — revenue, payments, outstanding"""
+    from django.db.models import Count, Sum
+    total_invoiced = Invoice.objects.aggregate(s=Sum('amount'))['s'] or 0
+    total_paid = Payment.objects.aggregate(s=Sum('amount'))['s'] or 0
+    overdue = Invoice.objects.filter(status='overdue').aggregate(s=Sum('amount'))['s'] or 0
+    by_status = list(Invoice.objects.values('status').annotate(count=Count('id'), total=Sum('amount')))
+    return Response({
+        'total_invoiced': round(float(total_invoiced), 2), 'total_paid': round(float(total_paid), 2),
+        'overdue': round(float(overdue), 2), 'by_status': by_status,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def exam_reports(request):
+    """GET /api/reports/exams/ -- pass rates, results summary"""
+    from apps.exams.models import Exam, ExamAttempt
+    from django.db.models import Count, Avg
+    total_exams = Exam.objects.count()
+    total_attempts = ExamAttempt.objects.count()
+    passed = ExamAttempt.objects.filter(is_passed=True).count()
+    pass_rate = round((passed / total_attempts * 100) if total_attempts > 0 else 0, 1)
+    avg_score = ExamAttempt.objects.filter(score__isnull=False).aggregate(a=Avg('score'))['a'] or 0
+    return Response({
+        'total_exams': total_exams, 'total_attempts': total_attempts,
+        'passed': passed, 'pass_rate': pass_rate, 'avg_score': round(float(avg_score), 1),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def fleet_report(request):
+    """GET /api/reports/fleet/ — aircraft usage, instructor utilization"""
+    from apps.flight_training.models import Aircraft, FlightLesson
+    from apps.students.models import FlightInstructor
+    from django.db.models import Sum, Count
+
+    aircraft = []
+    for a in Aircraft.objects.all():
+        hours = FlightLesson.objects.filter(aircraft=a, status='completed').aggregate(s=Sum('flight_duration'))['s'] or 0
+        aircraft.append({'registration': a.registration, 'hours': round(float(hours), 1), 'status': a.status, 'lessons': FlightLesson.objects.filter(aircraft=a).count()})
+
+    instructors = []
+    for fi in FlightInstructor.objects.filter(status='active'):
+        hours = FlightLesson.objects.filter(instructor=fi, status='completed').aggregate(s=Sum('flight_duration'))['s'] or 0
+        instructors.append({'name': f'{fi.first_name} {fi.last_name}', 'hours': round(float(hours), 1), 'students': fi.flight_lessons.values('student').distinct().count()})
+
+    return Response({'aircraft': aircraft, 'instructors': instructors})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def student_history(request):
+    """GET /api/students/me/history/ -- chronological academic history"""
+    from apps.students.models import Student
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return Response({'error': 'Student profile not found'}, status=404)
+
+    from apps.exams.models import ExamAttempt, ProgressCheck, SkillTest, Certificate
+    events = []
+    for a in ExamAttempt.objects.filter(student=student).select_related('exam'):
+        events.append({'type': 'exam', 'date': str(a.completed_at.date()) if a.completed_at else str(a.started_at.date()), 'title': f'Exam: {a.exam.code}', 'detail': f'Score: {a.score}% - {"Passed" if a.is_passed else "Failed"}', 'id': str(a.id)})
+    for p in ProgressCheck.objects.filter(student=student):
+        events.append({'type': 'progress_check', 'date': str(p.scheduled_date.date()), 'title': 'Progress Check', 'detail': p.result or 'Pending', 'id': str(p.id)})
+    for s in SkillTest.objects.filter(student=student):
+        events.append({'type': 'skill_test', 'date': str(s.scheduled_date.date()), 'title': 'Skill Test', 'detail': s.result or 'Pending', 'id': str(s.id)})
+    for c in Certificate.objects.filter(student=student):
+        events.append({'type': 'certificate', 'date': str(c.issue_date), 'title': f'Certificate: {c.title or c.type}', 'detail': c.certificate_number, 'id': str(c.id)})
+    events.sort(key=lambda x: x['date'], reverse=True)
+    return Response({'events': events})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def certificate_pdf(request, cert_id):
-    from apps.exams.models import Certificate
     cert = Certificate.objects.get(id=cert_id)
     return _cert_pdf(cert)
 
@@ -299,9 +404,159 @@ def certificate_pdf(request, cert_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_pdf(request, inv_id):
-    from apps.administration.models import Invoice
     inv = Invoice.objects.get(id=inv_id)
     return _inv_pdf(inv)
+
+
+@api_view(['POST'])
+@permission_classes([])  # Public
+def submit_contact(request):
+    """Handle contact form + application submissions from the landing page."""
+    name = request.data.get('name', '').strip()
+    email = request.data.get('email', '').strip()
+    phone = request.data.get('phone', '').strip()
+    subject = request.data.get('subject', '').strip()
+    message = request.data.get('message', '').strip()
+    form_type = request.data.get('type', 'contact')  # 'contact' or 'application'
+    program = request.data.get('program', '')  # for applications
+
+    if not name or not email or not message:
+        return Response({'error': 'Name, email, and message are required.'}, status=400)
+
+    # Store as a notification for admin users
+    from apps.notifications.models import Notification
+    from apps.accounts.models import User
+
+    title = f"New {'Application' if form_type == 'application' else 'Contact'} from {name}"
+    body = f"Email: {email}\nPhone: {phone}\n\n{message}"
+    if program:
+        body = f"Program: {program}\n{body}"
+
+    # Send to all admin roles
+    admin_roles = ['system_admin', 'admin_responsible', 'admin_agent', 'admissions_responsible']
+    admins = User.objects.filter(role__in=admin_roles, is_active=True)
+    for admin in admins:
+        Notification.objects.create(
+            user=admin,
+            type='contact_form' if form_type == 'contact' else 'application',
+            title=title,
+            message=body,
+            data={'name': name, 'email': email, 'phone': phone, 'subject': subject, 'program': program, 'type': form_type}
+        )
+
+    # If application, also create an Application record
+    if form_type == 'application':
+        import uuid
+        from apps.students.models import Student
+        from apps.administration.models import Application
+        from apps.accounts.models import User as UserModel
+
+        first = name.split()[0] if name else 'Applicant'
+        last = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
+
+        # Generate a unique base for candidate accounts
+        uid = uuid.uuid4()
+        cand_username = f'candidate_{uid.hex[:12]}'
+        cand_email = email or f'{cand_username}@maa.dz'
+
+        # Look up by email first to avoid get_or_create collisions with existing users
+        existing_user = UserModel.objects.filter(email=cand_email).first()
+
+        if existing_user:
+            # If the existing user is already a candidate, reuse; otherwise create a new user
+            if existing_user.role == 'candidate':
+                user = existing_user
+            else:
+                # Existing non-candidate user with this email — create a separate candidate account
+                # Use a suffixed email to avoid collision
+                cand_email = f'candidate_{uid.hex[:8]}__{email}' if email else f'{cand_username}@maa.dz'
+                user = UserModel.objects.create_user(
+                    username=cand_username,
+                    email=cand_email,
+                    password=UserModel.objects.make_random_password(),
+                    role='candidate',
+                    status='pending',
+                    first_name=first,
+                    last_name=last,
+                )
+        else:
+            user = UserModel.objects.create_user(
+                username=cand_username,
+                email=cand_email,
+                password=UserModel.objects.make_random_password(),
+                role='candidate',
+                status='pending',
+                first_name=first,
+                last_name=last,
+            )
+
+        student, created = Student.objects.get_or_create(
+            user=user,
+            defaults={
+                'student_number': f'APP-{uid.hex[:8].upper()}',
+                'first_name': first,
+                'last_name': last,
+                'date_of_birth': '2000-01-01',
+                'enrollment_date': timezone.now().date(),
+                'program': program or 'PPL',
+                'status': 'pending',
+                'phone': phone,
+            }
+        )
+        # If student already existed, update contact info
+        if not created:
+            student.first_name = first
+            student.last_name = last
+            student.phone = phone or student.phone
+            if program:
+                student.program = program
+            student.save(update_fields=['first_name', 'last_name', 'phone', 'program'])
+
+        Application.objects.create(
+            application_number=f'APP-{uuid.uuid4().hex[:8].upper()}',
+            student=student,
+            status='pending',
+            notes=message,
+            documents=[{'type': 'contact', 'email': email, 'phone': phone, 'program': program}],
+        )
+
+    return Response({'success': True, 'message': 'Your message has been received. We will get back to you shortly.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def notification_broadcast(request):
+    """POST /api/notifications/broadcast/ — send notification to users by role or individual user_id"""
+    title = request.data.get('title', '')
+    message = request.data.get('message', '')
+    user_id = request.data.get('user_id', None)
+    role = request.data.get('role', '')
+
+    if not title:
+        return Response({'error': 'Title is required'}, status=400)
+
+    from apps.notifications.models import Notification
+    from apps.accounts.models import User
+
+    # If user_id is provided, send to that specific user
+    if user_id:
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+            Notification.objects.create(user=user, type='broadcast', title=title, message=message)
+            return Response({'sent': 1})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+
+    # Otherwise send by role
+    if not role:
+        return Response({'error': 'Role or user_id is required'}, status=400)
+
+    users = User.objects.filter(role=role, is_active=True)
+    count = 0
+    for user in users:
+        Notification.objects.create(user=user, type='broadcast', title=title, message=message)
+        count += 1
+    return Response({'sent': count})
 
 
 @api_view(['GET'])
@@ -328,9 +583,6 @@ def search_view(request):
             return Response({'results': results, 'source': 'meilisearch'})
 
     # DB fallback
-    from apps.students.models import Student
-    from apps.ground_training.models import Course
-    from apps.flight_training.models import Aircraft
     results = []
     for s in Student.objects.filter(first_name__icontains=q)[:5]:
         results.append({'type': 'student', 'title': s.full_name, 'id': str(s.id)})
@@ -348,6 +600,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 router = DefaultRouter()
+router.register(r'users', UserViewSet)
 router.register(r'subjects', SubjectViewSet)
 router.register(r'modules', ModuleViewSet)
 router.register(r'rooms', RoomViewSet)
@@ -385,19 +638,22 @@ router.register(r'skill-tests', SkillTestViewSet)
 router.register(r'practical-evaluations', PracticalEvaluationViewSet)
 router.register(r'module-lessons', ModuleLessonViewSet)
 router.register(r'module-documents', ModuleDocumentViewSet)
+router.register(r'ground-evaluations', GroundEvaluationViewSet)
 router.register(r'quiz-attempts', QuizAttemptViewSet)
 router.register(r'flight-instructors', FlightInstructorViewSet)
 router.register(r'admin-profiles', AdminProfileViewSet)
 router.register(r'system-settings', SystemSettingViewSet)
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'simulators', SimulatorViewSet)
+router.register(r'simulator-sessions', SimulatorSessionViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
     path('students/flight-log/', FlightLogViewSet.as_view({'get': 'list'}), name='flight-log'),
     path('dashboard/kpis/', DashboardKPIView.as_view(), name='dashboard-kpis'),
     path('student/dashboard/', StudentDashboardView.as_view(), name='student-dashboard'),
-    path('student/certificates/verify/', verify_certificate, name='verify-certificate'),
+    path('certificates/verify/', verify_certificate, name='verify-certificate'),
     path('quality/dashboard/', QualityDashboardView.as_view(), name='quality-dashboard'),
     path('finance/reports/', finance_reports, name='finance-reports'),
     path('export/students/', ExportStudentsView.as_view(), name='export-students'),
@@ -407,7 +663,22 @@ urlpatterns = [
     path('audits/<uuid:audit_id>/pdf/', generate_audit_report_pdf, name='audit-pdf'),
     path('certificates/<uuid:cert_id>/pdf/', certificate_pdf, name='certificate-pdf'),
     path('invoices/<uuid:inv_id>/pdf/', invoice_pdf, name='invoice-pdf'),
+    path('contact/submit/', submit_contact, name='submit-contact'),
     path('search/', search_view, name='search'),
+    path('notifications/broadcast/', notification_broadcast, name='notification-broadcast'),
+    path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
+
+    path('export/audits/', ExportAuditsView.as_view(), name='export-audits'),
+    path('export/non-conformities/', ExportNCRsView.as_view(), name='export-ncrs'),
+    path('export/capas/', ExportCAPAsView.as_view(), name='export-capas'),
+    path('export/safety-events/', ExportSafetyEventsView.as_view(), name='export-safety-events'),
+    path('export/risk-assessments/', ExportRiskAssessmentsView.as_view(), name='export-risk-assessments'),
+    path('reports/students/', student_report, name='report-students'),
+    path('reports/financial/', financial_report, name='report-financial'),
+
+    path('reports/exams/', exam_reports, name='report-exams'),
+    path('reports/fleet/', fleet_report, name='report-fleet'),
+    path('students/me/history/', student_history, name='student-history'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

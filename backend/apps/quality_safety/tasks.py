@@ -1,5 +1,6 @@
 """Periodic tasks for quality & safety — deadline monitoring and notifications."""
 from celery import shared_task
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -8,15 +9,15 @@ User = get_user_model()
 @shared_task
 def check_upcoming_deadlines():
     """Check all upcoming quality/safety deadlines and notify responsible users
-    when items are within 7 days of expiry."""
+    when items are within the configured window of expiry."""
     from .services import DeadlineMonitorService
     from apps.notifications.services import NotificationService
 
-    deadlines = DeadlineMonitorService.get_upcoming_deadlines(days_ahead=30)
+    deadlines = DeadlineMonitorService.get_upcoming_deadlines(days_ahead=settings.QUALITY_SAFETY_DEADLINE_DAYS_AHEAD)
     notification_count = 0
 
     for d in deadlines:
-        if d['days_remaining'] <= 7 and d.get('responsible'):
+        if d['days_remaining'] <= settings.QUALITY_SAFETY_DAYS_REMAINING and d.get('responsible'):
             user = User.objects.filter(email=d['responsible']).first()
             if user:
                 type_label = d['type'].replace('_', ' ').title()

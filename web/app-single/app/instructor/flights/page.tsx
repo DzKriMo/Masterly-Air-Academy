@@ -14,6 +14,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { ExportButton } from "@/components/export-button";
 import { useToast } from "@/components/toast";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface Flight {
   id: string; student_name: string; instructor_name: string;
@@ -43,6 +44,14 @@ export default function FlightsPage() {
   const [saving, setSaving] = useState(false);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // Cancel state
+  const [cancelFlightId, setCancelFlightId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  // Reschedule state
+  const [rescheduleFlight, setRescheduleFlight] = useState<Flight | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" });
+  const [rescheduling, setRescheduling] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { router.push("/login"); return; }
@@ -76,6 +85,42 @@ export default function FlightsPage() {
     } catch (err: any) {
       showToast("error", err.message || t('instructor.createFailed'));
     } finally { setSaving(false); }
+  };
+
+  const handleCancel = async () => {
+    if (!cancelFlightId) return;
+    setCancelling(true);
+    try {
+      await api.patch(`/flight-lessons/${cancelFlightId}/`, { status: 'cancelled' });
+      setCancelFlightId(null);
+      showToast("success", t('instructor.cancelledSuccess', "Cancelled successfully"));
+      fetchFlights();
+    } catch (err: any) {
+      showToast("error", err.message || t('instructor.createFailed'));
+    } finally { setCancelling(false); }
+  };
+
+  const handleReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleFlight) return;
+    setRescheduling(true);
+    try {
+      const body: any = {
+        scheduled_date: rescheduleForm.scheduled_date,
+        start_time: rescheduleForm.start_time,
+        end_time: rescheduleForm.end_time,
+      };
+      if (rescheduleForm.aircraft) {
+        body.aircraft = rescheduleForm.aircraft;
+      }
+      await api.patch(`/flight-lessons/${rescheduleFlight.id}/`, body);
+      setRescheduleFlight(null);
+      setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" });
+      showToast("success", t('instructor.rescheduledSuccess', "Rescheduled successfully"));
+      fetchFlights();
+    } catch (err: any) {
+      showToast("error", err.message || t('instructor.createFailed'));
+    } finally { setRescheduling(false); }
   };
 
   const filtered = useMemo(() => {
@@ -123,6 +168,26 @@ export default function FlightsPage() {
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => router.push(`/instructor/flights/${f.id}/prep`)} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20">{t('instructor.prep')}</button>
           <button onClick={() => router.push(`/instructor/flights/${f.id}/evaluate`)} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900">{t('instructor.evaluate')}</button>
+          <button
+            onClick={() => {
+              setRescheduleFlight(f);
+              setRescheduleForm({
+                scheduled_date: f.scheduled_date || "",
+                start_time: f.start_time?.slice(0,16) || "",
+                end_time: f.end_time?.slice(0,16) || "",
+                aircraft: "",
+              });
+            }}
+            className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20"
+          >
+            {t('instructor.reschedule', 'Reschedule')}
+          </button>
+          <button
+            onClick={() => setCancelFlightId(f.id)}
+            className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs hover:bg-red-500/20"
+          >
+            {t('instructor.cancel', 'Cancel')}
+          </button>
         </div>
       );
     }},
@@ -211,6 +276,83 @@ export default function FlightsPage() {
             </div>
           </form>
         </ModalForm>
+
+        {/* Reschedule Flight Modal */}
+        <ModalForm
+          open={!!rescheduleFlight}
+          onClose={() => { setRescheduleFlight(null); setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" }); }}
+          title={t('instructor.rescheduleFlight', 'Reschedule Flight')}
+          footer={
+            <button
+              type="submit"
+              form="reschedule-form"
+              disabled={rescheduling}
+              className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm"
+            >
+              {rescheduling ? t('common.loading', 'Saving...') : t('instructor.reschedule', 'Reschedule')}
+            </button>
+          }
+        >
+          <form id="reschedule-form" onSubmit={handleReschedule}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('instructor.aircraftLabel')}</label>
+                <select
+                  value={rescheduleForm.aircraft}
+                  onChange={e => setRescheduleForm(p => ({ ...p, aircraft: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                >
+                  <option value="">{t('instructor.selectOption', 'Keep current aircraft')}</option>
+                  {aircraft.map(a => <option key={a.id} value={a.id}>{a.registration} ({a.model})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('instructor.dateLabel')}</label>
+                <input
+                  type="date"
+                  value={rescheduleForm.scheduled_date}
+                  onChange={e => setRescheduleForm(p => ({ ...p, scheduled_date: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">{t('instructor.startLabel')}</label>
+                  <input
+                    type="datetime-local"
+                    value={rescheduleForm.start_time}
+                    onChange={e => setRescheduleForm(p => ({ ...p, start_time: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">{t('instructor.endLabel')}</label>
+                  <input
+                    type="datetime-local"
+                    value={rescheduleForm.end_time}
+                    onChange={e => setRescheduleForm(p => ({ ...p, end_time: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </form>
+        </ModalForm>
+
+        {/* Cancel Flight Confirm Dialog */}
+        <ConfirmDialog
+          open={!!cancelFlightId}
+          onClose={() => setCancelFlightId(null)}
+          onConfirm={handleCancel}
+          title={t('instructor.cancelFlight', 'Cancel Flight')}
+          message={t('instructor.cancelFlightConfirm', 'Are you sure you want to cancel this flight?')}
+          confirmLabel={t('instructor.cancel', 'Cancel Flight')}
+          destructive
+          loading={cancelling}
+        />
 
         {loading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState

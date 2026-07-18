@@ -31,8 +31,21 @@ export default function QualityDashboard() {
   });
   const [audits=[],ncrs=[],capas=[],events=[],risks=[],documents=[]] = data ? data.map((d:any)=>d.results||[]) : [[],[],[],[],[],[]];
 
+  const { data: dashboardData } = useQuery({
+    queryKey: ['quality-dashboard'],
+    queryFn: () => api.get("/quality/dashboard/").then(r=>r.data).catch(()=>({upcoming_deadlines:[]})),
+    enabled: isAuthenticated,
+  });
+  const upcoming_deadlines = dashboardData?.upcoming_deadlines || [];
+
   const handleReport=async(e:React.FormEvent)=>{e.preventDefault();
     try{const r=await api.post("/safety-events/",reportForm);if(r.success){setMsg(t('quality.reported', 'Reported.'));setShowReport(false);setReportForm({title:"",type:"incident",description:"",confidential:false})}else{setMsg(r.message||t('common.error', 'Failed'))}}catch{setMsg(t('common.error', 'Connection error'))}};
+
+  const daysColor = (days: number) => {
+    if (days < 7) return "text-red-400";
+    if (days < 30) return "text-yellow-400";
+    return "text-green-400";
+  };
 
   return (<div className="min-h-screen bg-navy-900">
     <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
@@ -53,6 +66,37 @@ export default function QualityDashboard() {
       {msg&&<div className="mb-4 p-3 rounded-lg text-sm bg-navy-800 border border-navy-700 text-gray-300">{msg}</div>}
 
       {showReport&&(<form onSubmit={handleReport} className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8"><h3 className="text-lg font-semibold text-white mb-4">{t('quality.reportSafetyEvent', 'Report Safety Event')}</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><input value={reportForm.title} onChange={e=>setReportForm({...reportForm,title:e.target.value})} required placeholder={t('common.title', 'Title')} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/></div><div><select value={reportForm.type} onChange={e=>setReportForm({...reportForm,type:e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="incident">{t('quality.incident', 'Incident')}</option><option value="near_miss">{t('quality.nearMiss', 'Near Miss')}</option><option value="hazard">{t('quality.hazard', 'Hazard')}</option><option value="observation">{t('quality.observation', 'Observation')}</option></select></div></div><textarea value={reportForm.description} onChange={e=>setReportForm({...reportForm,description:e.target.value})} required rows={3} placeholder={t('common.description', 'Description')} className="w-full mt-4 px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/><div className="flex items-center gap-2 mt-4"><input type="checkbox" id="conf" checked={reportForm.confidential} onChange={e=>setReportForm({...reportForm,confidential:e.target.checked})}/><label htmlFor="conf" className="text-sm text-gray-400">{t('quality.reportAnonymously', 'Report anonymously')}</label></div><button type="submit" className="mt-4 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg text-sm">{t('quality.submitReport', 'Submit Report')}</button></form>)}
+
+      {/* ── Deadlines Section ── */}
+      {upcoming_deadlines.length > 0 && (
+        <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8">
+          <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('quality.upcomingDeadlines', 'Upcoming Deadlines')}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-navy-700">
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase tracking-wider">{t('common.item', 'Item')}</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase tracking-wider">{t('common.type', 'Type')}</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase tracking-wider">{t('quality.dueDate', 'Due Date')}</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase tracking-wider">{t('quality.daysRemaining', 'Days Left')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upcoming_deadlines.map((d: any, i: number) => (
+                  <tr key={i} className="border-b border-navy-700/50 hover:bg-navy-700/20 transition-colors">
+                    <td className="px-3 py-2.5 text-white font-medium">{d.item_name}</td>
+                    <td className="px-3 py-2.5 text-gray-400">{d.type.replace(/_/g, ' ')}</td>
+                    <td className="px-3 py-2.5 text-gray-400">{d.expiry_date?.slice(0, 10)}</td>
+                    <td className={`px-3 py-2.5 font-semibold ${daysColor(d.days_remaining)}`}>
+                      {d.days_remaining}d
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {ncrs.length>0&&tab==="ncrs"&&(<div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('quality.ncrsBySeverity', 'NCRs by Severity')}</h3><ResponsiveContainer width="100%" height={200}><PieChart><Pie data={[{name:t('quality.critical','Critical'),value:ncrs.filter((n:any)=>n.severity==="critical").length},{name:t('quality.major','Major'),value:ncrs.filter((n:any)=>n.severity==="major").length},{name:t('quality.minor','Minor'),value:ncrs.filter((n:any)=>n.severity==="minor").length}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({name,value}:any)=>`${name}: ${value}`}>{[0,1,2].map(i=><Cell key={i} fill={NCR_COLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer></div>)}
 

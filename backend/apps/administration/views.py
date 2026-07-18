@@ -47,6 +47,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
 
     def perform_create(self, serializer):
+        from django.conf import settings
+        from apps.notifications.services import NotificationService
         last = Invoice.objects.order_by('-created_at').first()
         num = 1
         if last and last.invoice_number:
@@ -54,7 +56,9 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 num = int(last.invoice_number.split('-')[-1]) + 1
             except (ValueError, IndexError):
                 pass
-        serializer.save(invoice_number=f'INV-{timezone.now().year}-{num:04d}')
+        invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=timezone.now().year, num=num))
+        # Auto-notify student that a new invoice was created
+        NotificationService.invoice_created(invoice)
 
     @action(detail=False, methods=['get'])
     def overdue(self, request):

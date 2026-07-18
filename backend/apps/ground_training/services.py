@@ -83,7 +83,7 @@ class StudentConflictService:
         return overlapping
 
     @staticmethod
-    def resolve_all_conflicts(room, instructor, scheduled_date, start_time, end_time, exclude_course_id=None):
+    def resolve_all_conflicts(room, instructor, scheduled_date, start_time, end_time, exclude_course_id=None, student_ids=None):
         """Check all conflicts: room, instructor, and enrolled students."""
         all_conflicts = []
 
@@ -98,6 +98,15 @@ class StudentConflictService:
         )
         for c in instructor_conflicts:
             all_conflicts.append(f'Instructor conflict: {c.title} ({c.start_time}–{c.end_time})')
+
+        if student_ids:
+            from .models import CourseEnrollment
+            for student_id in student_ids:
+                student_conflicts = StudentConflictService.check_student_conflicts(
+                    student_id, scheduled_date, start_time, end_time, exclude_course_id
+                )
+                for c in student_conflicts:
+                    all_conflicts.append(f'Student conflict: {c.title} ({c.start_time}–{c.end_time})')
 
         return all_conflicts
 

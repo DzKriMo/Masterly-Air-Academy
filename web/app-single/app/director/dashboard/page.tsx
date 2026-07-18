@@ -27,14 +27,17 @@ export default function DirectorDashboard() {
       api.get<any>("/aircraft/"),
       api.get<any>("/flight-lessons/"),
       api.get<any>("/audits/"),
+      api.get<any>("/flight-instructors/"),
+      api.get<any>("/simulators/"),
+      api.get<any>("/rooms/"),
     ]),
     enabled: isAuthenticated,
   });
   useEffect(() => { if (!isLoading && !isAuthenticated) router.push("/login"); }, [isLoading, isAuthenticated, router]);
   if (isLoading || !isAuthenticated) return null;
 
-  const [st, inv, co, ac, fl, au] = data || [{}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}];
-  const iList=inv.results||[]; const fList=fl.results||[]; const aList=ac.results||[];
+  const [st, inv, co, ac, fl, au, fi, sim, rm] = data || [{}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}];
+  const iList=inv.results||[]; const fList=fl.results||[]; const aList=ac.results||[]; const fiList=fi.results||[]; const simList=sim.results||[]; const rmList=rm.results||[];
   const paid=iList.filter((i:any)=>i.status==="paid").reduce((s:number,i:any)=>s+parseFloat(i.amount),0);
   const out=iList.filter((i:any)=>i.status==="issued"||i.status==="partially_paid").reduce((s:number,i:any)=>s+parseFloat(i.amount),0);
   const th=fList.reduce((s:number,f:any)=>s+(parseFloat(f.flight_duration)||0),0);
@@ -42,12 +45,20 @@ export default function DirectorDashboard() {
   const ic:Record<string,number>={}; iList.forEach((i:any)=>{ic[i.status]=(ic[i.status]||0)+1});
   const kpis={students:(st.results||st).length||0,courses:(co.results||[]).length,aircraft:aList.length,flights:fList.length,completed:fList.filter((f:any)=>f.status==="completed").length,hours:Math.round(th),revenue:Math.round(paid),outstanding:Math.round(out),audits:(au.results||[]).filter((a:any)=>a.status==="planned").length};
   const charts={flights:Object.entries(sc).map(([n,v])=>({name:n,value:v})),revenue:[{name:t('finance.collected','Collected'),value:Math.round(paid)},{name:t('finance.outstanding','Outstanding'),value:Math.round(out)}],fleet:aList.map((a:any)=>({name:a.registration,hours:parseFloat(a.airframe_hours)||0})),invoices:Object.entries(ic).map(([n,v])=>({name:n,value:v}))};
+  const resourceAvail={aircraft:aList.filter((a:any)=>a.status==='available').length,aircraftTotal:aList.length,instructors:fiList.filter((f:any)=>f.status==='active').length,instructorsTotal:fiList.length,simulators:simList.filter((s:any)=>s.status==='available').length,simulatorsTotal:simList.length,rooms:rmList.filter((r:any)=>r.status==='available').length,roomsTotal:rmList.length};
+  const maintAircraft=aList.filter((a:any)=>a.status==='maintenance').length;
+  const inactiveInstructors=fiList.filter((f:any)=>f.status!=='active').length;
+  const upcomingMaint=aList.filter((a:any)=>a.next_maintenance&&new Date(a.next_maintenance)<=new Date(Date.now()+7*24*60*60*1000)).length;
 
   return (<div className="min-h-screen bg-navy-900">
     <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110}/><div><h1 className="text-lg font-bold text-white">{t('director.dashboard', 'Director Dashboard')}</h1><p className="text-xs text-gold-500">{t('director.executiveOverview', 'Executive Overview')}</p></div></div><div className="flex items-center gap-3"><ExportButton exports={[{label:"Students (Excel)",url:"/export/students/",filename:"students.xlsx",type:"excel"},{label:"Invoices (Excel)",url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:"Flights (Excel)",url:"/export/flights/",filename:"flights.xlsx",type:"excel"}]}/><button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></div></div></nav>
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={()=>setError(null)}/>}{loading?<LoadingSkeleton type="card" rows={4}/>:<>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.students', 'Students')} value={kpis.students} c="text-blue-400"/><KpiCard label={t('director.courses', 'Courses')} value={kpis.courses} c="text-green-400"/><KpiCard label={t('director.aircraft', 'Aircraft')} value={kpis.aircraft} c="text-purple-400"/><KpiCard label={t('director.fleetHours', 'Flight Hours')} value={`${kpis.hours}h`} c="text-gold-400"/></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><KpiCard label={t('director.revenue', 'Revenue')} value={`${kpis.revenue.toLocaleString()} DZD`} c="text-green-400"/><KpiCard label={t('finance.outstanding', 'Outstanding')} value={`${kpis.outstanding.toLocaleString()} DZD`} c="text-red-400"/><KpiCard label={t('director.completed', 'Completed')} value={kpis.completed} c="text-cyan-400"/><KpiCard label={t('director.audits', 'Audits')} value={kpis.audits} c="text-yellow-400"/></div>
+      <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.resourceOverview', 'Resource Overview')}</h3>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.availableAircraft', 'Available Aircraft')} value={`${resourceAvail.aircraft} / ${resourceAvail.aircraftTotal}`} c="text-blue-400"/><KpiCard label={t('director.availableInstructors', 'Available Instructors')} value={`${resourceAvail.instructors} / ${resourceAvail.instructorsTotal}`} c="text-green-400"/><KpiCard label={t('director.simulatorsAvailable', 'Simulators Available')} value={`${resourceAvail.simulators} / ${resourceAvail.simulatorsTotal}`} c="text-purple-400"/><KpiCard label={t('director.roomsAvailable', 'Rooms Available')} value={`${resourceAvail.rooms} / ${resourceAvail.roomsTotal}`} c="text-gold-400"/></div>
+      <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.operationalAlerts', 'Operational Alerts')}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8"><KpiCard label={t('director.aircraftMaintenance', 'Aircraft in Maintenance')} value={maintAircraft} c="text-red-400"/><KpiCard label={t('director.inactiveInstructors', 'Instructors Inactive')} value={inactiveInstructors} c="text-yellow-400"/><KpiCard label={t('director.upcomingMaintenance', 'Upcoming Maintenance (7d)')} value={upcomingMaint} c="text-orange-400"/></div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <ChartCard title={t('director.flightsByStatus', 'Flights by Status')}><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={charts.flights} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({name,value}:any)=>`${name}: ${value}`}>{charts.flights.map((_:any,i:number)=><Cell key={i} fill={DCOLORS[i%DCOLORS.length]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer></ChartCard>
         <ChartCard title={t('director.revenue', 'Revenue (DZD)')}><ResponsiveContainer width="100%" height={250}><BarChart data={charts.revenue}><CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={12}/><YAxis stroke="#94a3b8" fontSize={12}/><Tooltip/><Bar dataKey="value" fill="#c4943c" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></ChartCard>

@@ -102,6 +102,10 @@ class ExamViewSet(viewsets.ModelViewSet):
         attempt.completed_at = timezone.now()
         attempt.save()
 
+        # Notify student of exam result
+        from apps.notifications.services import NotificationService
+        NotificationService.exam_result(attempt)
+
         if result['is_passed']:
             # Auto-issue certificate on first pass
             cert_exists = Certificate.objects.filter(
@@ -131,6 +135,30 @@ class ExamViewSet(viewsets.ModelViewSet):
             return Response([])
         attempts = ExamAttempt.objects.filter(student=student).select_related('exam')
         return Response(ExamAttemptSerializer(attempts, many=True).data)
+
+    @action(detail=True, methods=['post'], url_path='attempts/(?P<attempt_id>[^/.]+)/grade')
+    def grade_attempt(self, request, pk=None, attempt_id=None):
+        exam = self.get_object()
+        try:
+            attempt = ExamAttempt.objects.get(id=attempt_id, exam=exam)
+        except ExamAttempt.DoesNotExist:
+            return Response({'error': 'Attempt not found'}, status=404)
+
+        grade = request.data.get('grade')
+        feedback = request.data.get('feedback', '')
+
+        if grade is not None:
+            attempt.score = grade
+            attempt.is_passed = float(grade) >= float(exam.passing_grade) if exam.passing_grade else None
+        attempt.notes = feedback
+        attempt.graded_by = request.user
+        attempt.save()
+
+        # Notify student
+        from apps.notifications.services import NotificationService
+        NotificationService.exam_result(attempt)
+
+        return Response(ExamAttemptSerializer(attempt).data)
 
 
 class QuizViewSet(viewsets.ModelViewSet):

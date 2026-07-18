@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "Masterly Air Academy",
   description: "ATO Management Platform | Training, Administration & Compliance",
   icons: { icon: "/logo.png", apple: "/logo.png" },
+  openGraph: {
+    title: "Masterly Air Academy",
+    description: "Approved Training Organization — Professional Aviation Training in Algeria",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {

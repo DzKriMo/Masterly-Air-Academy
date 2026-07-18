@@ -11,7 +11,7 @@ export function useAuth() {
 
   useEffect(() => {
     hydrate();
-  }, [hydrate]);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {

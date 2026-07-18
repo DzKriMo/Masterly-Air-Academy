@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useRef } from 'react';
 import {
   Pressable,
   Text,
@@ -7,12 +7,8 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  Animated,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { colors } from '@/constants/colors';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -28,8 +24,6 @@ interface ButtonProps {
   size?: ButtonSize;
   style?: ViewStyle;
 }
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const SIZE_CONFIG: Record<ButtonSize, { paddingV: number; paddingH: number; fontSize: number; iconGap: number }> = {
   sm: { paddingV: 8, paddingH: 14, fontSize: 13, iconGap: 6 },
@@ -47,60 +41,65 @@ export function Button({
   size = 'md',
   style,
 }: ButtonProps) {
-  const scale = useSharedValue(1);
+  const scale = useRef(new Animated.Value(1)).current;
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.96,
+      damping: 15,
+      stiffness: 400,
+      useNativeDriver: true,
+    }).start();
+  };
 
-  const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  }, [scale]);
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 15,
+      stiffness: 400,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const sizeConfig = SIZE_CONFIG[size];
   const isDisabled = disabled || loading;
-
   const variantStyles = getVariantStyles(variant);
 
   return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={isDisabled}
-      style={[
-        styles.base,
-        {
-          paddingVertical: sizeConfig.paddingV,
-          paddingHorizontal: sizeConfig.paddingH,
-          opacity: isDisabled ? 0.5 : 1,
-        },
-        variantStyles.container,
-        animatedStyle,
-        style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={variantStyles.loaderColor} />
-      ) : (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeConfig.iconGap }}>
-          {icon}
-          <Text
-            style={[
-              styles.label,
-              { fontSize: sizeConfig.fontSize },
-              variantStyles.label,
-            ]}
-          >
-            {title}
-          </Text>
-        </View>
-      )}
-    </AnimatedPressable>
+    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isDisabled}
+        style={[
+          styles.base,
+          {
+            paddingVertical: sizeConfig.paddingV,
+            paddingHorizontal: sizeConfig.paddingH,
+            opacity: isDisabled ? 0.5 : 1,
+          },
+          variantStyles.container,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={variantStyles.loaderColor} />
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeConfig.iconGap }}>
+            {icon}
+            <Text
+              style={[
+                styles.label,
+                { fontSize: sizeConfig.fontSize },
+                variantStyles.label,
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 

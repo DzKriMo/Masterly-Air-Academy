@@ -92,11 +92,39 @@ class UserSerializer(serializers.ModelSerializer):
         return list(obj.groups.values_list('name', flat=True))
 
 
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'password', 'role', 'status', 'is_active', 'last_login_at', 'date_joined']
+        read_only_fields = ['id', 'last_login_at', 'date_joined']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        role = validated_data.get('role', '')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        # Auto-assign to the corresponding Django group based on role
+        if role:
+            from django.contrib.auth.models import Group
+            try:
+                group = Group.objects.get(name=role)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                pass  # Group not seeded yet — admin can assign manually
+        return user
+
+
 class ProfileUpdateSerializer(serializers.Serializer):
     current_password = serializers.CharField(write_only=True, required=True)
     password = serializers.CharField(write_only=True, required=True,
                                       validators=[validate_password])
     password_confirmation = serializers.CharField(write_only=True, required=True)
+    address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    nationality = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def validate_current_password(self, value):
         user = self.context['request'].user
@@ -115,4 +143,19 @@ class ProfileUpdateSerializer(serializers.Serializer):
         user = self.context['request'].user
         user.set_password(self.validated_data['password'])
         user.save()
+
+        # Update Student model fields if the user has a student profile
+        from apps.students.models import Student
+        try:
+            student = Student.objects.get(user=user)
+            if 'address' in self.validated_data:
+                student.address = self.validated_data['address']
+            if 'phone' in self.validated_data:
+                student.phone = self.validated_data['phone']
+            if 'nationality' in self.validated_data:
+                student.nationality = self.validated_data['nationality']
+            student.save()
+        except Student.DoesNotExist:
+            pass
+
         return user

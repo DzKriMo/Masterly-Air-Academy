@@ -4,16 +4,43 @@ from django.db import models
 from apps.students.models import TrainingProgram
 
 
+class QuestionType(models.TextChoices):
+    MCQ = 'mcq', 'Multiple Choice'
+    TRUE_FALSE = 'true_false', 'True/False'
+    SHORT_ANSWER = 'short_answer', 'Short Answer'
+    ESSAY = 'essay', 'Essay'
+    MATCHING = 'matching', 'Matching'
+    ORDERING = 'ordering', 'Ordering'
+    CASE_STUDY = 'case_study', 'Case Study'
+
+
+class ExamType(models.TextChoices):
+    QUIZ = 'quiz', 'Quiz'
+    PROGRESS_TEST = 'progress_test', 'Progress Test'
+    MODULE_EXAM = 'module_exam', 'Module Exam'
+    MOCK_EXAM = 'mock_exam', 'Mock Exam'
+    FINAL_EXAM = 'final_exam', 'Final Internal Exam'
+
+
+class CompetencyStatus(models.TextChoices):
+    NOT_STARTED = 'not_started', 'Not Started'
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    ACQUIRED = 'acquired', 'Acquired'
+    NEEDS_REINFORCEMENT = 'needs_reinforcement', 'Needs Reinforcement'
+
+
 class QuestionBank(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subject = models.ForeignKey('ground_training.Subject', on_delete=models.SET_NULL, null=True, blank=True)
     question_text = models.TextField()
-    question_type = models.CharField(max_length=30)
+    question_type = models.CharField(max_length=30, choices=QuestionType.choices, default=QuestionType.MCQ)
     options = models.JSONField(default=list, blank=True)
     correct_answer = models.TextField()
     explanation = models.TextField(blank=True, null=True)
     reference = models.CharField(max_length=255, blank=True, null=True)
     difficulty = models.CharField(max_length=20)
+    program = models.CharField(max_length=10, choices=TrainingProgram.choices, null=True, blank=True)
+    module = models.ForeignKey('ground_training.Module', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -71,7 +98,7 @@ class Exam(models.Model):
     title_fr = models.CharField(max_length=255, blank=True, null=True)
     subject = models.ForeignKey('ground_training.Subject', on_delete=models.SET_NULL, null=True, blank=True)
     program = models.CharField(max_length=10, choices=TrainingProgram.choices, null=True, blank=True)
-    type = models.CharField(max_length=30, blank=True, null=True)
+    type = models.CharField(max_length=30, choices=ExamType.choices, default=ExamType.QUIZ)
     duration = models.IntegerField(help_text='Duration in minutes')
     question_count = models.IntegerField(null=True, blank=True)
     passing_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -142,7 +169,7 @@ class StudentCompetency(models.Model):
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='competencies')
     program = models.CharField(max_length=10, choices=TrainingProgram.choices, null=True, blank=True)
     competency = models.CharField(max_length=255)
-    status = models.CharField(max_length=30, default='not_started')
+    status = models.CharField(max_length=30, choices=CompetencyStatus.choices, default=CompetencyStatus.NOT_STARTED)
     achieved_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
 

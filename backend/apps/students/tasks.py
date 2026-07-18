@@ -1,5 +1,6 @@
 """Periodic tasks for students."""
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import MedicalCertificate
@@ -7,8 +8,8 @@ from .models import MedicalCertificate
 
 @shared_task
 def check_expiring_medicals():
-    """Notify about medical certificates expiring within 30 days."""
-    soon = timezone.now().date() + timedelta(days=30)
+    """Notify about medical certificates expiring within the notice period."""
+    soon = timezone.now().date() + timedelta(days=settings.MEDICAL_EXPIRY_NOTICE_DAYS)
     expiring = MedicalCertificate.objects.filter(expiry_date__lte=soon, expiry_date__gte=timezone.now().date(), status='valid')
     from apps.notifications.models import Notification
     count = 0

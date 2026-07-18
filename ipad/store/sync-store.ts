@@ -14,11 +14,11 @@ interface SyncState {
 }
 
 interface SyncActions {
-  addToQueue: (action: Omit<SyncAction, 'id' | 'timestamp' | 'retryCount'>) => void;
+  addToQueue: (action: Omit<SyncAction, 'id' | 'timestamp' | 'retryCount'>) => Promise<void>;
   processQueue: () => Promise<void>;
-  clearQueue: () => void;
+  clearQueue: () => Promise<void>;
   setLastSyncTime: (time: number) => void;
-  hydrate: () => void;
+  hydrate: () => Promise<void>;
 }
 
 type SyncStore = SyncState & SyncActions;
@@ -28,9 +28,9 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   isSyncing: false,
   lastSyncTime: null,
 
-  addToQueue: (action) => {
-    libAddToSyncQueue(action);
-    set({ queue: getSyncQueue() });
+  addToQueue: async (action) => {
+    await libAddToSyncQueue(action);
+    set({ queue: await getSyncQueue() });
   },
 
   processQueue: async () => {
@@ -42,18 +42,18 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
         set({ lastSyncTime: Date.now() });
       }
     } finally {
-      set({ queue: getSyncQueue(), isSyncing: false });
+      set({ queue: await getSyncQueue(), isSyncing: false });
     }
   },
 
-  clearQueue: () => {
-    libClearSyncQueue();
+  clearQueue: async () => {
+    await libClearSyncQueue();
     set({ queue: [] });
   },
 
   setLastSyncTime: (time) => set({ lastSyncTime: time }),
 
-  hydrate: () => {
-    set({ queue: getSyncQueue() });
+  hydrate: async () => {
+    set({ queue: await getSyncQueue() });
   },
 }));
