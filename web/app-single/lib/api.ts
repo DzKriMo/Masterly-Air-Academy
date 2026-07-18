@@ -73,7 +73,7 @@ class ApiClient {
       }
     }
 
-    if (response.status === 401) {
+    if (response.status === 401 && !url.endsWith('/login/')) {
       this.clearAuth();
       this.onLogoutHandler?.();
     }
