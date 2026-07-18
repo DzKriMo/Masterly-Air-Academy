@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "@/lib/use-translation";
@@ -119,7 +120,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer id="contact" className="border-t border-navy-800">
+      <section id="contact" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+        <div className="text-center mb-16">
+          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("contact_title")}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("contact_heading")}</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">{t("contact_subtitle")}</p>
+        </div>
+        <ContactForm t={t} />
+      </section>
+
+      <footer className="border-t border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110} className="opacity-80" /><span>{t("app_name")}, {t("tagline")}</span></div>
@@ -128,6 +138,100 @@ export default function LandingPage() {
           <p className="text-center text-xs text-gray-600 mt-6">&copy; {new Date().getFullYear()} {t("footer_copyright")}</p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
+  const [activeTab, setActiveTab] = useState<"contact" | "application">("contact");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [program, setProgram] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email || !message) { setError("Name, email, and message are required."); return; }
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/contact/submit/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, subject, message, type: activeTab, program }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(data.message || data.data?.message || "Your message has been received. We will get back to you shortly.");
+        setName(""); setEmail(""); setPhone(""); setSubject(""); setMessage(""); setProgram("");
+      } else {
+        setError(data.error || (data.data && (data.data as any).error) || "Something went wrong.");
+      }
+    } catch {
+      setError("Connection error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex justify-center mb-8">
+        <button onClick={() => setActiveTab("contact")} className={`px-6 py-2 font-semibold rounded-l-lg transition-colors ${activeTab === "contact" ? "bg-gold-500 text-navy-900" : "bg-navy-800 border border-navy-700 text-gray-400"}`}>
+          {t("contact_general", "General Inquiry")}
+        </button>
+        <button onClick={() => setActiveTab("application")} className={`px-6 py-2 font-semibold rounded-r-lg transition-colors ${activeTab === "application" ? "bg-gold-500 text-navy-900" : "bg-navy-800 border border-navy-700 text-gray-400"}`}>
+          {t("contact_apply", "Apply Now")}
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-navy-800 border border-navy-700 rounded-2xl p-8 space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_name", "Full Name")} *</label>
+            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_name_placeholder", "Your full name")} />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_email", "Email")} *</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="your@email.com" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_phone", "Phone")}</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="+213 ..." />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">{activeTab === "application" ? t("contact_program", "Program of Interest") : t("contact_subject_label", "Subject")}</label>
+            {activeTab === "application" ? (
+              <select value={program} onChange={e => setProgram(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("contact_select_program", "Select a program")}</option>
+                <option value="PPL">PPL — Private Pilot License</option>
+                <option value="CPL">CPL — Commercial Pilot License</option>
+                <option value="IR">IR — Instrument Rating</option>
+                <option value="MEP">MEP — Multi-Engine Piston</option>
+                <option value="MCC">MCC — Multi-Crew Cooperation</option>
+              </select>
+            ) : (
+              <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_subject_placeholder", "Subject")} />
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1.5">{t("contact_message", "Message")} *</label>
+          <textarea required rows={5} value={message} onChange={e => setMessage(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none resize-y" placeholder={activeTab === "application" ? t("contact_application_placeholder", "Tell us about yourself, your aviation experience, and why you want to join Masterly Air Academy...") : t("contact_message_placeholder", "Your message...")} />
+        </div>
+        <button type="submit" disabled={submitting} className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors disabled:opacity-50 text-lg">
+          {submitting ? t("contact_sending", "Sending...") : activeTab === "application" ? t("contact_submit_application", "Submit Application") : t("contact_send", "Send Message")}
+        </button>
+        {success && <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm text-center">{success}</div>}
+        {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">{error}</div>}
+      </form>
     </div>
   );
 }
