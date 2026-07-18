@@ -29,12 +29,74 @@ export default function LessonViewPage() {
   const lessonId = params?.lessonId as string;
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { router.push("/student/login"); return; }
   }, [authLoading, isAuthenticated, router]);
+
+  const getYouTubeEmbedUrl = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/,
+      /^([a-zA-Z0-9_-]{11})$/,
+    ];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return `https://www.youtube.com/embed/${m[1]}`;
+    }
+    return null;
+  };
+
+  const getVimeoEmbedUrl = (url: string): string | null => {
+    const m = url.match(/vimeo\.com\/(\d+)/);
+    return m ? `https://player.vimeo.com/video/${m[1]}` : null;
+  };
+
+  const renderVideoPlayer = (url: string) => {
+    const youtubeUrl = getYouTubeEmbedUrl(url);
+    if (youtubeUrl) {
+      return (
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+          <iframe
+            src={youtubeUrl}
+            title="Video lesson"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        </div>
+      );
+    }
+
+    const vimeoUrl = getVimeoEmbedUrl(url);
+    if (vimeoUrl) {
+      return (
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+          <iframe
+            src={vimeoUrl}
+            title="Video lesson"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        </div>
+      );
+    }
+
+    // Fallback: HTML5 video tag for direct video files
+    return (
+      <video
+        controls
+        className="w-full rounded-xl"
+        preload="metadata"
+      >
+        <source src={url} />
+        {t("student.videoNotSupported", "Your browser does not support the video tag.")}
+      </video>
+    );
+  };
 
   useEffect(() => {
     if (!isAuthenticated || !lessonId) return;
@@ -49,6 +111,7 @@ export default function LessonViewPage() {
           module_title: d.module_title || "",
           subject_code: d.subject_code || "",
         });
+        setVideoUrl(d.video_url || null);
         setError(null);
       })
       .catch(err => {
@@ -95,6 +158,17 @@ export default function LessonViewPage() {
               <h1 className="text-3xl font-bold text-white">{lesson.title}</h1>
             </div>
 
+            {/* Video Player — shown if video_url is present */}
+            {videoUrl && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+                  {t("student.videoContent", "Video Content")}
+                </h3>
+                {renderVideoPlayer(videoUrl)}
+              </div>
+            )}
+
+            {/* Lesson Content */}
             {lesson.content ? (
               <div className="prose prose-invert prose-gold max-w-none
                 prose-headings:text-white prose-headings:font-bold

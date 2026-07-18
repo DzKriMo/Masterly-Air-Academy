@@ -10,6 +10,7 @@ import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 
@@ -21,6 +22,13 @@ export default function SafetyPage() {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const { t } = useTranslation();
+
+  // Analyze modal state
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [analysisText, setAnalysisText] = useState("");
+
+  // Resolve confirm dialog state
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const { data: eventsData, isLoading } = useQuery({
     queryKey: ['quality-safety'],
@@ -46,11 +54,28 @@ export default function SafetyPage() {
     reportEvent.mutate(form);
   };
 
+  const transitionEvent = useMutation({
+    mutationFn: ({ id, action, analysis }: { id: string; action: string; analysis?: string }) => {
+      const body = action === 'analyze' && analysis ? { analysis } : undefined;
+      return api.post(`/safety-events/${id}/${action}/`, body);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quality-safety"] });
+      showToast("success", t('quality.statusUpdated', 'Status updated.'));
+      setAnalyzingId(null);
+      setAnalysisText("");
+      setResolvingId(null);
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
   const filterOptions: FilterOption[] = [
     { key: "status", label: t('common.allStatuses', 'All Statuses'), options: [
       { value: "reported", label: t('quality.reported', 'Reported') },
       { value: "investigating", label: t('quality.investigating', 'Investigating') },
+      { value: "analyzed", label: t('quality.analyzed', 'Analyzed') },
       { value: "resolved", label: t('quality.resolved', 'Resolved') },
+      { value: "closed", label: t('quality.closed', 'Closed') },
     ]},
     { key: "type", label: t('quality.allTypes', 'All Types'), options: [
       { value: "incident", label: t('quality.incident', 'Incident') },
@@ -67,6 +92,17 @@ export default function SafetyPage() {
     return true;
   });
 
+  const statusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      reported: "bg-yellow-500/10 text-yellow-400",
+      investigating: "bg-blue-500/10 text-blue-400",
+      analyzed: "bg-purple-500/10 text-purple-400",
+      resolved: "bg-green-500/10 text-green-400",
+      closed: "bg-gray-500/10 text-gray-400",
+    };
+    return colors[status] || "bg-gray-500/10 text-gray-400";
+  };
+
   const columns: Column<any>[] = [
     { key: "title", header: t('common.title', 'Title'), render: (e) => <span className="text-white font-medium">{e.title}</span> },
     { key: "type", header: t('common.type', 'Type'), render: (e) => <span className="text-sm text-gray-400">{e.type}</span> },
@@ -74,7 +110,40 @@ export default function SafetyPage() {
       key: "status",
       header: t('common.status', 'Status'),
       render: (e) => (
-        <span className={`text-xs px-2 py-0.5 rounded ${e.status==="reported"?"bg-yellow-500/10 text-yellow-400":"bg-green-500/10 text-green-400"}`}>{e.status}</span>
+        <span className={`text-xs px-2 py-0.5 rounded ${statusColor(e.status)}`}>{e.status}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: t('common.actions', 'Actions'),
+      render: (e) => (
+        <div className="flex items-center gap-2">
+          {e.status === "reported" && (
+            <button
+              onClick={() => transitionEvent.mutate({ id: e.id, action: 'investigate' })}
+              disabled={transitionEvent.isPending}
+              className="text-xs px-3 py-1 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 disabled:opacity-50"
+            >
+              {t('quality.investigate', 'Investigate')}
+            </button>
+          )}
+          {e.status === "investigating" && (
+            <button
+              onClick={() => { setAnalyzingId(e.id); setAnalysisText(e.analysis || ""); }}
+              className="text-xs px-3 py-1 rounded bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+            >
+              {t('quality.analyze', 'Analyze')}
+            </button>
+          )}
+          {e.status === "analyzed" && (
+            <button
+              onClick={() => setResolvingId(e.id)}
+              className="text-xs px-3 py-1 rounded bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20"
+            >
+              {t('quality.resolve', 'Resolve')}
+            </button>
+          )}
+        </div>
       ),
     },
   ];
@@ -102,6 +171,48 @@ export default function SafetyPage() {
           </div>
         </form>
       </ModalForm>
+
+      {/* Analyze modal */}
+      <ModalForm
+        open={analyzingId !== null}
+        onClose={() => { setAnalyzingId(null); setAnalysisText(""); }}
+        title={t('quality.analyzeEvent', 'Analyze Event')}
+        footer={
+          <>
+            <button type="button" onClick={() => { setAnalyzingId(null); setAnalysisText(""); }} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">{t('common.cancel', 'Cancel')}</button>
+            <button
+              type="button"
+              onClick={() => analyzingId && transitionEvent.mutate({ id: analyzingId, action: 'analyze', analysis: analysisText })}
+              disabled={transitionEvent.isPending}
+              className="px-6 py-2 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white font-semibold rounded-lg text-sm"
+            >
+              {transitionEvent.isPending ? t('common.loading', 'Loading...') : t('quality.submitAnalysis', 'Submit Analysis')}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <textarea
+            value={analysisText}
+            onChange={e => setAnalysisText(e.target.value)}
+            rows={5}
+            placeholder={t('quality.analysisPlaceholder', 'Enter analysis findings...')}
+            className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+          />
+        </div>
+      </ModalForm>
+
+      {/* Resolve confirm dialog */}
+      <ConfirmDialog
+        open={resolvingId !== null}
+        onClose={() => setResolvingId(null)}
+        onConfirm={() => resolvingId && transitionEvent.mutate({ id: resolvingId, action: 'resolve' })}
+        title={t('quality.resolveEvent', 'Resolve Event')}
+        message={t('quality.resolveConfirm', 'Are you sure you want to resolve this safety event? This will mark it as resolved and set the closure timestamp.')}
+        confirmLabel={t('quality.resolve', 'Resolve')}
+        destructive={false}
+        loading={transitionEvent.isPending}
+      />
 
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0&&events.length===0?<EmptyState message={t('quality.noEvents', 'No events reported.')}/>:<>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchEvents', 'Search events...')}/>

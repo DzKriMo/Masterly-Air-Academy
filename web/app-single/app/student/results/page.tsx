@@ -51,6 +51,8 @@ export default function StudentResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
 
+  const programs = ["PPL", "CPL", "IR", "MEP", "MCC"];
+
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
 
   const loadData = useCallback(() => {
@@ -116,20 +118,24 @@ export default function StudentResultsPage() {
     { key: "instructor_name", header: t('common.instructor', 'Instructor') },
   ];
 
-  // Group competencies by program
-  const compByProgram: Record<string, Competency[]> = {};
+  // Build competency matrix: program -> competency name -> Competency object
+  const compMatrix: Record<string, Record<string, Competency>> = {};
+  const compNameSet = new Set<string>();
   competencies.forEach(c => {
-    if (!compByProgram[c.program]) compByProgram[c.program] = [];
-    compByProgram[c.program].push(c);
+    if (!compMatrix[c.program]) compMatrix[c.program] = {};
+    compMatrix[c.program][c.name] = c;
+    compNameSet.add(c.name);
   });
+  const allCompetencyNames = Array.from(compNameSet).sort();
 
-  const compStatusBadge = (status: string) => {
+  const compBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      achieved: "bg-green-500/10 text-green-400",
-      in_progress: "bg-yellow-500/10 text-yellow-400",
-      not_started: "bg-gray-500/10 text-gray-400",
+      acquired: "bg-green-500/10 text-green-400 border-green-500/30",
+      in_progress: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+      not_started: "bg-gray-500/10 text-gray-400 border-gray-500/30",
+      needs_reinforcement: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     };
-    return <span className={`text-xs px-2 py-0.5 rounded ${colors[status] || "bg-gray-500/10 text-gray-400"}`}>{status.replace(/_/g, ' ')}</span>;
+    return `${colors[status] || "bg-gray-500/10 text-gray-400 border-gray-500/30"} border`;
   };
 
   return (<div className="min-h-screen bg-navy-900">
@@ -186,27 +192,48 @@ export default function StudentResultsPage() {
               : <DataTable columns={evalColumns} data={evals as any} keyField="id" emptyMessage={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
           )}
 
-          {/* Competencies Tab */}
+          {/* Competencies Tab — Matrix Grid */}
           {activeTab === "competencies" && (
-            Object.keys(compByProgram).length === 0
+            competencies.length === 0
               ? <EmptyState message={t('student.noCompetencies', 'No competencies recorded yet.')} />
-              : <div className="space-y-6">
-                  {Object.entries(compByProgram).map(([program, comps]) => (
-                    <div key={program} className="bg-navy-800 border border-navy-700 rounded-xl p-6">
-                      <h3 className="text-sm font-semibold text-gold-500 mb-4 uppercase tracking-wider">{program}</h3>
-                      <div className="space-y-3">
-                        {comps.map(c => (
-                          <div key={c.id} className="flex items-center justify-between py-2 border-b border-navy-700/50 last:border-0">
-                            <div>
-                              <p className="text-white text-sm font-medium">{c.name}</p>
-                              {c.description && <p className="text-xs text-gray-500 mt-0.5">{c.description}</p>}
-                            </div>
-                            {compStatusBadge(c.status)}
-                          </div>
+              : <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-navy-700 bg-navy-800/50">
+                          <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-medium w-1/3">
+                            {t('student.competency', 'Competency')}
+                          </th>
+                          {programs.map(prog => (
+                            <th key={prog} className="px-3 py-3 text-center text-xs text-gray-500 uppercase tracking-wider font-medium">
+                              {prog}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allCompetencyNames.map((compName, idx) => (
+                          <tr key={compName} className={`border-b border-navy-700/50 ${idx % 2 === 0 ? 'bg-navy-800/30' : ''} hover:bg-navy-700/20 transition-colors`}>
+                            <td className="px-4 py-3 text-white text-sm font-medium">{compName}</td>
+                            {programs.map(prog => {
+                              const comp = compMatrix[prog]?.[compName];
+                              return (
+                                <td key={prog} className="px-3 py-3 text-center">
+                                  {comp ? (
+                                    <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${compBadgeColor(comp.status)}`}>
+                                      {comp.status.replace(/_/g, ' ')}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-gray-600">—</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
                         ))}
-                      </div>
-                    </div>
-                  ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
           )}
         </>

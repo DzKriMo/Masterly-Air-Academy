@@ -17,6 +17,9 @@ class Subject(models.Model):
     program = models.CharField(max_length=10, choices=TrainingProgram.choices)
     academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='active')
+    bibliography = models.JSONField(default=list, blank=True)  # list of {title, author, url}
+    required_documents = models.JSONField(default=list, blank=True)  # list of doc names
+    prerequisites = models.JSONField(default=list, blank=True)  # list of prerequisite descriptions
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -60,6 +63,7 @@ class ModuleLesson(models.Model):
     lesson_no = models.IntegerField()
     title = models.CharField(max_length=255, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
+    video_url = models.URLField(blank=True, null=True)
 
     class Meta:
         db_table = 'module_lessons'
@@ -68,6 +72,21 @@ class ModuleLesson(models.Model):
 
     def __str__(self):
         return f'Lesson {self.lesson_no}: {self.title or "Untitled"}'
+
+
+class ModuleExercise(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='exercises')
+    title = models.CharField(max_length=255)
+    instructions = models.TextField(blank=True, null=True)
+    due_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'module_exercises'
+
+    def __str__(self):
+        return f'{self.module.title} - {self.title}'
 
 
 class ModuleDocument(models.Model):

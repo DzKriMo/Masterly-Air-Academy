@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (
-    Subject, Module, ModuleLesson, ModuleDocument,
+    Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise,
     Room, Course, CourseEnrollment, AttendanceRecord,
     GroundEvaluation,
 )
@@ -12,7 +12,7 @@ class ModuleLessonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ModuleLesson
-        fields = ['id', 'module', 'lesson_no', 'title', 'content', 'module_title', 'subject_code']
+        fields = ['id', 'module', 'lesson_no', 'title', 'content', 'video_url', 'module_title', 'subject_code']
 
     def get_module_title(self, obj):
         return obj.module.title if obj.module else ''
@@ -25,6 +25,12 @@ class ModuleDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModuleDocument
         fields = ['id', 'module', 'name', 'file_url', 'type']
+
+
+class ModuleExerciseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModuleExercise
+        fields = ['id', 'module', 'title', 'instructions', 'due_date', 'created_at']
 
 
 class ModuleSerializer(serializers.ModelSerializer):
@@ -45,6 +51,7 @@ class SubjectSerializer(serializers.ModelSerializer):
             'id', 'code', 'title_en', 'title_fr', 'title_ar',
             'description_en', 'description_fr', 'description_ar',
             'total_hours', 'program', 'academic_year', 'status',
+            'bibliography', 'required_documents', 'prerequisites',
             'modules', 'created_at', 'updated_at',
         ]
 
@@ -55,7 +62,7 @@ class SubjectListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subject
-        fields = ['id', 'code', 'title_en', 'title_fr', 'title_ar', 'total_hours', 'program', 'status', 'module_count']
+        fields = ['id', 'code', 'title_en', 'title_fr', 'title_ar', 'total_hours', 'program', 'status', 'bibliography', 'required_documents', 'prerequisites', 'module_count']
 
     def get_module_count(self, obj):
         return obj.modules.count()

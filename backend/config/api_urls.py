@@ -2,14 +2,20 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework import viewsets
+from django.contrib.auth.models import Group, Permission
 
-from apps.accounts.serializers import CustomTokenObtainPairSerializer
+from apps.accounts.serializers import (
+    CustomTokenObtainPairSerializer,
+    GroupSerializer,
+    PermissionSerializer,
+)
 from apps.accounts.views import CurrentUserView, UpdateProfileView, LogoutView, UserViewSet
 from apps.ground_training.views import (
     SubjectViewSet, ModuleViewSet, RoomViewSet,
     CourseViewSet, CourseEnrollmentViewSet, AttendanceRecordViewSet,
     StudentProgressViewSet, ModuleLessonViewSet, ModuleDocumentViewSet,
-    GroundEvaluationViewSet,
+    ModuleExerciseViewSet, GroundEvaluationViewSet,
 )
 from apps.flight_training.views import (
     AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
@@ -593,10 +599,47 @@ def search_view(request):
     return Response({'results': results, 'source': 'database'})
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def trigger_backup(request):
+    """POST /api/system/backup/ — trigger a manual database backup."""
+    import subprocess, os, gzip
+    from django.conf import settings
+    try:
+        result = subprocess.run(
+            ['docker', 'compose', 'exec', '-T', 'db', 'pg_dump', '-U', 'masterly', 'masterly'],
+            capture_output=True, text=True, timeout=60,
+            cwd=os.path.join(settings.BASE_DIR, '..')
+        )
+        # Save to backup dir
+        backup_dir = os.path.join(settings.BASE_DIR, '..', 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        filename = f'manual_backup_{timezone.now().strftime("%Y%m%d_%H%M")}.sql.gz'
+        with gzip.open(os.path.join(backup_dir, filename), 'wb') as f:
+            f.write(result.stdout.encode())
+        return Response({'status': 'ok', 'file': filename})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
+
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = Group.objects.all().prefetch_related('permissions')
+    serializer_class = GroupSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'accounts.manage'
+
+
+class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'accounts.manage'
 
 
 router = DefaultRouter()
@@ -638,6 +681,7 @@ router.register(r'skill-tests', SkillTestViewSet)
 router.register(r'practical-evaluations', PracticalEvaluationViewSet)
 router.register(r'module-lessons', ModuleLessonViewSet)
 router.register(r'module-documents', ModuleDocumentViewSet)
+router.register(r'module-exercises', ModuleExerciseViewSet)
 router.register(r'ground-evaluations', GroundEvaluationViewSet)
 router.register(r'quiz-attempts', QuizAttemptViewSet)
 router.register(r'flight-instructors', FlightInstructorViewSet)
@@ -647,6 +691,8 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'simulators', SimulatorViewSet)
 router.register(r'simulator-sessions', SimulatorSessionViewSet)
+router.register(r'groups', GroupViewSet)
+router.register(r'permissions', PermissionViewSet)
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
@@ -665,6 +711,7 @@ urlpatterns = [
     path('invoices/<uuid:inv_id>/pdf/', invoice_pdf, name='invoice-pdf'),
     path('contact/submit/', submit_contact, name='submit-contact'),
     path('search/', search_view, name='search'),
+    path('system/backup/', trigger_backup, name='trigger-backup'),
     path('notifications/broadcast/', notification_broadcast, name='notification-broadcast'),
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
 

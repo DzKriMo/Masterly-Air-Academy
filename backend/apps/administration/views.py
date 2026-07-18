@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.conf import settings
 from django.utils import timezone
 from apps.accounts.permissions import HasRolePermission
 from .models import Application, Invoice, Payment, Contract, Document
@@ -152,3 +153,28 @@ class ContractViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'documents.view'
     filterset_fields = ['student', 'status', 'type']
+
+    @action(detail=True, methods=['post'])
+    def generate_pdf(self, request, pk=None):
+        contract = self.get_object()
+        # Generate a PDF contract from template
+        from django.template.loader import render_to_string
+        html = render_to_string('contracts/contract_template.html', {
+            'contract': contract,
+            'student': contract.student,
+            'today': timezone.now().date(),
+        })
+        try:
+            from weasyprint import HTML
+            pdf = HTML(string=html).write_pdf()
+            import os, uuid
+            filename = f'contract-{contract.contract_number}.pdf'
+            filepath = os.path.join(settings.MEDIA_ROOT, 'contracts', filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, 'wb') as f:
+                f.write(pdf)
+            contract.file_url = f'/media/contracts/{filename}'
+            contract.save()
+            return Response({'file_url': contract.file_url, 'status': 'generated'})
+        except ImportError:
+            return Response({'error': 'PDF generation not available'}, status=501)

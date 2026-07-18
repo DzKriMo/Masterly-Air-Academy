@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  @page { size: A4; margin: 2cm; }
+  body { font-family: sans-serif; color: #333; }
+  .header { text-align: center; border-bottom: 2px solid #c4943c; padding-bottom: 15px; margin-bottom: 20px; }
+  .logo { font-size: 24px; color: #c4943c; font-weight: bold; }
+  h1 { font-size: 20px; color: #0a1628; text-align: center; margin: 20px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  td { padding: 8px; border: 1px solid #ddd; }
+  .label { background: #f5f5f5; width: 200px; font-weight: bold; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 60px; }
+  .sig-box { width: 200px; text-align: center; }
+  .sig-line { border-top: 1px solid #333; margin-top: 40px; padding-top: 5px; }
+</style></head><body>
+<div class="header"><div class="logo">MAA</div><div>Masterly Air Academy</div></div>
+<h1>TRAINING CONTRACT</h1>
+<p><strong>Contract Number:</strong> {{ contract.contract_number }}</p>
+<p><strong>Date:</strong> {{ contract.start_date }}</p>
+<table>
+  <tr><td class="label">Student Name</td><td>{{ student.full_name }}</td></tr>
+  <tr><td class="label">Student Number</td><td>{{ student.student_number }}</td></tr>
+  <tr><td class="label">Program</td><td>{{ student.get_program_display }}</td></tr>
+  <tr><td class="label">Contract Type</td><td>{{ contract.type }}</td></tr>
+  <tr><td class="label">Start Date</td><td>{{ contract.start_date }}</td></tr>
+  <tr><td class="label">End Date</td><td>{{ contract.end_date|default:"Ongoing" }}</td></tr>
+  <tr><td class="label">Generated</td><td>{{ today }}</td></tr>
+</table>
+<p>This contract confirms the enrollment of {{ student.full_name }} in the {{ student.get_program_display }} program at Masterly Air Academy, in accordance with the approved training programme and relevant civil aviation regulations.</p>
+<div class="signatures">
+  <div class="sig-box"><div class="sig-line">Student Signature</div></div>
+  <div class="sig-box"><div class="sig-line">Academy Representative</div></div>
+  <div class="sig-box"><div class="sig-line">Date</div></div>
+</div>
+</body></html>

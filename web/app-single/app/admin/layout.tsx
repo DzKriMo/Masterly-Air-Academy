@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { LayoutDashboard, Users, ClipboardCheck, FileText, CreditCard, File, ScrollText, GraduationCap, Shield, BookOpen, DoorOpen, Plane, Award, Settings, ClipboardList, BarChart3, Megaphone, Menu, X, Monitor } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, ClipboardCheck, FileText, CreditCard, File, ScrollText, GraduationCap, Shield, BookOpen, DoorOpen, Plane, Award, Settings, ClipboardList, BarChart3, Megaphone, Menu, X, Monitor } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const NAV = [
     { href: "/admin/dashboard", label: t("admin.dashboard"), Icon: LayoutDashboard },
     { href: "/admin/users", label: t("admin.users"), Icon: Users },
+    { href: "/admin/roles", label: t("admin.roles", "Roles"), Icon: ShieldCheck },
     { href: "/admin/applications", label: t("admin.applications"), Icon: ClipboardCheck },
     { href: "/admin/communication", label: "Communication", Icon: Megaphone },
     { href: "/admin/invoices", label: t("admin.invoices"), Icon: FileText },

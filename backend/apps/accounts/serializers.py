@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -159,3 +161,32 @@ class ProfileUpdateSerializer(serializers.Serializer):
             pass
 
         return user
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    content_type_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Permission
+        fields = ['id', 'name', 'codename', 'content_type', 'content_type_name']
+
+    def get_content_type_name(self, obj):
+        return obj.content_type.model
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    user_count = serializers.SerializerMethodField()
+    permission_count = serializers.SerializerMethodField()
+    permissions = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Permission.objects.all(), required=False
+    )
+
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'user_count', 'permission_count', 'permissions']
+
+    def get_user_count(self, obj):
+        return obj.user_set.count()
+
+    def get_permission_count(self, obj):
+        return obj.permissions.count()

@@ -72,6 +72,20 @@ export default function AdminSettingsPage() {
     },
   });
 
+  // ── Backup trigger mutation ──
+  const backupMutation = useMutation({
+    mutationFn: () => api.post("/system/backup/"),
+    onSuccess: (data: any) => {
+      showToast(
+        "success",
+        `Backup completed successfully: ${data?.file || ""}`,
+      );
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to trigger backup");
+    },
+  });
+
   // ── Group by category ──
   const grouped = useMemo(() => {
     if (!settings) return {};
@@ -125,6 +139,45 @@ export default function AdminSettingsPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* ── Backup Section ───────────────────────────── */}
+        <div>
+          <h2 className="text-sm font-semibold text-gold-500 uppercase tracking-wider mb-3">
+            {t("admin.backup", "Backup")}
+          </h2>
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${backupMutation.isPending ? "bg-amber-400 animate-pulse" : "bg-green-400"}`} />
+                  <span className="text-sm text-white">
+                    {backupMutation.isPending
+                      ? t("admin.backupInProgress", "Backup in progress...")
+                      : t("admin.backupReady", "Backup service ready")}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {t("admin.backupRetention", "Retention period: 30 days")}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t(
+                    "admin.backupDescription",
+                    "Manual backup creates a compressed SQL dump of the database.",
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => backupMutation.mutate()}
+                disabled={backupMutation.isPending}
+                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {backupMutation.isPending
+                  ? t("admin.backingUp", "Backing up...")
+                  : t("admin.triggerBackup", "Trigger Manual Backup")}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Error */}
         {error && (
           <ErrorCard

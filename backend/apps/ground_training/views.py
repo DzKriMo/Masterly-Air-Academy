@@ -4,12 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import (
-    Subject, Module, ModuleLesson, ModuleDocument, Room,
+    Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise, Room,
     Course, CourseEnrollment, AttendanceRecord, GroundEvaluation,
 )
 from .serializers import (
     SubjectSerializer, SubjectListSerializer,
     ModuleSerializer, ModuleLessonSerializer, ModuleDocumentSerializer,
+    ModuleExerciseSerializer,
     RoomSerializer,
     CourseSerializer, CourseCreateSerializer,
     CourseEnrollmentSerializer,
@@ -57,6 +58,14 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
             type=doc_type,
         )
         return Response(ModuleDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+
+class ModuleExerciseViewSet(viewsets.ModelViewSet):
+    queryset = ModuleExercise.objects.all()
+    serializer_class = ModuleExerciseSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.view'
+    filterset_fields = ['module']
 
 
 class SubjectViewSet(viewsets.ModelViewSet):

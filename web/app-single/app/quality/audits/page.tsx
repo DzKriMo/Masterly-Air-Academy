@@ -29,6 +29,8 @@ export default function AuditsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
+  const [checklistItems, setChecklistItems] = useState<{text: string; status: string}[]>([]);
+  const [newItemText, setNewItemText] = useState("");
   const { t } = useTranslation();
 
   const { data: audits=[], isLoading } = useQuery({
@@ -50,6 +52,8 @@ export default function AuditsPage() {
       setShowForm(false);
       setEditing(null);
       setForm({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
+      setChecklistItems([]);
+      setNewItemText("");
       showToast("success", editing ? t('quality.auditUpdated', 'Audit updated.') : t('quality.auditCreated', 'Audit created.'));
     },
     onError: (e: Error) => showToast("error", e.message),
@@ -58,6 +62,8 @@ export default function AuditsPage() {
   const openCreate = () => {
     setEditing(null);
     setForm({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
+    setChecklistItems([]);
+    setNewItemText("");
     setShowForm(true);
   };
 
@@ -70,12 +76,25 @@ export default function AuditsPage() {
       scheduled_date: audit.scheduled_date?.slice(0, 16) || "",
       lead_auditor: audit.lead_auditor || "",
     });
+    setChecklistItems(
+      (audit.checklist_items || []).map((item: any) => ({
+        text: typeof item === "string" ? item : (item.text || ""),
+        status: item.status || "pending",
+      }))
+    );
+    setNewItemText("");
     setShowForm(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMutation.mutate(form);
+    saveMutation.mutate({
+      ...form,
+      checklist_items: checklistItems.map(item => ({
+        text: item.text,
+        status: item.status,
+      })),
+    });
   };
 
   const filterOptions: FilterOption[] = [
@@ -136,7 +155,7 @@ export default function AuditsPage() {
   return (<div className="flex-1 min-w-0">
     <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><h1 className="text-lg font-bold text-white">{t('quality.audits', 'Audits')}</h1><button onClick={openCreate} className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900">{t('quality.createAudit', '+ Create Audit')}</button></div></nav>
     <main className="px-6 py-8">
-      <ModalForm open={showForm} onClose={() => { setShowForm(false); setEditing(null); }} title={editing ? t('quality.editAudit', 'Edit Audit') : t('quality.createAudit', 'Create Audit')} footer={modalFooter}>
+      <ModalForm open={showForm} onClose={() => { setShowForm(false); setEditing(null); setChecklistItems([]); setNewItemText(""); }} title={editing ? t('quality.editAudit', 'Edit Audit') : t('quality.createAudit', 'Create Audit')} footer={modalFooter} wide>
         <form id="audit-form" onSubmit={handleSubmit} className="space-y-4">
           <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} required placeholder={t('common.title', 'Title')} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/>
           <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
@@ -148,6 +167,91 @@ export default function AuditsPage() {
             <option value="">{t('common.selectLeadAuditor', 'Select lead auditor...')}</option>
             {qualityManagers.map((u: any) => <option key={u.id} value={u.id}>{u.email}</option>)}
           </select>
+
+          {/* Checklist Items Section */}
+          <div className="border-t border-navy-700 pt-4">
+            <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+              {t('quality.checklistItems', 'Checklist Items')}
+            </h3>
+
+            {/* Existing items */}
+            {checklistItems.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {checklistItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-navy-900/50 rounded-lg p-2">
+                    <input
+                      value={item.text}
+                      onChange={e => {
+                        const updated = [...checklistItems];
+                        updated[idx] = { ...updated[idx], text: e.target.value };
+                        setChecklistItems(updated);
+                      }}
+                      placeholder={t('quality.checklistItemPlaceholder', 'Checklist item...')}
+                      className="flex-1 px-3 py-1.5 bg-navy-900 border border-navy-600 rounded text-white text-sm"
+                    />
+                    {editing && (
+                      <select
+                        value={item.status}
+                        onChange={e => {
+                          const updated = [...checklistItems];
+                          updated[idx] = { ...updated[idx], status: e.target.value };
+                          setChecklistItems(updated);
+                        }}
+                        className="px-2 py-1.5 bg-navy-900 border border-navy-600 rounded text-white text-sm"
+                      >
+                        <option value="pending">{t('quality.pending', 'Pending')}</option>
+                        <option value="pass">{t('quality.pass', 'Pass')}</option>
+                        <option value="fail">{t('quality.fail', 'Fail')}</option>
+                        <option value="na">{t('quality.na', 'N/A')}</option>
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setChecklistItems(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-red-400 hover:text-red-300 p-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add item input */}
+            <div className="flex gap-2">
+              <input
+                value={newItemText}
+                onChange={e => setNewItemText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && newItemText.trim()) {
+                    e.preventDefault();
+                    setChecklistItems(prev => [...prev, { text: newItemText.trim(), status: "pending" }]);
+                    setNewItemText("");
+                  }
+                }}
+                placeholder={t('quality.addChecklistItem', 'Add a checklist item...')}
+                className="flex-1 px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm placeholder-gray-500"
+              />
+              <button
+                type="button"
+                disabled={!newItemText.trim()}
+                onClick={() => {
+                  if (newItemText.trim()) {
+                    setChecklistItems(prev => [...prev, { text: newItemText.trim(), status: "pending" }]);
+                    setNewItemText("");
+                  }
+                }}
+                className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('quality.addItem', 'Add Item')}
+              </button>
+            </div>
+            {checklistItems.length === 0 && (
+              <p className="text-xs text-gray-500 mt-2">{t('quality.noChecklistItems', 'No checklist items yet. Add items above to track audit criteria.')}</p>
+            )}
+          </div>
         </form>
       </ModalForm>
 

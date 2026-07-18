@@ -67,7 +67,7 @@ def generate_certificate_pdf(certificate):
     """Generate a beautifully formatted PDF certificate with logo, QR code, and decorated border."""
 
     logo_b64 = _logo_base64()
-    verify_url = f"http://localhost/verify-certificate?number={certificate.certificate_number}"
+    verify_url = f"{settings.SITE_URL}/verify-certificate?number={certificate.certificate_number}"
     qr_b64 = _generate_qr_data_url(verify_url)
 
     logo_img = f'<img src="data:image/png;base64,{logo_b64}" width="70" height="70" style="display:block;margin:0 auto 4px;" />' if logo_b64 else '<div style="font-size:26px;color:#c4943c;font-weight:bold;">MAA</div>'

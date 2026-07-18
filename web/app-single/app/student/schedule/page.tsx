@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/empty-state";
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import multiMonthPlugin from '@fullcalendar/multimonth';
 
 export default function StudentSchedulePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -47,9 +48,9 @@ export default function StudentSchedulePage() {
       {loading?<LoadingSkeleton type="table" rows={5} />:events.length===0?<EmptyState message={t('student.noEvents', 'No events scheduled.')} />:
       <div className="fc-wrapper">
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin, multiMonthPlugin]}
           initialView="timeGridWeek"
-          headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek,dayGridYear"}}
+          headerToolbar={{left:"prev,next today",center:"title",right:"dayGridMonth,timeGridWeek,multiMonthYear"}}
           events={events}
           height="auto"
           slotMinTime="06:00:00"

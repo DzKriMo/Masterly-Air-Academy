@@ -33,6 +33,12 @@ export default function DirectorDashboard() {
     ]),
     enabled: isAuthenticated,
   });
+
+  const { data: fleetData } = useQuery({
+    queryKey: ['director-fleet-utilization'],
+    queryFn: () => api.get<any>("/reports/fleet/"),
+    enabled: isAuthenticated,
+  });
   useEffect(() => { if (!isLoading && !isAuthenticated) router.push("/login"); }, [isLoading, isAuthenticated, router]);
   if (isLoading || !isAuthenticated) return null;
 
@@ -57,6 +63,31 @@ export default function DirectorDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><KpiCard label={t('director.revenue', 'Revenue')} value={`${kpis.revenue.toLocaleString()} DZD`} c="text-green-400"/><KpiCard label={t('finance.outstanding', 'Outstanding')} value={`${kpis.outstanding.toLocaleString()} DZD`} c="text-red-400"/><KpiCard label={t('director.completed', 'Completed')} value={kpis.completed} c="text-cyan-400"/><KpiCard label={t('director.audits', 'Audits')} value={kpis.audits} c="text-yellow-400"/></div>
       <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.resourceOverview', 'Resource Overview')}</h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.availableAircraft', 'Available Aircraft')} value={`${resourceAvail.aircraft} / ${resourceAvail.aircraftTotal}`} c="text-blue-400"/><KpiCard label={t('director.availableInstructors', 'Available Instructors')} value={`${resourceAvail.instructors} / ${resourceAvail.instructorsTotal}`} c="text-green-400"/><KpiCard label={t('director.simulatorsAvailable', 'Simulators Available')} value={`${resourceAvail.simulators} / ${resourceAvail.simulatorsTotal}`} c="text-purple-400"/><KpiCard label={t('director.roomsAvailable', 'Rooms Available')} value={`${resourceAvail.rooms} / ${resourceAvail.roomsTotal}`} c="text-gold-400"/></div>
+      <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.fleetUtilization', 'Fleet Utilization')}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <ChartCard title={t('director.aircraftHours', 'Aircraft Hours')}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={fleetData?.aircraft || []} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/>
+              <XAxis type="number" stroke="#94a3b8" fontSize={12}/>
+              <YAxis dataKey="registration" type="category" stroke="#94a3b8" fontSize={12} width={80}/>
+              <Tooltip contentStyle={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:'8px',fontSize:'12px'}}/>
+              <Bar dataKey="hours" fill="#3b82f6" radius={[0,4,4,0]} name={t('director.hours', 'Hours')}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+        <ChartCard title={t('director.instructorHours', 'Instructor Hours')}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={fleetData?.instructors || []} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a2332"/>
+              <XAxis type="number" stroke="#94a3b8" fontSize={12}/>
+              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={100}/>
+              <Tooltip contentStyle={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:'8px',fontSize:'12px'}}/>
+              <Bar dataKey="hours" fill="#22c55e" radius={[0,4,4,0]} name={t('director.hours', 'Hours')}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
       <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.operationalAlerts', 'Operational Alerts')}</h3>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8"><KpiCard label={t('director.aircraftMaintenance', 'Aircraft in Maintenance')} value={maintAircraft} c="text-red-400"/><KpiCard label={t('director.inactiveInstructors', 'Instructors Inactive')} value={inactiveInstructors} c="text-yellow-400"/><KpiCard label={t('director.upcomingMaintenance', 'Upcoming Maintenance (7d)')} value={upcomingMaint} c="text-orange-400"/></div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

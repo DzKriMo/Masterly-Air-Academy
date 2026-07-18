@@ -148,6 +148,13 @@ class RiskAssessment(models.Model):
 
 
 class SafetyEvent(models.Model):
+    class SafetyEventStatus(models.TextChoices):
+        REPORTED = 'reported', 'Reported'
+        INVESTIGATING = 'investigating', 'Under Investigation'
+        ANALYZED = 'analyzed', 'Analyzed'
+        RESOLVED = 'resolved', 'Resolved'
+        CLOSED = 'closed', 'Closed'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     type = models.CharField(max_length=50)
@@ -156,7 +163,7 @@ class SafetyEvent(models.Model):
     confidential = models.BooleanField(default=False)
     attachments = models.JSONField(default=list, blank=True)
     analysis = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=20, default='reported')
+    status = models.CharField(max_length=20, choices=SafetyEventStatus.choices, default=SafetyEventStatus.REPORTED)
     closed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -220,6 +220,29 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)
 
+    @action(detail=True, methods=['post'])
+    def investigate(self, request, pk=None):
+        event = self.get_object()
+        event.status = 'investigating'
+        event.save()
+        return Response({'status': 'investigating'})
+
+    @action(detail=True, methods=['post'])
+    def analyze(self, request, pk=None):
+        event = self.get_object()
+        event.analysis = request.data.get('analysis', event.analysis)
+        event.status = 'analyzed'
+        event.save()
+        return Response({'status': 'analyzed'})
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        event = self.get_object()
+        event.status = 'resolved'
+        event.closed_at = timezone.now()
+        event.save()
+        return Response({'status': 'resolved'})
+
 
 class QualityDocumentViewSet(viewsets.ModelViewSet):
     queryset = QualityDocument.objects.all()

@@ -1,6 +1,9 @@
 """Notification service — creates notifications triggered by key events."""
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import timezone
 from .models import Notification
 
@@ -39,6 +42,31 @@ class NotificationService:
             notifications.append(NotificationService.notify(user, type, title, message, data))
         return notifications
 
+    @staticmethod
+    def send_email_notification(user, subject, message):
+        """Send an email notification to a user."""
+        if not user.email:
+            return
+        try:
+            html_message = render_to_string('emails/notification.html', {
+                'subject': subject,
+                'message': message,
+            })
+            text_message = render_to_string('emails/notification.txt', {
+                'subject': subject,
+                'message': message,
+            })
+            send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Email failures should not break the app
+
     # ── Pre-built event triggers ──────────────────────────
 
     @staticmethod
@@ -48,6 +76,8 @@ class NotificationService:
         data = {'flight_id': str(lesson.id), 'date': str(lesson.scheduled_date)}
         NotificationService.notify(lesson.student.user, 'flight_scheduled',
                                      'Flight Scheduled', msg, data)
+        NotificationService.send_email_notification(lesson.student.user,
+                                                      'Flight Scheduled', msg)
         NotificationService.notify(lesson.instructor.user, 'flight_scheduled',
                                      'New Flight Assigned', msg, data)
 
@@ -72,6 +102,9 @@ class NotificationService:
             'Exam Result Available', msg,
             {'exam_id': str(attempt.exam.id), 'score': str(attempt.score), 'passed': attempt.is_passed}
         )
+        NotificationService.send_email_notification(
+            attempt.student.user, 'Exam Result Available', msg
+        )
 
     @staticmethod
     def course_scheduled(course):
@@ -95,6 +128,9 @@ class NotificationService:
             'New Invoice', msg,
             {'invoice_id': str(invoice.id), 'amount': str(invoice.amount)}
         )
+        NotificationService.send_email_notification(
+            invoice.student.user, 'New Invoice', msg
+        )
 
     @staticmethod
     def document_expiring(user, document_type: str, doc_name: str, expiry_date):
@@ -116,6 +152,15 @@ class NotificationService:
             'ncr_opened', 'New Non-Conformity', msg,
             {'ncr_id': str(ncr.id)}
         )
+        # Also email all active users with quality roles
+        quality_users = User.objects.filter(
+            role__in=['quality_manager', 'compliance_monitoring_manager', 'safety_manager'],
+            status='active', is_active=True
+        )
+        for u in quality_users:
+            NotificationService.send_email_notification(
+                u, 'New Non-Conformity', msg
+            )
 
     @staticmethod
     def capa_assigned(capa):
@@ -126,6 +171,9 @@ class NotificationService:
                 capa.responsible, 'capa_assigned',
                 'CAPA Assigned to You', msg,
                 {'capa_id': str(capa.id)}
+            )
+            NotificationService.send_email_notification(
+                capa.responsible, 'CAPA Assigned to You', msg
             )
 
     @staticmethod
@@ -168,4 +216,7 @@ class NotificationService:
             certificate.student.user, 'certificate_issued',
             'Certificate Issued', msg,
             {'certificate_id': str(certificate.id), 'number': certificate.certificate_number}
+        )
+        NotificationService.send_email_notification(
+            certificate.student.user, 'Certificate Issued', msg
         )

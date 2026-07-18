@@ -58,7 +58,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -239,6 +239,9 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@masterly-air-academy.dz')
+
+# Site URL (used for certificate QR codes, etc.)
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost')
 
 # Inactivity auto-logout (seconds, 0 = disabled)
 INACTIVITY_TIMEOUT_SECONDS = int(os.environ.get('INACTIVITY_TIMEOUT', 1800))  # 30 min default
