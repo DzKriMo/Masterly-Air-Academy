@@ -17,7 +17,6 @@ import { useToast } from "@/components/toast";
 
 interface Msg {
   id: string;
-  sender_name: string;
   sender: string;
   sender_name: string;
   receiver: string;
