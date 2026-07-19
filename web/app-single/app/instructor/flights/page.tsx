@@ -14,6 +14,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ExportButton } from "@/components/export-button";
 
 interface Flight {
   id: string; student_name: string; instructor_name: string;
@@ -204,7 +205,7 @@ export default function FlightsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Flight export endpoints not yet implemented */}
+            <ExportButton exports={[{label:t('instructor.exportExcel','Excel'),url:'/export/flights/',filename:'flights.xlsx',type:'excel'}]} />
             <button onClick={() => setShowForm(true)}
               className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
               {t('instructor.newFlight')}

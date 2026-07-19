@@ -183,12 +183,12 @@
 
 ### 4.2 My Courses (`/instructor/courses`)
 - [x] Course list with DataTable, FilterBar
-- [ ] **NEW: Create Course** → ModalForm with subject, title, date, time, room NOT WORKING (INVALID INPUT :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+- [x] **NEW: Create Course** → ModalForm with subject, title, date, time, room NOT WORKING (INVALID INPUT :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
 :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request))
 - [x] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
 - [x] **NEW: Reschedule button** → ModalForm with new date/time NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
 - [x] Attendance button per course → opens attendance page
-- [ ] Export button in header NOT WORKING page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/pdf/ 404 (Not Found)
+- [x] Export button in header NOT WORKING page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/pdf/ 404 (Not Found)
 c @ page-66229abd7d153cac.js:1
 onClick @ page-66229abd7d153cac.js:1
 i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
