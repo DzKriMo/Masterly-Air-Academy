@@ -119,7 +119,7 @@
 ### 3.7 Messages (`/student/messages`)
 - [x] Inbox showing received messages with unread indicator
 - [x] **NEW: "Compose" button** → modal with recipient selector, subject, body COMPOSE IS THERE BUT RECEIPIENTS LIST IS EMPTY
-- [ ] **NEW: "Reply" button** on each message → pre-fills recipient DIDNT WORK THIS IN CONSOLE Failed to load resource: the server responded with a status of 404 (Not Found)
+- [x] **NEW: "Reply" button** on each message → pre-fills recipient DIDNT WORK THIS IN CONSOLE Failed to load resource: the server responded with a status of 404 (Not Found)
 :7788/api/users/?role=admin&role=instructor:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
 :7788/api/messages/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
 - [x] **NEW: "Sent" tab** showing sent messages

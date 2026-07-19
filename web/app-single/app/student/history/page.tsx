@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
@@ -84,7 +84,7 @@ export default function StudentHistoryPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const loadData = useCallback(() => {
+  useEffect(() => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
@@ -97,14 +97,10 @@ export default function StudentHistoryPage() {
       })
       .catch((err) => {
         console.error("Failed to load history:", err);
-        setError(t("student.historyLoadError", "Failed to load academic history. Please try again."));
+        setError("Failed to load academic history. Please try again.");
       })
       .finally(() => setLoading(false));
-  }, [isAuthenticated, t]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  }, [isAuthenticated]);
 
   /* ── Filters ──────────────────────────────────── */
   const filterOptions: FilterOption[] = [
