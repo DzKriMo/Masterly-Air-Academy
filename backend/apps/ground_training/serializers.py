@@ -107,11 +107,15 @@ class CourseCreateSerializer(serializers.ModelSerializer):
 
         if not data.get('instructor') and request:
             from apps.students.models import GroundInstructor
-            try:
-                gi = GroundInstructor.objects.get(user=request.user)
-                data['instructor'] = gi
-            except GroundInstructor.DoesNotExist:
-                raise serializers.ValidationError({'instructor': 'No instructor profile found for this user.'})
+            gi, _ = GroundInstructor.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'first_name': request.user.get_full_name() or request.user.email or '',
+                    'last_name': '',
+                    'status': 'active',
+                }
+            )
+            data['instructor'] = gi
 
         if not data.get('academic_year'):
             from apps.core.models import AcademicYear

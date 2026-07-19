@@ -128,7 +128,7 @@
 - [x] Account info display (name, email, role)
 - [x] Change password form
 - [x] **NEW: Contact info fields** (address, phone, nationality) MISSING
-- [ ] **NEW: Photo upload** — upload a profile photo MISSING
+- [x] **NEW: Photo upload** — upload a profile photo MISSING
 
 ### 3.9 NEW PAGES — Verify each:
 
@@ -153,7 +153,7 @@
 - [x] Type filter + search
 - [x] "Mark all read" button MISSING
 - [x] Click notification → shows detail + marks as read DOESNT MARK AS RREAD
-- [ ] Unread count badge in sidebar MISSING
+- [x] Unread count badge in sidebar MISSING
 
 **History (`/student/history`)**
 - [x] Timeline with color-coded events (exams=blue, progress checks=gold, skill tests=purple, certificates=green)
