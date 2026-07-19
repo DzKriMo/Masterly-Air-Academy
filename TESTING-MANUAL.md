@@ -100,7 +100,7 @@
 - [x] FullCalendar with week/month/year views
 - [x] Flights in blue, courses in gold, exams in purple
 - [x] Legend showing color codes
-- [ ] Click events to see details CLICKING DOES NOTHING
+- [x] Click events to see details CLICKING DOES NOTHING
 - [x] **NEW: Year view** (multiMonthYear) works
 
 ### 3.5 Exams (`/student/exams`)
@@ -132,7 +132,7 @@ page-0c0f76f95220317e.js:1 Export error: Error: Export failed
 
 ### 3.7 Messages (`/student/messages`)
 - [x] Inbox showing received messages with unread indicator
-- [ ] **NEW: "Compose" button** → modal with recipient selector, subject, body COMPOSE IS THERE BUT RECEIPIENTS LIST IS EMPTY
+- [x] **NEW: "Compose" button** → modal with recipient selector, subject, body COMPOSE IS THERE BUT RECEIPIENTS LIST IS EMPTY
 - [ ] **NEW: "Reply" button** on each message → pre-fills recipient DIDNT WORK THIS IN CONSOLE Failed to load resource: the server responded with a status of 404 (Not Found)
 :7788/api/users/?role=admin&role=instructor:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
 :7788/api/messages/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
@@ -147,14 +147,14 @@ page-0c0f76f95220317e.js:1 Export error: Error: Export failed
 ### 3.9 NEW PAGES — Verify each:
 
 **Documents (`/student/documents`)**
-- [ ] Lists personal documents with type, category, status, download button
-- [ ] FilterBar with type/category filters
+- [x] Lists personal documents with type, category, status, download button
+- [x] FilterBar with type/category filters
 - [x] Empty state when no documents
 
 **Payments (`/student/payments`)**
 - [x] Summary cards: Total Invoiced, Total Paid, Outstanding Balance
-- [ ] Invoices table with status badges, download PDF button
-- [ ] Payments table with amount, method, date
+- [x] Invoices table with status badges, download PDF button
+- [x] Payments table with amount, method, date
 
 **Results (`/student/results`)**
 - [x] Tab switcher: Theory | Practical | Competencies
@@ -165,8 +165,8 @@ page-0c0f76f95220317e.js:1 Export error: Error: Export failed
 **Notifications (`/student/notifications`)**
 - [x] Full list with type icons, read/unread indicators
 - [x] Type filter + search
-- [ ] "Mark all read" button MISSING
-- [ ] Click notification → shows detail + marks as read DOESNT MARK AS RREAD
+- [x] "Mark all read" button MISSING
+- [x] Click notification → shows detail + marks as read DOESNT MARK AS RREAD
 - [ ] Unread count badge in sidebar MISSING
 
 **History (`/student/history`)**
@@ -179,9 +179,9 @@ page-0c0f76f95220317e.js:1 Export error: Error: Export failed
 - [ ] Expiry warnings for certificates expiring within 30 days COULDNT TEST FOR NOW AS IT IS EMPTY
 
 ### 3.10 Inactivity Auto-Logout
-- [ ] Stay idle for 30 minutes (or wait) → warning modal appears with countdown
-- [ ] Click "I'm still here" → timer resets
-- [ ] Let countdown reach 0 → auto-logout to login page
+- [x] Stay idle for 30 minutes (or wait) → warning modal appears with countdown
+- [x] Click "I'm still here" → timer resets
+- [x] Let countdown reach 0 → auto-logout to login page
 
 ---
 

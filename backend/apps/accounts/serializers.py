@@ -120,31 +120,42 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 
 class ProfileUpdateSerializer(serializers.Serializer):
-    current_password = serializers.CharField(write_only=True, required=True)
-    password = serializers.CharField(write_only=True, required=True,
+    current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True,
                                       validators=[validate_password])
-    password_confirmation = serializers.CharField(write_only=True, required=True)
+    password_confirmation = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     nationality = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def validate_current_password(self, value):
+        # Skip validation when not changing password
+        if not value:
+            return value
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError('Current password is incorrect.')
         return value
 
     def validate(self, data):
-        if data['password'] != data['password_confirmation']:
-            raise serializers.ValidationError(
-                {'password_confirmation': 'Passwords do not match.'}
-            )
+        password = data.get('password', '')
+        password_confirmation = data.get('password_confirmation', '')
+
+        # Only validate password match if password fields are provided
+        if password or password_confirmation:
+            if password != password_confirmation:
+                raise serializers.ValidationError(
+                    {'password_confirmation': 'Passwords do not match.'}
+                )
         return data
 
     def save(self):
         user = self.context['request'].user
-        user.set_password(self.validated_data['password'])
-        user.save()
+
+        # Only change password if password field is provided
+        if self.validated_data.get('password'):
+            user.set_password(self.validated_data['password'])
+            user.save()
 
         # Update Student model fields if the user has a student profile
         from apps.students.models import Student

@@ -116,16 +116,25 @@ class ExportAuditLogsView(APIView):
 
 
 class ExportCertificatesView(APIView):
-    permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'certificates.export'
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         from apps.exams.models import Certificate
+        from apps.students.models import Student
+
+        # Students can only export their own certificates
+        try:
+            student = Student.objects.get(user=request.user)
+            certificates = Certificate.objects.filter(student=student).select_related('student')
+        except Student.DoesNotExist:
+            # Admins/staff export all certificates
+            certificates = Certificate.objects.select_related('student').all()
+
         wb = Workbook()
         ws = wb.active
         ws.title = "Certificates"
         _style_header(ws, ["Certificate #", "Student", "Type", "Title", "Program", "Issue Date", "Expiry Date", "Status"])
-        for i, c in enumerate(Certificate.objects.select_related('student').all(), 2):
+        for i, c in enumerate(certificates, 2):
             ws.cell(row=i, column=1, value=c.certificate_number or "")
             ws.cell(row=i, column=2, value=c.student.full_name)
             ws.cell(row=i, column=3, value=c.type or "")

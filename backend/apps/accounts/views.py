@@ -57,10 +57,14 @@ class UpdateProfileView(views.APIView):
         if not file:
             return Response({'error': 'No photo provided'}, status=400)
 
-        student.photo = file
-        student.save()
+        try:
+            student.photo = file
+            student.save()
+        except Exception as e:
+            return Response({'error': f'Failed to save photo: {str(e)}'}, status=500)
+
         return Response({
-            'photo_url': student.photo.url if student.photo else None,
+            'photo': student.photo.url if student.photo else None,
         })
 
 

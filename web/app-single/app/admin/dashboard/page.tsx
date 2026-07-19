@@ -70,7 +70,7 @@ export default function AdminDashboard() {
       id: u.id,
       action: `User ${u.email || u.username || "—"}`,
       user: u.role || "unknown",
-      timestamp: u.last_login_at || u.created_at || null,
+      timestamp: u.last_login_at || u.created_at || undefined,
     }));
   })();
 
