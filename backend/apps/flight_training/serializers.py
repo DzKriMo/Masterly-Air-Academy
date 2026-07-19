@@ -78,6 +78,11 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
             'student', 'instructor', 'aircraft', 'lesson_template',
             'scheduled_date', 'start_time', 'end_time', 'status',
         ]
+        extra_kwargs = {
+            'instructor': {'required': False},
+            'lesson_template': {'required': False},
+            'status': {'required': False},
+        }
 
     def validate(self, data):
         # Skip full validation for partial updates (e.g. cancel/reschedule)

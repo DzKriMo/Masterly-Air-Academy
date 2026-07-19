@@ -150,3 +150,32 @@ class ExportCertificatesView(APIView):
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": "attachment; filename=certificates.xlsx"},
         )
+
+
+class ExportCoursesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.ground_training.models import Course
+        courses = Course.objects.select_related('subject', 'instructor', 'room').all()
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Courses"
+        _style_header(ws, ["Title", "Subject", "Instructor", "Date", "Start", "End", "Room", "Status"])
+        for i, c in enumerate(courses, 2):
+            ws.cell(row=i, column=1, value=c.title or "")
+            ws.cell(row=i, column=2, value=c.subject.code if c.subject else "")
+            ws.cell(row=i, column=3, value=f'{c.instructor.first_name} {c.instructor.last_name}' if c.instructor else "")
+            ws.cell(row=i, column=4, value=str(c.scheduled_date) if c.scheduled_date else "")
+            ws.cell(row=i, column=5, value=str(c.start_time) if c.start_time else "")
+            ws.cell(row=i, column=6, value=str(c.end_time) if c.end_time else "")
+            ws.cell(row=i, column=7, value=c.room.name if c.room else "")
+            ws.cell(row=i, column=8, value=c.status or "")
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=courses.xlsx"},
+        )
