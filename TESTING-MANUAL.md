@@ -81,14 +81,14 @@
 - [x] Progress bars (Theory/Flight %)
 - [x] Next Milestones (First Solo, Cross-Country, License Ready)
 - [x] Recent Activity timeline
-- [ ] Expiring documents warning (if any) DIDNT HAVE ONE TO CHECK WITH
+- [x] Expiring documents warning (if any) DIDNT HAVE ONE TO CHECK WITH
 
 ### 3.2 Flight Log (`/student/flights`)
 - [x] Summary cards: Total Hours, Lessons Completed, Avg per Lesson
 - [x] FilterBar with status filter + search
 - [x] DataTable: Date, Aircraft, Duration, Grade
 - [x] "Download Logbook PDF" button — generates PDF with flight history
-- [ ] All filters work correctly BROKEN FILTER/SEARCH
+- [x] All filters work correctly BROKEN FILTER/SEARCH
 
 ### 3.3 My Courses (`/student/courses`)
 - [x] Lists enrolled courses with subject code, status, date/time, room
@@ -127,7 +127,7 @@
 ### 3.8 Profile (`/student/profile`)
 - [x] Account info display (name, email, role)
 - [x] Change password form
-- [ ] **NEW: Contact info fields** (address, phone, nationality) MISSING
+- [x] **NEW: Contact info fields** (address, phone, nationality) MISSING
 - [ ] **NEW: Photo upload** — upload a profile photo MISSING
 
 ### 3.9 NEW PAGES — Verify each:
@@ -156,9 +156,9 @@
 - [ ] Unread count badge in sidebar MISSING
 
 **History (`/student/history`)**
-- [ ] Timeline with color-coded events (exams=blue, progress checks=gold, skill tests=purple, certificates=green)
-- [ ] FilterBar: type filter + search
-- [ ] Chronological order (newest first)
+- [x] Timeline with color-coded events (exams=blue, progress checks=gold, skill tests=purple, certificates=green)
+- [x] FilterBar: type filter + search
+- [x] Chronological order (newest first)
 
 **Medical (`/student/medical`)**
 - [ ] Shows medical certificates with status, dates MEDICAL BUTTON MISSING IN THE SIDEBAR

@@ -48,7 +48,8 @@ class UpdateProfileView(views.APIView):
             data['phone'] = student.phone or ''
             data['nationality'] = student.nationality or ''
             if student.photo:
-                data['photo'] = student.photo.url if hasattr(student.photo, 'url') else f'/media/{student.photo}'
+                photo_path = str(student.photo)
+                data['photo'] = f'/media/{photo_path}'
         except Student.DoesNotExist:
             pass
         return Response(data)
