@@ -76,82 +76,98 @@
 - [x] Sidebar with 12 nav items: Dashboard, Exams, Flight Log, My Courses, Schedule, Certificates, Messages, Profile, Documents, Payments, Results, History, Notifications
 - [x] Welcome message with student name
 - [x] Stat cards: Flight Hours, Lessons Completed, Exam Average, Unpaid Invoices
-- [ ] Flight hours line chart
+- [x] Flight hours line chart
 - [x] Competencies radar chart
 - [x] Progress bars (Theory/Flight %)
 - [x] Next Milestones (First Solo, Cross-Country, License Ready)
 - [x] Recent Activity timeline
-- [ ] Expiring documents warning (if any)
+- [ ] Expiring documents warning (if any) DIDNT HAVE ONE TO CHECK WITH
 
 ### 3.2 Flight Log (`/student/flights`)
-- [ ] Summary cards: Total Hours, Lessons Completed, Avg per Lesson
-- [ ] FilterBar with status filter + search
-- [ ] DataTable: Date, Aircraft, Duration, Grade
-- [ ] "Download Logbook PDF" button — generates PDF with flight history
-- [ ] All filters work correctly
+- [x] Summary cards: Total Hours, Lessons Completed, Avg per Lesson
+- [x] FilterBar with status filter + search
+- [x] DataTable: Date, Aircraft, Duration, Grade
+- [x] "Download Logbook PDF" button — generates PDF with flight history
+- [ ] All filters work correctly BROKEN FILTER/SEARCH
 
 ### 3.3 My Courses (`/student/courses`)
 - [x] Lists enrolled courses with subject code, status, date/time, room
 - [x] Click course → detail page with modules, lessons, documents
 - [x] **NEW: Lesson viewer** — click "Open Lesson" → renders markdown content beautifully
-- [ ] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player
+- [ ] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player THERE IS NO OPTION FOR A URL WHEN ADDING A LESSON SO COULDNT TEST
 
 ### 3.4 Schedule (`/student/schedule`)
 - [x] FullCalendar with week/month/year views
 - [x] Flights in blue, courses in gold, exams in purple
 - [x] Legend showing color codes
-- [ ] Click events to see details
+- [ ] Click events to see details CLICKING DOES NOTHING
 - [x] **NEW: Year view** (multiMonthYear) works
 
 ### 3.5 Exams (`/student/exams`)
 - [x] Available exams list with attempt limits
 - [x] Click exam → start exam page with countdown timer
-- [ ] Answer questions, submit → results with per-question breakdown
+- [x] Answer questions, submit → results with per-question breakdown
 - [x] Anti-cheat: switch tabs → warning (1 warning then auto-submit)
 - [x] Past attempts/results list below
 
 ### 3.6 Certificates (`/student/certificates`)
 - [x] Lists all earned certificates with QR codes
-- [ ] "Download PDF" button per certificate
-- [ ] "Verify" link → opens verification page
-- [ ] Export button for all certificates
+- [x] "Download PDF" button per certificate
+- [x] "Verify" link → opens verification page
+- [ ] Export button for all certificates NOT WORKING (layout-6761222035435647.js:1  GET http://185.185.80.188:7788/api/notifications/unread-count/ 404 (Not Found)
+request @ layout-6761222035435647.js:1
+get @ layout-6761222035435647.js:1
+e @ layout-4a2f1c40782fefa0.js:1
+page-0c0f76f95220317e.js:1  GET http://185.185.80.188:7788/api/certificates/export/ 404 (Not Found)
+d @ page-0c0f76f95220317e.js:1
+onClick @ page-0c0f76f95220317e.js:1
+i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
+(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
+nz @ 4bd1b696-100b9d70ed4e49c1.js:1
+sn @ 4bd1b696-100b9d70ed4e49c1.js:1
+cc @ 4bd1b696-100b9d70ed4e49c1.js:1
+ci @ 4bd1b696-100b9d70ed4e49c1.js:1
+page-0c0f76f95220317e.js:1 Export error: Error: Export failed
+    at d (page-0c0f76f95220317e.js:1:397))
 
 ### 3.7 Messages (`/student/messages`)
-- [ ] Inbox showing received messages with unread indicator
-- [ ] **NEW: "Compose" button** → modal with recipient selector, subject, body
-- [ ] **NEW: "Reply" button** on each message → pre-fills recipient
-- [ ] **NEW: "Sent" tab** showing sent messages
+- [x] Inbox showing received messages with unread indicator
+- [ ] **NEW: "Compose" button** → modal with recipient selector, subject, body COMPOSE IS THERE BUT RECEIPIENTS LIST IS EMPTY
+- [ ] **NEW: "Reply" button** on each message → pre-fills recipient DIDNT WORK THIS IN CONSOLE Failed to load resource: the server responded with a status of 404 (Not Found)
+:7788/api/users/?role=admin&role=instructor:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:7788/api/messages/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+- [x] **NEW: "Sent" tab** showing sent messages
 
 ### 3.8 Profile (`/student/profile`)
-- [ ] Account info display (name, email, role)
-- [ ] Change password form
-- [ ] **NEW: Contact info fields** (address, phone, nationality)
-- [ ] **NEW: Photo upload** — upload a profile photo
+- [x] Account info display (name, email, role)
+- [x] Change password form
+- [ ] **NEW: Contact info fields** (address, phone, nationality) MISSING
+- [ ] **NEW: Photo upload** — upload a profile photo MISSING
 
 ### 3.9 NEW PAGES — Verify each:
 
 **Documents (`/student/documents`)**
 - [ ] Lists personal documents with type, category, status, download button
 - [ ] FilterBar with type/category filters
-- [ ] Empty state when no documents
+- [x] Empty state when no documents
 
 **Payments (`/student/payments`)**
-- [ ] Summary cards: Total Invoiced, Total Paid, Outstanding Balance
+- [x] Summary cards: Total Invoiced, Total Paid, Outstanding Balance
 - [ ] Invoices table with status badges, download PDF button
 - [ ] Payments table with amount, method, date
 
 **Results (`/student/results`)**
-- [ ] Tab switcher: Theory | Practical | Competencies
-- [ ] Theory tab: exam attempts with score, pass/fail, date
-- [ ] Practical tab: flight evaluations with grade, result, instructor
-- [ ] **NEW: Competencies tab** — matrix grid (programs × competencies) with color-coded status badges
+- [x] Tab switcher: Theory | Practical | Competencies
+- [x] Theory tab: exam attempts with score, pass/fail, date
+- [x] Practical tab: flight evaluations with grade, result, instructor
+- [x] **NEW: Competencies tab** — matrix grid (programs × competencies) with color-coded status badges
 
 **Notifications (`/student/notifications`)**
-- [ ] Full list with type icons, read/unread indicators
-- [ ] Type filter + search
-- [ ] "Mark all read" button
-- [ ] Click notification → shows detail + marks as read
-- [ ] Unread count badge in sidebar
+- [x] Full list with type icons, read/unread indicators
+- [x] Type filter + search
+- [ ] "Mark all read" button MISSING
+- [ ] Click notification → shows detail + marks as read DOESNT MARK AS RREAD
+- [ ] Unread count badge in sidebar MISSING
 
 **History (`/student/history`)**
 - [ ] Timeline with color-coded events (exams=blue, progress checks=gold, skill tests=purple, certificates=green)
@@ -159,8 +175,8 @@
 - [ ] Chronological order (newest first)
 
 **Medical (`/student/medical`)**
-- [ ] Shows medical certificates with status, dates
-- [ ] Expiry warnings for certificates expiring within 30 days
+- [ ] Shows medical certificates with status, dates MEDICAL BUTTON MISSING IN THE SIDEBAR
+- [ ] Expiry warnings for certificates expiring within 30 days COULDNT TEST FOR NOW AS IT IS EMPTY
 
 ### 3.10 Inactivity Auto-Logout
 - [ ] Stay idle for 30 minutes (or wait) → warning modal appears with countdown
@@ -174,29 +190,51 @@
 **Login:** `http://185.185.80.188:7788/login` — `fi@masterly.dz` / `admin123`
 
 ### 4.1 Dashboard
-- [ ] Stats: Total Courses, Today's Courses, Active Students
-- [ ] Courses by Status bar chart
-- [ ] Courses by Subject pie chart
-- [ ] Today's schedule list
+- [x] Stats: Total Courses, Today's Courses, Active Students PARTIAL PASS ACTIVE STUDENT NUMBER MISSING
+- [x] Courses by Status bar chart
+- [x] Courses by Subject pie chart
+- [x] Today's schedule list
 
 ### 4.2 My Courses (`/instructor/courses`)
-- [ ] Course list with DataTable, FilterBar
-- [ ] **NEW: Create Course** → ModalForm with subject, title, date, time, room
-- [ ] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled
-- [ ] **NEW: Reschedule button** → ModalForm with new date/time
-- [ ] Attendance button per course → opens attendance page
-- [ ] Export button in header
+- [x] Course list with DataTable, FilterBar
+- [ ] **NEW: Create Course** → ModalForm with subject, title, date, time, room NOT WORKING (INVALID INPUT :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+:7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request))
+- [ ] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
+- [ ] **NEW: Reschedule button** → ModalForm with new date/time NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
+- [x] Attendance button per course → opens attendance page
+- [ ] Export button in header NOT WORKING page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/pdf/ 404 (Not Found)
+c @ page-66229abd7d153cac.js:1
+onClick @ page-66229abd7d153cac.js:1
+i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
+(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
+nz @ 4bd1b696-100b9d70ed4e49c1.js:1
+sn @ 4bd1b696-100b9d70ed4e49c1.js:1
+cc @ 4bd1b696-100b9d70ed4e49c1.js:1
+ci @ 4bd1b696-100b9d70ed4e49c1.js:1
+page-66229abd7d153cac.js:1 Export error: Error: Export failed
+    at c (page-66229abd7d153cac.js:1:397)
+    page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/excel/ 404 (Not Found)
+c @ page-66229abd7d153cac.js:1
+onClick @ page-66229abd7d153cac.js:1
+i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
+(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
+nz @ 4bd1b696-100b9d70ed4e49c1.js:1
+sn @ 4bd1b696-100b9d70ed4e49c1.js:1
+cc @ 4bd1b696-100b9d70ed4e49c1.js:1
+ci @ 4bd1b696-100b9d70ed4e49c1.js:1
+page-66229abd7d153cac.js:1 Export error: Error: Export failed
+    at c (page-66229abd7d153cac.js:1:397)
 
 ### 4.3 Attendance (`/instructor/courses/[id]/attendance`)
-- [ ] Student list with status toggle (present → late → absent → excused)
-- [ ] "All Present" / "All Absent" bulk buttons
-- [ ] Date picker
-- [ ] Save Attendance → success toast
-- [ ] Download Attendance PDF → opens PDF in new tab
+- [x] Student list with status toggle (present → late → absent → excused)
+- [x] "All Present" / "All Absent" bulk buttons
+- [x] Date picker
+- [x] Save Attendance → success toast
+- [x] Download Attendance PDF → opens PDF in new tab
 
 ### 4.4 Flight Schedule (`/instructor/flights`)
-- [ ] Flight list with DataTable, FilterBar
-- [ ] **NEW: Create Flight** → ModalForm with student, aircraft, date/time
+- [x] Flight list with DataTable, FilterBar
+- [ ] **NEW: Create Flight** → ModalForm with student, aircraft, date/time CHANGE THE STUDENT ID TO A SEARCH LIKE THE COMMUN
 - [ ] **NEW: Cancel button** → ConfirmDialog
 - [ ] **NEW: Reschedule button** → ModalForm with new date/time/aircraft
 - [ ] Prep button (for scheduled flights) → pre-flight briefing form

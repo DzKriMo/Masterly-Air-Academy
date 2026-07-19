@@ -19,6 +19,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
         self.get_queryset().filter(is_read=False).update(is_read=True, read_at=timezone.now())
         return Response({'status': 'ok'})
 
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'count': count})
+
     @action(detail=True, methods=['put'])
     def mark_read(self, request, pk=None):
         notif = self.get_object()
