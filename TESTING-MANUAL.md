@@ -234,12 +234,25 @@ page-66229abd7d153cac.js:1 Export error: Error: Export failed
 
 ### 4.4 Flight Schedule (`/instructor/flights`)
 - [x] Flight list with DataTable, FilterBar
-- [ ] **NEW: Create Flight** → ModalForm with student, aircraft, date/time CHANGE THE STUDENT ID TO A SEARCH LIKE THE COMMUN
-- [ ] **NEW: Cancel button** → ConfirmDialog
-- [ ] **NEW: Reschedule button** → ModalForm with new date/time/aircraft
-- [ ] Prep button (for scheduled flights) → pre-flight briefing form
-- [ ] Evaluate button → post-flight evaluation form
-- [ ] Export button
+- [ ] **NEW: Create Flight** → ModalForm with student, aircraft, date/time CHANGE THE STUDENT ID TO A SEARCH LIKE THE SEND TO USER IN THE ADMIN COMMUNICATION + NOT WORKING 
+﻿
+:7788/api/flight-lessons/:1 
+ Failed to load resource: the server responded with a status of 400 (Bad Request)
+- [ ] **NEW: Cancel button** → ConfirmDialog NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/cc1c8741-fbbc-4e8c-a5dd-8955c5f7f443/ 500 (Internal Server Error)
+- [ ] **NEW: Reschedule button** → ModalForm with new date/time/aircraft NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/bb7aed3f-379f-4959-a207-43052179d73c/ 500 (Internal Server Error)
+- [x] Prep button (for scheduled flights) → pre-flight briefing form
+- [x] Evaluate button → post-flight evaluation form
+- [ ] Export button NOT WORKING page-19633129adb23f08.js:1  GET http://185.185.80.188:7788/api/flight-lessons/export/pdf/ 404 (Not Found)
+c @ page-19633129adb23f08.js:1
+onClick @ page-19633129adb23f08.js:1
+i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
+(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
+nz @ 4bd1b696-100b9d70ed4e49c1.js:1
+sn @ 4bd1b696-100b9d70ed4e49c1.js:1
+cc @ 4bd1b696-100b9d70ed4e49c1.js:1
+ci @ 4bd1b696-100b9d70ed4e49c1.js:1
+page-19633129adb23f08.js:1 Export error: Error: Export failed
+    at c (page-19633129adb23f08.js:1:397)
 
 ### 4.5 Flight Preparation (`/instructor/flights/[id]/prep`)
 - [ ] Checkboxes: Weather, NOTAM, Performance, Documents, Medical

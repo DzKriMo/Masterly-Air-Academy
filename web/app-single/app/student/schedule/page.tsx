@@ -20,6 +20,7 @@ export default function StudentSchedulePage() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
 
   const loadSchedule = () => {
@@ -59,7 +60,47 @@ export default function StudentSchedulePage() {
           firstDay={1}
           locale="en-gb"
           eventTimeFormat={{hour:"2-digit",minute:"2-digit",hour12:false}}
+          eventClick={(info) => { info.jsEvent.preventDefault(); setSelectedEvent(info.event); }}
         />
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" onClick={() => setSelectedEvent(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-navy-800 border border-navy-700 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-navy-700">
+              <h2 className="text-lg font-semibold text-white">{selectedEvent.title}</h2>
+              <button onClick={() => setSelectedEvent(null)} className="text-gray-500 hover:text-white">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <div>
+                <span className="text-xs text-gray-500 uppercase tracking-wider">{t('common.type', 'Type')}</span>
+                <p className="text-sm text-white capitalize">{selectedEvent.extendedProps?.type || '-'}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 uppercase tracking-wider">{t('common.start', 'Start')}</span>
+                <p className="text-sm text-white">{selectedEvent.start ? new Date(selectedEvent.start).toLocaleString() : '-'}</p>
+              </div>
+              {selectedEvent.end && (
+                <div>
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">{t('common.end', 'End')}</span>
+                  <p className="text-sm text-white">{new Date(selectedEvent.end).toLocaleString()}</p>
+                </div>
+              )}
+              {selectedEvent.extendedProps?.status && (
+                <div>
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">{t('common.status', 'Status')}</span>
+                  <p className="text-sm text-white capitalize">{selectedEvent.extendedProps.status}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>}
     </main>
     <style>{`

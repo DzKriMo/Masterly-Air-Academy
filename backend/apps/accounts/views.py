@@ -90,6 +90,12 @@ class UserViewSet(viewsets.ModelViewSet):
     filterset_fields = ['role', 'status', 'is_active']
     search_fields = ['email', 'username']
 
+    def get_permissions(self):
+        # Allow all authenticated users to list users (for message recipient picker)
+        if self.action == 'list':
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer

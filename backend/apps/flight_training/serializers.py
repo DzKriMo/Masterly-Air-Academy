@@ -76,7 +76,7 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
         model = FlightLesson
         fields = [
             'student', 'instructor', 'aircraft', 'lesson_template',
-            'scheduled_date', 'start_time', 'end_time',
+            'scheduled_date', 'start_time', 'end_time', 'status',
         ]
 
     def validate(self, data):

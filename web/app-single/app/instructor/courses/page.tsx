@@ -16,7 +16,6 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
-import { ExportButton } from "@/components/export-button";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
@@ -128,7 +127,9 @@ export default function CoursesPage() {
   });
 
   const onSubmit = (data: CourseFormData) => {
-    createCourse.mutate(data);
+    // Convert empty string room to undefined to avoid FK validation errors
+    const payload = { ...data, room: data.room || undefined };
+    createCourse.mutate(payload);
   };
 
   const filtered = useMemo(() => {
@@ -205,10 +206,7 @@ export default function CoursesPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">{t("instructor.myCourses", "My Courses")}</h1>
           <div className="flex items-center gap-3">
-            <ExportButton exports={[
-              { label: t("instructor.coursesPdf", "Courses PDF"), url: "/courses/export/pdf/", filename: "courses.pdf", type: "pdf" },
-              { label: t("instructor.coursesExcel", "Courses Excel"), url: "/courses/export/excel/", filename: "courses.xlsx", type: "excel" },
-            ]} />
+            {/* Course export endpoints not yet implemented */}
             <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors">{t("instructor.createCourse", "+ New Course")}</button>
           </div>
         </div>

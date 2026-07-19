@@ -111,7 +111,7 @@ export default function StudentCertificatesPage() {
         <h1 className="text-lg font-bold text-white">{t('student.certificates')}</h1>
         <ExportButton
           exports={[
-            { label: t('common.export', 'Export All'), url: "/certificates/export/", filename: "certificates.pdf", type: "pdf" as const },
+            { label: t('common.export', 'Export All'), url: "/export/certificates/", filename: "certificates.xlsx", type: "excel" as const },
           ]}
         />
       </div>

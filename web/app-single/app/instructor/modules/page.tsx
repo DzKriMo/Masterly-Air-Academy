@@ -53,7 +53,7 @@ export default function ModulesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lessonFormModule, setLessonFormModule] = useState<string>("");
-  const [lessonForm, setLessonForm] = useState({ lesson_no: 1, title: "", content: "" });
+  const [lessonForm, setLessonForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "" });
   const [savingLesson, setSavingLesson] = useState(false);
 
   useEffect(() => {
@@ -78,12 +78,12 @@ export default function ModulesPage() {
   const toggleExpand = (id: string) => {
     setExpandedModule(expandedModule === id ? "" : id);
     setLessonFormModule("");
-    setLessonForm({ lesson_no: 1, title: "", content: "" });
+    setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "" });
   };
 
   const openLessonForm = (moduleId: string, nextLessonNo: number) => {
     setLessonFormModule(moduleId);
-    setLessonForm({ lesson_no: nextLessonNo, title: "", content: "" });
+    setLessonForm({ lesson_no: nextLessonNo, title: "", content: "", video_url: "" });
   };
 
   const handleCreateLesson = async (e: React.FormEvent, moduleId: string) => {
@@ -95,9 +95,10 @@ export default function ModulesPage() {
         lesson_no: lessonForm.lesson_no,
         title: lessonForm.title,
         content: lessonForm.content,
+        video_url: lessonForm.video_url || undefined,
       });
       setLessonFormModule("");
-      setLessonForm({ lesson_no: 1, title: "", content: "" });
+      setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "" });
       if (selectedSubject) fetchModules(selectedSubject);
     } catch (err: any) {
       console.error("Failed to create lesson:", err);
@@ -233,6 +234,13 @@ export default function ModulesPage() {
                                 onChange={e => setLessonForm({ ...lessonForm, content: e.target.value })}
                                 placeholder={t("instructor.contentPlaceholder", "Lesson content, notes, key points...")}
                                 className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm resize-y" />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">{t("instructor.videoUrl", "Video URL")}</label>
+                              <input type="url" value={lessonForm.video_url}
+                                onChange={e => setLessonForm({ ...lessonForm, video_url: e.target.value })}
+                                placeholder={t("instructor.videoUrlPlaceholder", "https://www.youtube.com/watch?v=...")}
+                                className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
                             </div>
                             <div className="flex gap-2">
                               <button type="submit" disabled={savingLesson}

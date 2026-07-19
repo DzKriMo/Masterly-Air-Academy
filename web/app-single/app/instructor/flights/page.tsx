@@ -12,7 +12,6 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
-import { ExportButton } from "@/components/export-button";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
@@ -205,10 +204,7 @@ export default function FlightsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ExportButton exports={[
-              { label: `${t('instructor.flightSchedule')} PDF`, url: "/flight-lessons/export/pdf/", filename: "flights.pdf", type: "pdf" },
-              { label: `${t('instructor.flightSchedule')} Excel`, url: "/flight-lessons/export/excel/", filename: "flights.xlsx", type: "excel" },
-            ]} />
+            {/* Flight export endpoints not yet implemented */}
             <button onClick={() => setShowForm(true)}
               className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
               {t('instructor.newFlight')}

@@ -75,14 +75,14 @@ export default function StudentNotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.post(`/notifications/${id}/read/`);
+      await api.put(`/notifications/${id}/mark_read/`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch { showToast("error", t('student.markReadError', 'Failed to mark as read')); }
   };
 
   const markAllRead = async () => {
     try {
-      await api.post("/notifications/mark-all-read/");
+      await api.put("/notifications/mark_all_read/");
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       showToast("success", t('student.allRead', 'All notifications marked as read.'));
     } catch { showToast("error", t('student.markAllReadError', 'Failed to mark all as read')); }

@@ -32,9 +32,9 @@ export default function SafetyPage() {
 
   const { data: eventsData, isLoading } = useQuery({
     queryKey: ['quality-safety'],
-    queryFn: () => api.get("/safety-events/").then(r=>r.data),
+    queryFn: () => api.get("/safety-events/"),
   });
-  const events = eventsData?.results || [];
+  const events = (eventsData as any)?.results || [];
 
   const reportEvent = useMutation({
     mutationFn: (data: typeof form) => api.post("/safety-events/", data),

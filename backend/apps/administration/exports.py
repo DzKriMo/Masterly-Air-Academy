@@ -113,3 +113,31 @@ class ExportAuditLogsView(APIView):
         wb.save(buf)
         return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             headers={"Content-Disposition": "attachment; filename=audit_logs.xlsx"})
+
+
+class ExportCertificatesView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'certificates.export'
+
+    def get(self, request):
+        from apps.exams.models import Certificate
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Certificates"
+        _style_header(ws, ["Certificate #", "Student", "Type", "Title", "Program", "Issue Date", "Expiry Date", "Status"])
+        for i, c in enumerate(Certificate.objects.select_related('student').all(), 2):
+            ws.cell(row=i, column=1, value=c.certificate_number or "")
+            ws.cell(row=i, column=2, value=c.student.full_name)
+            ws.cell(row=i, column=3, value=c.type or "")
+            ws.cell(row=i, column=4, value=c.title or "")
+            ws.cell(row=i, column=5, value=c.program or "")
+            ws.cell(row=i, column=6, value=str(c.issue_date) if c.issue_date else "")
+            ws.cell(row=i, column=7, value=str(c.expiry_date) if c.expiry_date else "")
+            ws.cell(row=i, column=8, value=c.status or "")
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=certificates.xlsx"},
+        )

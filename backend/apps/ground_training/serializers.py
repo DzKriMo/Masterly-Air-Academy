@@ -100,7 +100,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
     """Used for creating courses — auto-assigns instructor and academic_year."""
     class Meta:
         model = Course
-        fields = ['subject', 'instructor', 'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes']
+        fields = ['subject', 'instructor', 'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes', 'status']
 
     def validate(self, data):
         request = self.context.get('request')

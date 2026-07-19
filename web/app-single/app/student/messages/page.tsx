@@ -66,11 +66,15 @@ export default function StudentMessagesPage() {
 
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
 
-  // Load recipients (admin and instructor roles)
+  // Load recipients (admin and instructor roles - filter client-side)
   const loadRecipients = useCallback(() => {
     if (!isAuthenticated) return;
-    api.get("/users/?role=admin&role=instructor")
-      .then((d: any) => setRecipients(d.results || []))
+    api.get("/users/")
+      .then((d: any) => {
+        const allUsers = d.results || [];
+        const allowedRoles = ['admin', 'instructor', 'system_admin', 'flight_instructor', 'chief_flight_instructor', 'ground_instructor', 'admin_responsible', 'admin_agent', 'quality_manager', 'finance_manager'];
+        setRecipients(allUsers.filter((u: any) => allowedRoles.includes(u.role)));
+      })
       .catch(() => {});
   }, [isAuthenticated]);
 
@@ -100,7 +104,7 @@ export default function StudentMessagesPage() {
     }
     setSending(true);
     try {
-      await api.post("/messages/", { receiver_id: recipientId, subject: subject.trim(), body: body.trim() });
+      await api.post("/messages/", { receiver: recipientId, subject: subject.trim(), body: body.trim() });
       showToast("success", t('student.messageSent', 'Message sent successfully.'));
       setComposeOpen(false);
       setRecipientId("");
@@ -121,7 +125,7 @@ export default function StudentMessagesPage() {
     }
     setSendingReply(true);
     try {
-      await api.post("/messages/", { receiver_id: replyTo!.sender_id, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
+      await api.post("/messages/", { receiver: replyTo!.sender_id, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
       showToast("success", t('student.replySent', 'Reply sent successfully.'));
       setReplyOpen(false);
       setReplyBody("");

@@ -46,7 +46,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView
+from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView
 from apps.quality_safety.exports import ExportAuditsView, ExportNCRsView, ExportCAPAsView, ExportSafetyEventsView, ExportRiskAssessmentsView
 from datetime import timedelta
 from django.utils import timezone
@@ -714,6 +714,7 @@ urlpatterns = [
     path('system/backup/', trigger_backup, name='trigger-backup'),
     path('notifications/broadcast/', notification_broadcast, name='notification-broadcast'),
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
+    path('export/certificates/', ExportCertificatesView.as_view(), name='export-certificates'),
 
     path('export/audits/', ExportAuditsView.as_view(), name='export-audits'),
     path('export/non-conformities/', ExportNCRsView.as_view(), name='export-ncrs'),

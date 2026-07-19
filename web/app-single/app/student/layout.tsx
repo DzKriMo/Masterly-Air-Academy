@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, File, CreditCard, BarChart, Bell, Clock, Menu, X } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, File, CreditCard, BarChart, Bell, Clock, Menu, X, Heart } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +38,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/payments", label: t("student.payments", "Payments"), Icon: CreditCard },
     { href: "/student/results", label: t("student.results", "Results"), Icon: BarChart },
     { href: "/student/history", label: t("student.history", "History"), Icon: Clock },
+    { href: "/student/medical", label: t("student.medical", "Medical"), Icon: Heart },
     { href: "/student/notifications", label: t("student.notifications", "Notifications"), Icon: Bell, badge: unreadNotifCount },
     { href: "/student/certificates", label: t("student.certificates"), Icon: Award },
     { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare },

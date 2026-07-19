@@ -64,7 +64,13 @@ export default function StudentFlightsPage() {
       if (filters.result === "passed" && !f.result?.toLowerCase().includes("pass")) return false;
       if (filters.result === "failed" && (!f.result || f.result.toLowerCase().includes("pass"))) return false;
     }
-    if (search && !f.aircraft.toLowerCase().includes(search.toLowerCase()) && !f.date.includes(search)) return false;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const matchAircraft = f.aircraft?.toLowerCase().includes(searchLower) ?? false;
+      const matchDate = f.date?.includes(search) ?? false;
+      const matchDuration = String(f.duration ?? '').includes(search);
+      if (!matchAircraft && !matchDate && !matchDuration) return false;
+    }
     return true;
   });
 
