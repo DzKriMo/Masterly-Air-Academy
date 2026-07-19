@@ -101,6 +101,10 @@ class CourseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['subject', 'instructor', 'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes', 'status']
+        extra_kwargs = {
+            'instructor': {'required': False},
+            'academic_year': {'required': False},
+        }
 
     def validate(self, data):
         request = self.context.get('request')

@@ -18,6 +18,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ExportButton } from "@/components/export-button";
 
 type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -206,7 +207,7 @@ export default function CoursesPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">{t("instructor.myCourses", "My Courses")}</h1>
           <div className="flex items-center gap-3">
-            {/* Course export endpoints not yet implemented */}
+            <ExportButton exports={[{label:t('instructor.exportPdf','PDF'),url:'/export/courses/',filename:'courses.pdf',type:'pdf'},{label:t('instructor.exportExcel','Excel'),url:'/export/courses/',filename:'courses.xlsx',type:'excel'}]} />
             <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors">{t("instructor.createCourse", "+ New Course")}</button>
           </div>
         </div>
