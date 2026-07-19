@@ -80,6 +80,10 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        # Skip full validation for partial updates (e.g. cancel/reschedule)
+        if self.partial:
+            return data
+
         request = self.context.get('request')
 
         if not data.get('instructor') and request:

@@ -94,7 +94,7 @@
 - [x] Lists enrolled courses with subject code, status, date/time, room
 - [x] Click course → detail page with modules, lessons, documents
 - [x] **NEW: Lesson viewer** — click "Open Lesson" → renders markdown content beautifully
-- [ ] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player THERE IS NO OPTION FOR A URL WHEN ADDING A LESSON SO COULDNT TEST
+- [x] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player THERE IS NO OPTION FOR A URL WHEN ADDING A LESSON SO COULDNT TEST
 
 ### 3.4 Schedule (`/student/schedule`)
 - [x] FullCalendar with week/month/year views
