@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
+import { ModalForm } from "@/components/modal-form";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { useToast } from "@/components/toast";
@@ -86,6 +87,7 @@ export default function AdminCommunicationPage() {
 
   // ── Active tab ──
   const [activeTab, setActiveTab] = useState("role");
+  const [detailNotif, setDetailNotif] = useState<Notification | null>(null);
 
   // ── Tab 1: Send to Role ──
   const [roleForm, setRoleForm] = useState({ role: "", title: "", message: "" });
@@ -493,12 +495,28 @@ export default function AdminCommunicationPage() {
               />
             ) : (
               <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
-                <DataTable columns={historyColumns} data={filteredHistory} keyField="id" pageSize={15} />
+                <DataTable columns={historyColumns} data={filteredHistory} keyField="id" pageSize={15} onRowClick={(n) => setDetailNotif(n as Notification)} />
               </div>
             )}
           </div>
         )}
       </main>
+
+      {/* Detail modal for viewing full notification */}
+      {detailNotif && (
+        <ModalForm open={!!detailNotif} onClose={() => setDetailNotif(null)} title={detailNotif.title}>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">{detailNotif.type}</span>
+              <span className="text-xs text-gray-500">{new Date(detailNotif.created_at).toLocaleString()}</span>
+              <span className={`text-xs ml-auto ${detailNotif.is_read ? "text-gray-500" : "text-gold-500"}`}>{detailNotif.is_read ? "Read" : "Unread"}</span>
+            </div>
+            <div className="bg-navy-900 rounded-lg p-4 border border-navy-700">
+              <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{detailNotif.message}</p>
+            </div>
+          </div>
+        </ModalForm>
+      )}
     </div>
   );
 }

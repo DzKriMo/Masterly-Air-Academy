@@ -73,14 +73,14 @@
 **Login:** `http://185.185.80.188:7788/student/login` — `ahmed@student.maa.dz` / `student123`
 
 ### 3.1 Dashboard
-- [ ] Sidebar with 12 nav items: Dashboard, Exams, Flight Log, My Courses, Schedule, Certificates, Messages, Profile, Documents, Payments, Results, History, Notifications
+- [x] Sidebar with 12 nav items: Dashboard, Exams, Flight Log, My Courses, Schedule, Certificates, Messages, Profile, Documents, Payments, Results, History, Notifications
 - [x] Welcome message with student name
 - [x] Stat cards: Flight Hours, Lessons Completed, Exam Average, Unpaid Invoices
 - [ ] Flight hours line chart
-- [ ] Competencies radar chart
-- [ ] Progress bars (Theory/Flight %)
-- [ ] Next Milestones (First Solo, Cross-Country, License Ready)
-- [ ] Recent Activity timeline
+- [x] Competencies radar chart
+- [x] Progress bars (Theory/Flight %)
+- [x] Next Milestones (First Solo, Cross-Country, License Ready)
+- [x] Recent Activity timeline
 - [ ] Expiring documents warning (if any)
 
 ### 3.2 Flight Log (`/student/flights`)
@@ -91,27 +91,27 @@
 - [ ] All filters work correctly
 
 ### 3.3 My Courses (`/student/courses`)
-- [ ] Lists enrolled courses with subject code, status, date/time, room
-- [ ] Click course → detail page with modules, lessons, documents
-- [ ] **NEW: Lesson viewer** — click "Open Lesson" → renders markdown content beautifully
+- [x] Lists enrolled courses with subject code, status, date/time, room
+- [x] Click course → detail page with modules, lessons, documents
+- [x] **NEW: Lesson viewer** — click "Open Lesson" → renders markdown content beautifully
 - [ ] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player
 
 ### 3.4 Schedule (`/student/schedule`)
-- [ ] FullCalendar with week/month/year views
-- [ ] Flights in blue, courses in gold, exams in purple
-- [ ] Legend showing color codes
+- [x] FullCalendar with week/month/year views
+- [x] Flights in blue, courses in gold, exams in purple
+- [x] Legend showing color codes
 - [ ] Click events to see details
-- [ ] **NEW: Year view** (multiMonthYear) works
+- [x] **NEW: Year view** (multiMonthYear) works
 
 ### 3.5 Exams (`/student/exams`)
-- [ ] Available exams list with attempt limits
-- [ ] Click exam → start exam page with countdown timer
+- [x] Available exams list with attempt limits
+- [x] Click exam → start exam page with countdown timer
 - [ ] Answer questions, submit → results with per-question breakdown
-- [ ] Anti-cheat: switch tabs → warning (1 warning then auto-submit)
-- [ ] Past attempts/results list below
+- [x] Anti-cheat: switch tabs → warning (1 warning then auto-submit)
+- [x] Past attempts/results list below
 
 ### 3.6 Certificates (`/student/certificates`)
-- [ ] Lists all earned certificates with QR codes
+- [x] Lists all earned certificates with QR codes
 - [ ] "Download PDF" button per certificate
 - [ ] "Verify" link → opens verification page
 - [ ] Export button for all certificates
