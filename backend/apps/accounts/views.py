@@ -36,6 +36,23 @@ class CurrentUserView(views.APIView):
 class UpdateProfileView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        """Return current profile data for pre-filling forms."""
+        from apps.students.models import Student
+        data = {
+            'address': '', 'phone': '', 'nationality': '', 'photo': None,
+        }
+        try:
+            student = Student.objects.get(user=request.user)
+            data['address'] = student.address or ''
+            data['phone'] = student.phone or ''
+            data['nationality'] = student.nationality or ''
+            if student.photo:
+                data['photo'] = student.photo.url if hasattr(student.photo, 'url') else f'/media/{student.photo}'
+        except Student.DoesNotExist:
+            pass
+        return Response(data)
+
     def put(self, request):
         serializer = ProfileUpdateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)

@@ -84,7 +84,7 @@ export default function StudentHistoryPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  useEffect(() => {
+  const loadData = () => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
@@ -97,10 +97,12 @@ export default function StudentHistoryPage() {
       })
       .catch((err) => {
         console.error("Failed to load history:", err);
-        setError("Failed to load academic history. Please try again.");
+        setError("Failed to load academic history.");
       })
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  };
+
+  useEffect(() => { loadData(); }, []); // eslint-disable-line
 
   /* ── Filters ──────────────────────────────────── */
   const filterOptions: FilterOption[] = [

@@ -1,9 +1,11 @@
 "use client";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { LayoutDashboard, Users, BookOpen, Plane, FileText, BarChart3, Shield } from "lucide-react";
+import { api } from "@/lib/api";
+import { LayoutDashboard, Users, BookOpen, Plane, FileText, BarChart3, Shield, Bell } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function DirectorLayout({ children }: { children: React.ReactNode }) {
@@ -11,11 +13,25 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchUnread = () => {
+      api.get("/notifications/unread-count/")
+        .then((d: any) => setUnreadNotifCount(d.count ?? 0))
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const NAV = [
     { href: "/director/dashboard", label: t("director.dashboard"), Icon: LayoutDashboard },
     { href: "/quality/dashboard", label: t("quality_safety"), Icon: Shield },
     { href: "/finance/dashboard", label: t("finance"), Icon: BarChart3 },
+    { href: "/director/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];
 
   if (isLoading) return null;
@@ -33,7 +49,13 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
         <nav className="p-2">
           {NAV.map(item => (
             <a key={item.href} href={item.href} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm mb-1 transition-colors ${pathname===item.href?"bg-gold-500/20 text-gold-500 font-medium":"text-gray-400 hover:text-white hover:bg-navy-700"}`}>
-              <item.Icon className="w-4 h-4 shrink-0"/>{item.label}
+              <item.Icon className="w-4 h-4 shrink-0"/>
+              <span className="flex-1">{item.label}</span>
+              {"badge" in item && (item as any).badge > 0 && (
+                <span className="bg-gold-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                  {(item as any).badge > 99 ? "99+" : (item as any).badge}
+                </span>
+              )}
             </a>
           ))}
         </nav>
