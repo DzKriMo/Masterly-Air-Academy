@@ -102,9 +102,7 @@ export default function LoginPage() {
             {isSubmitting ? t("login_signing") : t("login_signin")}
           </button>
 
-          <p className="text-xs text-gray-500 mt-4 text-center">
-            {t("login_admin_link")}
-          </p>
+          
         </form>
       </div>
     </div>

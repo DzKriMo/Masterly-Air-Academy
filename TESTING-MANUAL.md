@@ -185,8 +185,8 @@
 - [x] Course list with DataTable, FilterBar
 - [ ] **NEW: Create Course** → ModalForm with subject, title, date, time, room NOT WORKING (INVALID INPUT :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
 :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request))
-- [ ] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
-- [ ] **NEW: Reschedule button** → ModalForm with new date/time NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
+- [x] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
+- [x] **NEW: Reschedule button** → ModalForm with new date/time NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
 - [x] Attendance button per course → opens attendance page
 - [ ] Export button in header NOT WORKING page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/pdf/ 404 (Not Found)
 c @ page-66229abd7d153cac.js:1
@@ -224,8 +224,8 @@ page-66229abd7d153cac.js:1 Export error: Error: Export failed
 ﻿
 :7788/api/flight-lessons/:1 
  Failed to load resource: the server responded with a status of 400 (Bad Request)
-- [ ] **NEW: Cancel button** → ConfirmDialog NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/cc1c8741-fbbc-4e8c-a5dd-8955c5f7f443/ 500 (Internal Server Error)
-- [ ] **NEW: Reschedule button** → ModalForm with new date/time/aircraft NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/bb7aed3f-379f-4959-a207-43052179d73c/ 500 (Internal Server Error)
+- [x] **NEW: Cancel button** → ConfirmDialog NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/cc1c8741-fbbc-4e8c-a5dd-8955c5f7f443/ 500 (Internal Server Error)
+- [x] **NEW: Reschedule button** → ModalForm with new date/time/aircraft NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/bb7aed3f-379f-4959-a207-43052179d73c/ 500 (Internal Server Error)
 - [x] Prep button (for scheduled flights) → pre-flight briefing form
 - [x] Evaluate button → post-flight evaluation form
 - [ ] Export button NOT WORKING page-19633129adb23f08.js:1  GET http://185.185.80.188:7788/api/flight-lessons/export/pdf/ 404 (Not Found)

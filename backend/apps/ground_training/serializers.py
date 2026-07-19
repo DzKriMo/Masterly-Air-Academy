@@ -124,6 +124,10 @@ class CourseCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'academic_year': 'No active academic year configured.'})
             data['academic_year'] = ay
 
+        # Convert empty strings to None for optional FK fields
+        if not data.get('room'):
+            data['room'] = None
+
         from .services import RoomConflictService
         room = data.get('room')
         date = data.get('scheduled_date')

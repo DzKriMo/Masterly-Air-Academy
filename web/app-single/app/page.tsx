@@ -117,7 +117,6 @@ export default function LandingPage() {
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
           <Link href="/student/login" className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
           <Link href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
-          <a href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("administration")}</a>
         </div>
       </section>
 
