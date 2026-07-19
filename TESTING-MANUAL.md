@@ -114,21 +114,7 @@
 - [x] Lists all earned certificates with QR codes
 - [x] "Download PDF" button per certificate
 - [x] "Verify" link → opens verification page
-- [ ] Export button for all certificates NOT WORKING (layout-6761222035435647.js:1  GET http://185.185.80.188:7788/api/notifications/unread-count/ 404 (Not Found)
-request @ layout-6761222035435647.js:1
-get @ layout-6761222035435647.js:1
-e @ layout-4a2f1c40782fefa0.js:1
-page-0c0f76f95220317e.js:1  GET http://185.185.80.188:7788/api/certificates/export/ 404 (Not Found)
-d @ page-0c0f76f95220317e.js:1
-onClick @ page-0c0f76f95220317e.js:1
-i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
-(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
-nz @ 4bd1b696-100b9d70ed4e49c1.js:1
-sn @ 4bd1b696-100b9d70ed4e49c1.js:1
-cc @ 4bd1b696-100b9d70ed4e49c1.js:1
-ci @ 4bd1b696-100b9d70ed4e49c1.js:1
-page-0c0f76f95220317e.js:1 Export error: Error: Export failed
-    at d (page-0c0f76f95220317e.js:1:397))
+- [x] Export button for all certificates 
 
 ### 3.7 Messages (`/student/messages`)
 - [x] Inbox showing received messages with unread indicator

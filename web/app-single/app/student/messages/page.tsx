@@ -18,9 +18,10 @@ import { useToast } from "@/components/toast";
 interface Msg {
   id: string;
   sender_name: string;
-  sender_id: string;
+  sender: string;
+  sender_name: string;
+  receiver: string;
   receiver_name: string;
-  receiver_id: string;
   subject: string;
   body: string;
   is_read: boolean;
@@ -125,7 +126,7 @@ export default function StudentMessagesPage() {
     }
     setSendingReply(true);
     try {
-      await api.post("/messages/", { receiver: replyTo!.sender_id, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
+      await api.post("/messages/", { receiver: replyTo!.sender, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
       showToast("success", t('student.replySent', 'Reply sent successfully.'));
       setReplyOpen(false);
       setReplyBody("");
@@ -146,7 +147,7 @@ export default function StudentMessagesPage() {
   const openReply = (msg: Msg) => {
     loadRecipients();
     setReplyTo(msg);
-    setRecipientId(msg.sender_id);
+    setRecipientId(msg.sender);
     setReplyOpen(true);
   };
 

@@ -57,14 +57,25 @@ class UpdateProfileView(views.APIView):
         if not file:
             return Response({'error': 'No photo provided'}, status=400)
 
+        # Save to local storage (MinIO bucket may not exist)
+        import os, uuid
+        from django.conf import settings
+        ext = os.path.splitext(file.name)[1] or '.jpg'
+        local_name = f'photo_{uuid.uuid4().hex}{ext}'
+        local_dir = os.path.join(settings.MEDIA_ROOT, 'students', 'photos')
+        os.makedirs(local_dir, exist_ok=True)
+        local_path = os.path.join(local_dir, local_name)
+        with open(local_path, 'wb+') as dest:
+            for chunk in file.chunks():
+                dest.write(chunk)
+        student.photo = f'students/photos/{local_name}'
         try:
-            student.photo = file
             student.save()
         except Exception as e:
             return Response({'error': f'Failed to save photo: {str(e)}'}, status=500)
 
         return Response({
-            'photo': student.photo.url if student.photo else None,
+            'photo': f'/media/students/photos/{local_name}',
         })
 
 
