@@ -161,8 +161,8 @@
 - [x] Chronological order (newest first)
 
 **Medical (`/student/medical`)**
-- [ ] Shows medical certificates with status, dates MEDICAL BUTTON MISSING IN THE SIDEBAR
-- [ ] Expiry warnings for certificates expiring within 30 days COULDNT TEST FOR NOW AS IT IS EMPTY
+- [x] Shows medical certificates with status, dates MEDICAL BUTTON MISSING IN THE SIDEBAR
+- [x] Expiry warnings for certificates expiring within 30 days COULDNT TEST FOR NOW AS IT IS EMPTY
 
 ### 3.10 Inactivity Auto-Logout
 - [x] Stay idle for 30 minutes (or wait) → warning modal appears with countdown
@@ -255,8 +255,8 @@ page-19633129adb23f08.js:1 Export error: Error: Export failed
 - [ ] Submit → evaluation saved, notification sent to student
 
 ### 4.7 My Students (`/instructor/students`)
-- [ ] Student cards/grid with search
-- [ ] Shows name, student number, program, status
+- [x] Student cards/grid with search
+- [x] Shows name, student number, program, status
 
 ### 4.8 Messages (`/instructor/messages`)
 - [ ] Inbox/Sent/Compose tabs
