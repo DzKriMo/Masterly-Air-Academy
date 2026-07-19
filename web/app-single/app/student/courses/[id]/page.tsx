@@ -224,9 +224,13 @@ export default function StudentCourseDetailPage() {
                                 <span className="text-sm text-white font-medium">
                                   {t("student.lesson", "Lesson")} {lesson.lesson_no}: {lesson.title || t("student.untitled", "Untitled")}
                                 </span>
+                                <a href={`/student/courses/${courseId}/lesson/${lesson.id}`}
+                                  className="text-xs text-gold-500 hover:text-gold-400 border border-gold-500/30 px-3 py-1.5 rounded-lg transition-colors font-medium shrink-0">
+                                  {t("student.openLesson", "Open Lesson")} →
+                                </a>
                               </div>
                               {lesson.content && (
-                                <p className="text-sm text-gray-300 whitespace-pre-wrap">{lesson.content}</p>
+                                <p className="text-sm text-gray-300 whitespace-pre-wrap line-clamp-3">{lesson.content}</p>
                               )}
                             </div>
                           ))}
