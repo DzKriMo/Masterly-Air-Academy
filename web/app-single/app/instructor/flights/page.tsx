@@ -24,6 +24,7 @@ interface Flight {
 }
 
 interface Aircraft { id: string; registration: string; model: string; }
+interface Student { id: string; full_name: string; student_number: string; }
 
 const statusClass = (s: string) =>
   s === "scheduled" ? "bg-blue-500/10 text-blue-400" :
@@ -37,6 +38,7 @@ export default function FlightsPage() {
   const { showToast } = useToast();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ student: "", aircraft: "", scheduled_date: "", start_time: "", end_time: "" });
@@ -67,6 +69,9 @@ export default function FlightsPage() {
     api.get<any>("/aircraft/")
       .then(data => { setAircraft((data as unknown as any).results || []); })
       .catch(err => { console.error("Failed to load aircraft:", err); });
+    api.get<any>("/students/")
+      .then(data => { setStudents((data as unknown as any).results || []); })
+      .catch(err => { console.error("Failed to load students:", err); });
   };
 
   useEffect(() => {
@@ -76,15 +81,58 @@ export default function FlightsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setError(null);
     try {
-      const resp = await api.post<any>("/flight-lessons/", form);
+      const payload = {
+        ...form,
+        start_time: form.scheduled_date && form.start_time ? `${form.scheduled_date}T${form.start_time}:00Z` : "",
+        end_time: form.scheduled_date && form.end_time ? `${form.scheduled_date}T${form.end_time}:00Z` : "",
+      };
+      const resp = await api.post<any>("/flight-lessons/", payload);
       const data = resp as unknown as any;
       setShowForm(false);
       setFlights([data, ...flights]);
       setForm({ student: "", aircraft: "", scheduled_date: "", start_time: "", end_time: "" });
       showToast("success", t('instructor.createdSuccess'));
     } catch (err: any) {
-      showToast("error", err.message || t('instructor.createFailed'));
+      let msg = err.message || t('instructor.createFailed');
+      // If there are detailed field errors, surface them
+      if (err.errors) {
+        const details = Object.entries(err.errors)
+          .map(([field, msgs]: [string, any]) => (Array.isArray(msgs) ? msgs.join('; ') : msgs))
+          .join(' | ');
+        if (details) msg = details;
+      }
+      showToast("error", msg);
     } finally { setSaving(false); }
+  };
+
+  const handleReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleFlight) return;
+    setRescheduling(true);
+    try {
+      const body: any = {
+        scheduled_date: rescheduleForm.scheduled_date,
+        start_time: rescheduleForm.scheduled_date && rescheduleForm.start_time ? `${rescheduleForm.scheduled_date}T${rescheduleForm.start_time}:00Z` : "",
+        end_time: rescheduleForm.scheduled_date && rescheduleForm.end_time ? `${rescheduleForm.scheduled_date}T${rescheduleForm.end_time}:00Z` : "",
+      };
+      if (rescheduleForm.aircraft) {
+        body.aircraft = rescheduleForm.aircraft;
+      }
+      await api.patch(`/flight-lessons/${rescheduleFlight.id}/`, body);
+      setRescheduleFlight(null);
+      setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" });
+      showToast("success", t('instructor.rescheduledSuccess', "Rescheduled successfully"));
+      fetchFlights();
+    } catch (err: any) {
+      let msg = err.message || t('instructor.createFailed');
+      if (err.errors) {
+        const details = Object.entries(err.errors)
+          .map(([field, msgs]: [string, any]) => (Array.isArray(msgs) ? msgs.join('; ') : msgs))
+          .join(' | ');
+        if (details) msg = details;
+      }
+      showToast("error", msg);
+    } finally { setRescheduling(false); }
   };
 
   const handleCancel = async () => {
@@ -96,31 +144,15 @@ export default function FlightsPage() {
       showToast("success", t('instructor.cancelledSuccess', "Cancelled successfully"));
       fetchFlights();
     } catch (err: any) {
-      showToast("error", err.message || t('instructor.createFailed'));
-    } finally { setCancelling(false); }
-  };
-
-  const handleReschedule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rescheduleFlight) return;
-    setRescheduling(true);
-    try {
-      const body: any = {
-        scheduled_date: rescheduleForm.scheduled_date,
-        start_time: rescheduleForm.start_time,
-        end_time: rescheduleForm.end_time,
-      };
-      if (rescheduleForm.aircraft) {
-        body.aircraft = rescheduleForm.aircraft;
+      let msg = err.message || t('instructor.createFailed');
+      if (err.errors) {
+        const details = Object.entries(err.errors)
+          .map(([field, msgs]: [string, any]) => (Array.isArray(msgs) ? msgs.join('; ') : msgs))
+          .join(' | ');
+        if (details) msg = details;
       }
-      await api.patch(`/flight-lessons/${rescheduleFlight.id}/`, body);
-      setRescheduleFlight(null);
-      setRescheduleForm({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" });
-      showToast("success", t('instructor.rescheduledSuccess', "Rescheduled successfully"));
-      fetchFlights();
-    } catch (err: any) {
-      showToast("error", err.message || t('instructor.createFailed'));
-    } finally { setRescheduling(false); }
+      showToast("error", msg);
+    } finally { setCancelling(false); }
   };
 
   const filtered = useMemo(() => {
@@ -246,8 +278,11 @@ export default function FlightsPage() {
           <form id="flight-form" onSubmit={handleCreate}>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('instructor.studentIdLabel')}</label>
-                <input value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder={t('instructor.studentIdLabel')} />
+                <label className="block text-sm text-gray-400 mb-1">{t('common.student', 'Student')}</label>
+                <select value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+                  <option value="">{t('instructor.selectStudent', 'Select student...')}</option>
+                  {students.map(s => <option key={s.id} value={s.id}>{s.full_name} ({s.student_number})</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t('instructor.aircraftLabel')}</label>
@@ -263,11 +298,11 @@ export default function FlightsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('instructor.startLabel')}</label>
-                  <input type="datetime-local" value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                  <input type="time" value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('instructor.endLabel')}</label>
-                  <input type="datetime-local" value={form.end_time} onChange={e => setForm({...form, end_time: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                  <input type="time" value={form.end_time} onChange={e => setForm({...form, end_time: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
                 </div>
               </div>
             </div>
@@ -317,7 +352,7 @@ export default function FlightsPage() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('instructor.startLabel')}</label>
                   <input
-                    type="datetime-local"
+                    type="time"
                     value={rescheduleForm.start_time}
                     onChange={e => setRescheduleForm(p => ({ ...p, start_time: e.target.value }))}
                     required
@@ -327,7 +362,7 @@ export default function FlightsPage() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">{t('instructor.endLabel')}</label>
                   <input
-                    type="datetime-local"
+                    type="time"
                     value={rescheduleForm.end_time}
                     onChange={e => setRescheduleForm(p => ({ ...p, end_time: e.target.value }))}
                     required

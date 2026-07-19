@@ -46,7 +46,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView, ExportCoursesView
+from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView, ExportCoursesView, generate_courses_pdf, generate_flights_pdf
 from apps.quality_safety.exports import ExportAuditsView, ExportNCRsView, ExportCAPAsView, ExportSafetyEventsView, ExportRiskAssessmentsView
 from datetime import timedelta
 from django.utils import timezone
@@ -716,6 +716,9 @@ urlpatterns = [
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
     path('export/courses/', ExportCoursesView.as_view(), name='export-courses'),
     path('export/certificates/', ExportCertificatesView.as_view(), name='export-certificates'),
+    path('courses/export/pdf/', generate_courses_pdf, name='courses-export-pdf'),
+    path('courses/export/excel/', ExportCoursesView.as_view(), name='courses-export-excel'),
+    path('flights/export/pdf/', generate_flights_pdf, name='flights-export-pdf'),
 
     path('export/audits/', ExportAuditsView.as_view(), name='export-audits'),
     path('export/non-conformities/', ExportNCRsView.as_view(), name='export-ncrs'),

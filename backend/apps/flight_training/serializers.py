@@ -93,11 +93,15 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
 
         if not data.get('instructor') and request:
             from apps.students.models import FlightInstructor
-            try:
-                fi = FlightInstructor.objects.get(user=request.user)
-                data['instructor'] = fi
-            except FlightInstructor.DoesNotExist:
-                raise serializers.ValidationError({'instructor': 'No flight instructor profile found for this user.'})
+            fi, _ = FlightInstructor.objects.get_or_create(
+                user=request.user,
+                defaults={
+                    'first_name': request.user.get_full_name() or request.user.email or '',
+                    'last_name': '',
+                    'status': 'active',
+                }
+            )
+            data['instructor'] = fi
 
         if not data.get('instructor'):
             raise serializers.ValidationError({'instructor': 'This field is required.'})

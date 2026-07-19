@@ -71,7 +71,8 @@ class ConflictDetectionService:
                 elif hasattr(end_time, 'date'):
                     end = end_time.date()
                 if isinstance(maint, date) and isinstance(end, date) and maint < end:
-                    return [f'Aircraft maintenance due before flight']
+                    reg = getattr(aircraft, 'registration', '')
+                    return [f'{reg} has maintenance due on {maint} — cannot schedule flight on {end}']
         except Aircraft.DoesNotExist:
             return ['Aircraft not found']
 
@@ -82,6 +83,7 @@ class ConflictDetectionService:
         """Instructor must have 12 hours rest between lessons."""
         from django.utils import timezone
         from datetime import timedelta
+        from .models import FlightLesson
         cutoff = start_time - timedelta(hours=12)
         recent = FlightLesson.objects.filter(
             instructor_id=instructor_id,
@@ -101,7 +103,8 @@ class ConflictDetectionService:
             instructor = FlightInstructor.objects.get(id=instructor_id)
             if aircraft.model and instructor.authorized_aircraft_types:
                 if aircraft.model not in instructor.authorized_aircraft_types:
-                    return [f'Instructor is not qualified on {aircraft.model}']
+                    authorized = ', '.join(instructor.authorized_aircraft_types)
+                    return [f'You are not qualified to fly {aircraft.registration} ({aircraft.model}). Your authorized types: {authorized}']
         except (Aircraft.DoesNotExist, FlightInstructor.DoesNotExist):
             pass
         return []

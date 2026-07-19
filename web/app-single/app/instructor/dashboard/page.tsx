@@ -49,10 +49,15 @@ export default function InstructorDashboard() {
           <h1 className="text-lg font-bold text-white">
             {isCGI ? t('instructor.dashboard') : isCFI ? t('instructor.dashboard') : t('instructor.dashboard')}
           </h1>
-          <ExportButton exports={[
-            { label: `${t('instructor.totalCourses')} PDF`, url: "/courses/export/pdf/", filename: "courses.pdf", type: "pdf" },
-            { label: `${t('instructor.totalCourses')} Excel`, url: "/courses/export/excel/", filename: "courses.xlsx", type: "excel" },
-          ]} />
+          <ExportButton exports={
+            isCFI ? [
+              { label: `${t('instructor.cfi.todaysFlights')} PDF`, url: "/flights/export/pdf/", filename: "flights.pdf", type: "pdf" },
+              { label: `${t('instructor.cfi.todaysFlights')} Excel`, url: "/export/flights/", filename: "flights.xlsx", type: "excel" },
+            ] : [
+              { label: `${t('instructor.totalCourses')} PDF`, url: "/courses/export/pdf/", filename: "courses.pdf", type: "pdf" },
+              { label: `${t('instructor.totalCourses')} Excel`, url: "/courses/export/excel/", filename: "courses.xlsx", type: "excel" },
+            ]
+          } />
         </div>
       </nav>
       <main className="px-6 py-8">

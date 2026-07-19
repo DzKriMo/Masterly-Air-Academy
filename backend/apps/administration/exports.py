@@ -92,6 +92,66 @@ class ExportFlightsView(APIView):
                             headers={"Content-Disposition": "attachment; filename=flights.xlsx"})
 
 
+def generate_flights_pdf(request):
+    """Generate a PDF report listing all flights."""
+    flights = FlightLesson.objects.select_related('student', 'instructor', 'aircraft').all()
+
+    rows = ""
+    for f in flights:
+        status_color = {
+            'scheduled': '#3b82f6',
+            'in_progress': '#f59e0b',
+            'completed': '#22c55e',
+            'cancelled': '#ef4444',
+            'postponed': '#8b5cf6',
+        }.get(f.status, '#6b7280')
+        rows += (
+            f"<tr>"
+            f"<td>{str(f.scheduled_date) if f.scheduled_date else ''}</td>"
+            f"<td>{f.student.full_name}</td>"
+            f"<td>{f'{f.instructor.first_name} {f.instructor.last_name}'}</td>"
+            f"<td>{f.aircraft.registration}</td>"
+            f"<td>{float(f.flight_duration) if f.flight_duration else 0}</td>"
+            f"<td style='color:{status_color};font-weight:bold'>{f.status or ''}</td>"
+            f"<td>{float(f.grade) if f.grade else ''}</td>"
+            f"<td>{f.result or ''}</td>"
+            f"</tr>"
+        )
+
+    total = flights.count()
+    completed = flights.filter(status='completed').count()
+    scheduled = flights.filter(status='scheduled').count()
+
+    html = f"""<html><head><meta charset="utf-8"><style>
+@page {{ size: A4 landscape; margin: 1.5cm; }}
+body {{ font-family: sans-serif; }}
+.header {{ border-bottom: 2px solid #c4943c; padding-bottom: 10px; margin-bottom: 20px; }}
+.logo {{ font-size: 24px; color: #c4943c; font-weight: bold; }}
+table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 10px; }}
+th {{ background: #0a1628; color: #c4943c; padding: 8px; text-align: left; font-size: 10px; }}
+td {{ padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }}
+.stats {{ display: flex; gap: 20px; margin: 15px 0; }}
+.stat {{ background: #f3f4f6; padding: 10px 20px; border-radius: 8px; }}
+</style></head><body>
+<div class="header"><div class="logo">MAA</div><div>Masterly Air Academy</div><h2>Flights Report</h2></div>
+<div class="stats">
+  <div class="stat"><strong>Total:</strong> {total} flights</div>
+  <div class="stat"><strong>Scheduled:</strong> {scheduled}</div>
+  <div class="stat"><strong>Completed:</strong> {completed}</div>
+</div>
+<table><tr><th>Date</th><th>Student</th><th>Instructor</th><th>Aircraft</th><th>Duration (h)</th><th>Status</th><th>Grade</th><th>Result</th></tr>{rows}</table>
+</body></html>"""
+
+    try:
+        from weasyprint import HTML
+        pdf = HTML(string=html).write_pdf()
+        resp = HttpResponse(pdf, content_type="application/pdf")
+        resp["Content-Disposition"] = 'attachment; filename="flights.pdf"'
+        return resp
+    except ImportError:
+        return HttpResponse("PDF generation not available", status=501)
+
+
 class ExportAuditLogsView(APIView):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'audit.export'
@@ -179,3 +239,62 @@ class ExportCoursesView(APIView):
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": "attachment; filename=courses.xlsx"},
         )
+
+
+def generate_courses_pdf(request):
+    """Generate a PDF report listing all courses."""
+    from apps.ground_training.models import Course
+    courses = Course.objects.select_related('subject', 'instructor', 'room').all()
+
+    rows = ""
+    for c in courses:
+        status_color = {
+            'scheduled': '#3b82f6',
+            'in_progress': '#f59e0b',
+            'completed': '#22c55e',
+            'cancelled': '#ef4444',
+        }.get(c.status, '#6b7280')
+        rows += (
+            f"<tr>"
+            f"<td>{c.title or ''}</td>"
+            f"<td>{c.subject.code if c.subject else ''}</td>"
+            f"<td>{f'{c.instructor.first_name} {c.instructor.last_name}' if c.instructor else ''}</td>"
+            f"<td>{str(c.scheduled_date) if c.scheduled_date else ''}</td>"
+            f"<td>{str(c.start_time)[:5] if c.start_time else ''} - {str(c.end_time)[:5] if c.end_time else ''}</td>"
+            f"<td>{c.room.name if c.room else ''}</td>"
+            f"<td style='color:{status_color};font-weight:bold'>{c.status or ''}</td>"
+            f"</tr>"
+        )
+
+    total = courses.count()
+    scheduled = courses.filter(status='scheduled').count()
+    completed = courses.filter(status='completed').count()
+
+    html = f"""<html><head><meta charset="utf-8"><style>
+@page {{ size: A4 landscape; margin: 1.5cm; }}
+body {{ font-family: sans-serif; }}
+.header {{ border-bottom: 2px solid #c4943c; padding-bottom: 10px; margin-bottom: 20px; }}
+.logo {{ font-size: 24px; color: #c4943c; font-weight: bold; }}
+table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 10px; }}
+th {{ background: #0a1628; color: #c4943c; padding: 8px; text-align: left; font-size: 10px; }}
+td {{ padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }}
+.stats {{ display: flex; gap: 20px; margin: 15px 0; }}
+.stat {{ background: #f3f4f6; padding: 10px 20px; border-radius: 8px; }}
+</style></head><body>
+<div class="header"><div class="logo">MAA</div><div>Masterly Air Academy</div><h2>Courses Report</h2></div>
+<div class="stats">
+  <div class="stat"><strong>Total:</strong> {total} courses</div>
+  <div class="stat"><strong>Scheduled:</strong> {scheduled}</div>
+  <div class="stat"><strong>Completed:</strong> {completed}</div>
+</div>
+<table><tr><th>Title</th><th>Subject</th><th>Instructor</th><th>Date</th><th>Time</th><th>Room</th><th>Status</th></tr>{rows}</table>
+</body></html>"""
+
+    try:
+        from weasyprint import HTML
+        pdf = HTML(string=html).write_pdf()
+        resp = HttpResponse(pdf, content_type="application/pdf")
+        resp["Content-Disposition"] = 'attachment; filename="courses.pdf"'
+        return resp
+    except ImportError:
+        return HttpResponse("PDF generation not available", status=501)

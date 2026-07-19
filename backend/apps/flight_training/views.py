@@ -81,17 +81,25 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
             return FlightLessonCreateSerializer
         return FlightLessonSerializer
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['get', 'post'])
     def preparation(self, request, pk=None):
         lesson = self.get_object()
-        if hasattr(lesson, 'preparation'):
-            return Response({'error': 'Preparation already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'GET':
+            if not hasattr(lesson, 'preparation'):
+                return Response({'exists': False, 'data': None})
+            return Response({'exists': True, 'data': FlightPreparationSerializer(lesson.preparation).data})
 
         serializer = FlightPreparationSerializer(data={
             **request.data,
             'flight_lesson': str(lesson.id),
         })
         serializer.is_valid(raise_exception=True)
+        if hasattr(lesson, 'preparation'):
+            prep = lesson.preparation
+            for attr, value in serializer.validated_data.items():
+                setattr(prep, attr, value)
+            prep.save()
+            return Response(FlightPreparationSerializer(prep).data)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

@@ -24,6 +24,20 @@ export default function FlightPrepPage() {
 
   useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !flightId) return;
+    api.get(`/flight-lessons/${flightId}/preparation/`)
+      .then((data: any) => {
+        if (data.exists && data.data) {
+          const d = data.data;
+          setChecks({ weather: d.weather_check, notam: d.notam_check, performance: d.performance_check, document: d.document_check, medical: d.medical_check });
+          setObjectives(d.lesson_objectives || "");
+          setBriefing(d.briefing_notes || "");
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, flightId]);
+
   const toggle = (k: keyof typeof checks) => setChecks({ ...checks, [k]: !checks[k] });
   const allChecked = Object.values(checks).every(Boolean);
 
