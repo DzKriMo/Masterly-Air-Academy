@@ -25,6 +25,7 @@ interface Contract {
   start_date: string;
   end_date: string;
   status: string;
+  file_url?: string;
 }
 
 interface Student {
@@ -125,6 +126,21 @@ export default function AdminContractsPage() {
     },
   });
 
+  // ── Generate PDF mutation ──
+  const generatePdfMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.post(`/contracts/${id}/generate_pdf/`);
+    },
+    onSuccess: (data: any) => {
+      showToast("success", "PDF generated successfully");
+      if (data?.file_url) window.open(data.file_url, "_blank");
+      queryClient.invalidateQueries({ queryKey: ["admin-contracts"] });
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to generate PDF");
+    },
+  });
+
   // ── Filtered data ──
   const filtered = useMemo(() => {
     if (!contracts) return [];
@@ -201,8 +217,34 @@ export default function AdminContractsPage() {
           </span>
         ),
       },
+      {
+        key: "actions",
+        header: t("common.actions", "Actions"),
+        sortable: false,
+        render: (i) => (
+          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => generatePdfMutation.mutate(i.id)}
+              disabled={generatePdfMutation.isPending}
+              className="px-2 py-1 text-xs bg-gold-500/10 text-gold-400 border border-gold-500/30 rounded hover:bg-gold-500/20 transition-colors disabled:opacity-50"
+            >
+              {generatePdfMutation.isPending ? "..." : "PDF"}
+            </button>
+            {i.file_url && (
+              <a
+                href={i.file_url}
+                target="_blank"
+                className="px-2 py-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/20 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                View
+              </a>
+            )}
+          </div>
+        ),
+      },
     ],
-    [t]
+    [t, generatePdfMutation]
   );
 
   // ── Render ──

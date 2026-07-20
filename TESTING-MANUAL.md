@@ -316,12 +316,12 @@
 - [x] Overdue rows highlighted
 
 ### 6.6 Payments (`/admin/payments`)
-- [ ] DataTable: Student, Invoice#, Amount, Method, Date
-- [ ] Record Payment → ModalForm
-- [ ] FilterBar: method filter
+- [x] DataTable: Student, Invoice#, Amount, Method, Date
+- [x] Record Payment → ModalForm
+- [x] FilterBar: method filter
 
 ### 6.7 Contracts (`/admin/contracts`)
-- [ ] DataTable: Contract#, Student, Type, Start, End, Status
+- [x] DataTable: Contract#, Student, Type, Start, End, Status
 - [ ] Create Contract → ModalForm
 - [ ] **NEW: Generate PDF** button per contract → generates formatted contract PDF
 

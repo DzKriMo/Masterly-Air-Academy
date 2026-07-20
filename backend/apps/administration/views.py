@@ -196,6 +196,17 @@ class ContractViewSet(viewsets.ModelViewSet):
     required_permission = 'documents.view'
     filterset_fields = ['student', 'status', 'type']
 
+    def perform_create(self, serializer):
+        year = timezone.now().year
+        last = Contract.objects.filter(contract_number__startswith=f'CTR-{year}-').order_by('-contract_number').first()
+        num = 1
+        if last:
+            try:
+                num = int(last.contract_number.split('-')[-1]) + 1
+            except (ValueError, IndexError):
+                num = 1
+        serializer.save(contract_number=f'CTR-{year}-{num:04d}')
+
     @action(detail=True, methods=['post'])
     def generate_pdf(self, request, pk=None):
         contract = self.get_object()
