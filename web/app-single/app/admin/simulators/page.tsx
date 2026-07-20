@@ -61,27 +61,12 @@ export default function AdminSimulatorsPage() {
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedSim, setSelectedSim] = useState<Simulator | null>(null);
-  const [editingSim, setEditingSim] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", manufacturer: "", model_name: "", qualification_type: "", location: "", status: "" });
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    manufacturer: "",
-    model_name: "",
-    qualification_type: "",
-    location: "",
-    status: "available",
-  });
-
-  // ── Detail/edit modal state ──
-  const [selectedSim, setSelectedSim] = useState<Simulator | null>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "",
-    manufacturer: "",
-    model_name: "",
-    qualification_type: "",
-    location: "",
-    status: "",
+    name: "", manufacturer: "", model_name: "", qualification_type: "", location: "", status: "",
+  });
+  const [createForm, setCreateForm] = useState({
+    name: "", manufacturer: "", model_name: "", qualification_type: "", location: "", status: "available",
   });
 
   // ── Auth guard ──
