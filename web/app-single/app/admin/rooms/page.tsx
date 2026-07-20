@@ -64,6 +64,12 @@ export default function AdminRoomsPage() {
   const [equipmentList, setEquipmentList] = useState<string[]>([]);
   const [newEquipment, setNewEquipment] = useState("");
 
+  // ── Edit state ──
+  const [editingRoom, setEditingRoom] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", capacity: "", location: "", status: "" });
+  const [editEquipmentList, setEditEquipmentList] = useState<string[]>([]);
+  const [editNewEquipment, setEditNewEquipment] = useState("");
+
   // ── Auth guard ──
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push("/login");
@@ -102,6 +108,49 @@ export default function AdminRoomsPage() {
       showToast("error", err.message || "Failed to create room");
     },
   });
+
+  // ── Update mutation ──
+  const updateMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/rooms/${id}/`, {
+      name: editForm.name,
+      capacity: editForm.capacity,
+      location: editForm.location,
+      status: editForm.status,
+      equipment: editEquipmentList,
+    }),
+    onSuccess: () => {
+      showToast("success", "Room updated successfully");
+      setEditingRoom(false);
+      setSelectedRoom(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-rooms"] });
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to update room");
+    },
+  });
+
+  // Parse equipment from room data (handles string or already-parsed)
+  const parseEquipment = (eq: any): string[] => {
+    if (!eq) return [];
+    if (Array.isArray(eq)) return eq;
+    if (typeof eq === 'string') {
+      try { const p = JSON.parse(eq); return Array.isArray(p) ? p : Object.keys(p); } catch { return []; }
+    }
+    if (typeof eq === 'object') return Object.keys(eq);
+    return [];
+  };
+
+  const openDetail = (room: Room) => {
+    setSelectedRoom(room);
+    setEditingRoom(false);
+    setEditForm({ name: room.name, capacity: String(room.capacity || ''), location: room.location || '', status: room.status });
+    setEditEquipmentList(parseEquipment(room.equipment));
+    setEditNewEquipment('');
+  };
+
+  const startEdit = () => {
+    setEditingRoom(true);
+  };
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -279,7 +328,7 @@ export default function AdminRoomsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(r) => setSelectedRoom(r as Room)} />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(r) => openDetail(r as Room)} />
         )}
 
         {/* Create Room Modal */}
@@ -414,18 +463,45 @@ export default function AdminRoomsPage() {
           </div>
         </ModalForm>
 
-        {/* Room Detail Modal */}
+        {/* Room Detail / Edit Modal */}
         <ModalForm
           open={!!selectedRoom}
-          onClose={() => setSelectedRoom(null)}
-          title={selectedRoom?.name || ''}
+          onClose={() => { setSelectedRoom(null); setEditingRoom(false); }}
+          title={editingRoom ? `Edit: ${selectedRoom?.name}` : selectedRoom?.name || ''}
           footer={
-            <button
-              onClick={() => setSelectedRoom(null)}
-              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
-            >
-              {t("common.close", "Close")}
-            </button>
+            editingRoom ? (
+              <>
+                <button
+                  onClick={() => setEditingRoom(false)}
+                  disabled={updateMutation.isPending}
+                  className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50"
+                >
+                  {t("common.cancel", "Cancel")}
+                </button>
+                <button
+                  onClick={() => selectedRoom && updateMutation.mutate(selectedRoom.id)}
+                  disabled={updateMutation.isPending || !editForm.name}
+                  className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
+                >
+                  {updateMutation.isPending ? "Saving..." : t("common.save", "Save")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setSelectedRoom(null)}
+                  className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+                >
+                  {t("common.close", "Close")}
+                </button>
+                <button
+                  onClick={startEdit}
+                  className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400"
+                >
+                  {t("common.edit", "Edit")}
+                </button>
+              </>
+            )
           }
         >
           {selectedRoom && (
@@ -435,56 +511,99 @@ export default function AdminRoomsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Name</p>
-                    <p className="text-sm text-white font-medium">{selectedRoom.name}</p>
+                    {editingRoom ? (
+                      <input type="text" value={editForm.name}
+                        onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                    ) : (
+                      <p className="text-sm text-white font-medium">{selectedRoom.name}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Capacity</p>
-                    <p className="text-sm text-white font-mono">{selectedRoom.capacity}</p>
+                    {editingRoom ? (
+                      <input type="number" min="1" value={editForm.capacity}
+                        onChange={e => setEditForm(p => ({ ...p, capacity: e.target.value }))}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                    ) : (
+                      <p className="text-sm text-white font-mono">{selectedRoom.capacity}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Location</p>
-                    <p className="text-sm text-white">{selectedRoom.location || "—"}</p>
+                    {editingRoom ? (
+                      <input type="text" value={editForm.location}
+                        onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                    ) : (
+                      <p className="text-sm text-white">{selectedRoom.location || "—"}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">Status</p>
-                    <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedRoom.status] || "bg-gray-500/10 text-gray-400"}`}>
-                      {fmtStatus(selectedRoom.status)}
-                    </span>
+                    {editingRoom ? (
+                      <select value={editForm.status}
+                        onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
+                        {STATUSES.map(s => <option key={s} value={s}>{fmtStatus(s)}</option>)}
+                      </select>
+                    ) : (
+                      <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedRoom.status] || "bg-gray-500/10 text-gray-400"}`}>
+                        {fmtStatus(selectedRoom.status)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </section>
 
               <section>
                 <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Equipment</h3>
-                {(() => {
-                  try {
-                    const eq = typeof selectedRoom.equipment === 'string' ? JSON.parse(selectedRoom.equipment) : selectedRoom.equipment;
-                    if (Array.isArray(eq) && eq.length > 0) {
-                      return (
-                        <div className="flex flex-wrap gap-2">
-                          {eq.map((item: string, i: number) => (
-                            <span key={i} className="text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{item}</span>
-                          ))}
-                        </div>
-                      );
-                    }
-                    if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
-                      return (
-                        <div className="space-y-2">
-                          {Object.entries(eq).map(([k, v]) => (
-                            <div key={k} className="flex items-center justify-between bg-navy-900 rounded-lg px-3 py-2">
-                              <span className="text-sm text-white">{k}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${v ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
-                                {v ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                  } catch {}
-                  return <p className="text-sm text-gray-500">No equipment listed</p>;
-                })()}
+                {editingRoom ? (
+                  <>
+                    {editEquipmentList.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {editEquipmentList.map((item, i) => (
+                          <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
+                            {item}
+                            <button type="button" onClick={() => setEditEquipmentList(prev => prev.filter((_, j) => j !== i))}
+                              className="text-gold-500 hover:text-red-400 transition-colors">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input type="text" value={editNewEquipment}
+                        onChange={e => setEditNewEquipment(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && editNewEquipment.trim()) { e.preventDefault(); setEditEquipmentList(prev => [...prev, editNewEquipment.trim()]); setEditNewEquipment(''); }}}
+                        placeholder="Add equipment..."
+                        className="flex-1 px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none text-sm" />
+                      <button type="button"
+                        onClick={() => { if (editNewEquipment.trim()) { setEditEquipmentList(prev => [...prev, editNewEquipment.trim()]); setEditNewEquipment(''); }}}
+                        disabled={!editNewEquipment.trim()}
+                        className="px-4 py-2 text-xs bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded-lg hover:bg-gold-500/30 disabled:opacity-40 transition-colors">+ Add</button>
+                    </div>
+                  </>
+                ) : (
+                  (() => {
+                    try {
+                      const eq = typeof selectedRoom.equipment === 'string' ? JSON.parse(selectedRoom.equipment) : selectedRoom.equipment;
+                      if (Array.isArray(eq) && eq.length > 0) {
+                        return (<div className="flex flex-wrap gap-2">{eq.map((item: string, i: number) => (
+                          <span key={i} className="text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{item}</span>
+                        ))}</div>);
+                      }
+                      if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
+                        return (<div className="space-y-2">{Object.entries(eq as Record<string,any>).map(([k, v]) => (
+                          <div key={k} className="flex items-center justify-between bg-navy-900 rounded-lg px-3 py-2">
+                            <span className="text-sm text-white">{k}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${v ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>{v ? 'Yes' : 'No'}</span>
+                          </div>
+                        ))}</div>);
+                      }
+                    } catch {}
+                    return <p className="text-sm text-gray-500">No equipment listed</p>;
+                  })()
+                )}
               </section>
             </div>
           )}
