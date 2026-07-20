@@ -359,10 +359,10 @@
 
 ### 6.15 Exams (`/admin/exams`)
 - [x] DataTable: Code, Title, Subject, Program, Type, Status
-- [ ] FilterBar: program + type + status
+- [x] FilterBar: program + type + status
 
 ### 6.16 Certificates (`/admin/certificates`)
-- [ ] DataTable: Certificate#, Student, Type, Program, Date, Status
+- [x] DataTable: Certificate#, Student, Type, Program, Date, Status
 
 ### 6.17 Audit Logs (`/admin/audit-logs`)
 - [ ] DataTable: Date, User, Action, Entity, IP

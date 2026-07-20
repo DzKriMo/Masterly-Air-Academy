@@ -41,7 +41,7 @@ from apps.quality_safety.serializers import QualityDocumentSerializer
 from apps.students.views import StudentViewSet, MedicalCertificateViewSet, AdminProfileViewSet, FlightInstructorViewSet, GroundInstructorViewSet
 from apps.exams.serializers import CertificateSerializer
 from apps.notifications.views import NotificationViewSet, MessageViewSet
-from apps.core.views import SystemSettingViewSet
+from apps.core.views import SystemSettingViewSet, AuditLogViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -688,6 +688,7 @@ router.register(r'flight-instructors', FlightInstructorViewSet)
 router.register(r'ground-instructors', GroundInstructorViewSet, basename='ground-instructor')
 router.register(r'admin-profiles', AdminProfileViewSet)
 router.register(r'system-settings', SystemSettingViewSet)
+router.register(r'audit-logs', AuditLogViewSet)
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'simulators', SimulatorViewSet)

@@ -18,12 +18,15 @@ import { ModalForm } from "@/components/modal-form";
 interface AuditLog {
   id: string;
   user: string;
+  user_email: string;
   action: string;
   entity: string;
   entity_id: string;
   ip_address: string;
+  user_agent?: string;
   created_at: string;
-  details?: string;
+  old_values?: any;
+  new_values?: any;
 }
 
 // ── Constants ─────────────────────────────────────────────
@@ -140,10 +143,10 @@ export default function AdminAuditLogsPage() {
       const q = searchValue.toLowerCase();
       r = r.filter(
         (l) =>
-          (l.user || "").toLowerCase().includes(q) ||
+          (l.user_email || "").toLowerCase().includes(q) ||
           (l.entity || "").toLowerCase().includes(q) ||
           (l.entity_id || "").toLowerCase().includes(q) ||
-          (l.details || "").toLowerCase().includes(q)
+          ((l.old_values ? JSON.stringify(l.old_values) : '')+(l.new_values ? ' → '+JSON.stringify(l.new_values) : '') || "").toLowerCase().includes(q)
       );
     }
     return r;
@@ -165,7 +168,7 @@ export default function AdminAuditLogsPage() {
         key: "user",
         header: "User",
         render: (l) => (
-          <span className="text-sm text-white">{l.user || "—"}</span>
+          <span className="text-sm text-white">{l.user_email || "—"}</span>
         ),
       },
       {
