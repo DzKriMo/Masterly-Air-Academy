@@ -54,6 +54,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 class ContractSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    contract_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = Contract
