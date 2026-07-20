@@ -55,7 +55,7 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     email = serializers.CharField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True, allow_null=True)
-    qualifications = serializers.JSONField(source='qualifications', read_only=True)
+    qualifications = serializers.JSONField(read_only=True)
     student_count = serializers.SerializerMethodField()
 
     class Meta:

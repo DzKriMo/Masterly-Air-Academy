@@ -87,14 +87,14 @@ class GroundInstructorViewSet(viewsets.ViewSet):
         User = get_user_model()
         instructors = User.objects.filter(
             role__in=['ground_instructor', 'chief_ground_instructor']
-        ).values('id', 'email', 'phone', 'status', 'first_name', 'last_name')
+        ).values('id', 'email', 'status', 'first_name', 'last_name')
         data = []
         for u in instructors:
             data.append({
                 'id': str(u['id']),
                 'name': f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or u['email'],
                 'email': u['email'],
-                'phone': u.get('phone') or '',
+                'phone': '',
                 'license_number': '',
                 'qualifications': [],
                 'status': u.get('status', 'active'),
