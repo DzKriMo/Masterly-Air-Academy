@@ -54,13 +54,15 @@ export default function AdminRoomsPage() {
 
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [createForm, setCreateForm] = useState({
     name: "",
     capacity: "",
     location: "",
-    equipment: "",
-    status: "available",
+    status: "available" as string,
   });
+  const [equipmentList, setEquipmentList] = useState<string[]>([]);
+  const [newEquipment, setNewEquipment] = useState("");
 
   // ── Auth guard ──
   useEffect(() => {
@@ -84,11 +86,16 @@ export default function AdminRoomsPage() {
 
   // ── Create mutation ──
   const createMutation = useMutation({
-    mutationFn: (payload: typeof createForm) => api.post("/rooms/", payload),
+    mutationFn: () => api.post("/rooms/", {
+      ...createForm,
+      equipment: equipmentList,
+    }),
     onSuccess: () => {
       showToast("success", "Room created successfully");
       setCreateOpen(false);
-      setCreateForm({ name: "", capacity: "", location: "", equipment: "", status: "available" });
+      setCreateForm({ name: "", capacity: "", location: "", status: "available" });
+      setEquipmentList([]);
+      setNewEquipment("");
       queryClient.invalidateQueries({ queryKey: ["admin-rooms"] });
     },
     onError: (err: any) => {
@@ -272,7 +279,7 @@ export default function AdminRoomsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(r) => setSelectedRoom(r as Room)} />
         )}
 
         {/* Create Room Modal */}
@@ -280,7 +287,9 @@ export default function AdminRoomsPage() {
           open={createOpen}
           onClose={() => {
             setCreateOpen(false);
-            setCreateForm({ name: "", capacity: "", location: "", equipment: "", status: "available" });
+            setCreateForm({ name: "", capacity: "", location: "", status: "available" });
+            setEquipmentList([]);
+            setNewEquipment("");
           }}
           title="Create Room"
           footer={
@@ -293,7 +302,7 @@ export default function AdminRoomsPage() {
                 {t("common.cancel", "Cancel")}
               </button>
               <button
-                onClick={() => createMutation.mutate(createForm)}
+                onClick={() => createMutation.mutate()}
                 disabled={createMutation.isPending || !createForm.name}
                 className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
               >
@@ -339,14 +348,52 @@ export default function AdminRoomsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Equipment (JSON)</label>
-              <textarea
-                value={createForm.equipment}
-                onChange={(e) => setCreateForm((f) => ({ ...f, equipment: e.target.value }))}
-                rows={3}
-                placeholder='{"projector": true, "whiteboard": true}'
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none font-mono text-xs"
-              />
+              <label className="block text-sm text-gray-400 mb-1">Equipment</label>
+              {equipmentList.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {equipmentList.map((item, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
+                      {item}
+                      <button
+                        type="button"
+                        onClick={() => setEquipmentList(prev => prev.filter((_, j) => j !== i))}
+                        className="text-gold-500 hover:text-red-400 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newEquipment}
+                  onChange={(e) => setNewEquipment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newEquipment.trim()) {
+                      e.preventDefault();
+                      setEquipmentList(prev => [...prev, newEquipment.trim()]);
+                      setNewEquipment('');
+                    }
+                  }}
+                  placeholder="e.g. Projector, Whiteboard..."
+                  className="flex-1 px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newEquipment.trim()) {
+                      setEquipmentList(prev => [...prev, newEquipment.trim()]);
+                      setNewEquipment('');
+                    }
+                  }}
+                  disabled={!newEquipment.trim()}
+                  className="px-4 py-2 text-xs bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded-lg hover:bg-gold-500/30 disabled:opacity-40 transition-colors"
+                >
+                  + Add
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">
@@ -365,6 +412,82 @@ export default function AdminRoomsPage() {
               </select>
             </div>
           </div>
+        </ModalForm>
+
+        {/* Room Detail Modal */}
+        <ModalForm
+          open={!!selectedRoom}
+          onClose={() => setSelectedRoom(null)}
+          title={selectedRoom?.name || ''}
+          footer={
+            <button
+              onClick={() => setSelectedRoom(null)}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+            >
+              {t("common.close", "Close")}
+            </button>
+          }
+        >
+          {selectedRoom && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Room Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Name</p>
+                    <p className="text-sm text-white font-medium">{selectedRoom.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Capacity</p>
+                    <p className="text-sm text-white font-mono">{selectedRoom.capacity}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Location</p>
+                    <p className="text-sm text-white">{selectedRoom.location || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Status</p>
+                    <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedRoom.status] || "bg-gray-500/10 text-gray-400"}`}>
+                      {fmtStatus(selectedRoom.status)}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Equipment</h3>
+                {(() => {
+                  try {
+                    const eq = typeof selectedRoom.equipment === 'string' ? JSON.parse(selectedRoom.equipment) : selectedRoom.equipment;
+                    if (Array.isArray(eq) && eq.length > 0) {
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {eq.map((item: string, i: number) => (
+                            <span key={i} className="text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{item}</span>
+                          ))}
+                        </div>
+                      );
+                    }
+                    if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
+                      return (
+                        <div className="space-y-2">
+                          {Object.entries(eq).map(([k, v]) => (
+                            <div key={k} className="flex items-center justify-between bg-navy-900 rounded-lg px-3 py-2">
+                              <span className="text-sm text-white">{k}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${v ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                                {v ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                  } catch {}
+                  return <p className="text-sm text-gray-500">No equipment listed</p>;
+                })()}
+              </section>
+            </div>
+          )}
         </ModalForm>
       </main>
     </div>

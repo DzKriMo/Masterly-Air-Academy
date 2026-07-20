@@ -341,11 +341,11 @@
 - [ ] **NEW: bibliography, required_documents, prerequisites** fields in detail view
 
 ### 6.11 Classrooms (`/admin/rooms`)
-- [ ] DataTable: Name, Capacity, Location, Status
-- [ ] Create Room → ModalForm
+- [x] DataTable: Name, Capacity, Location, Status
+- [x] Create Room → ModalForm
 
 ### 6.12 Aircraft (`/admin/aircraft`)
-- [ ] DataTable: Registration, Manufacturer, Model, Status, Hours
+- [x] DataTable: Registration, Manufacturer, Model, Status, Hours
 - [ ] Create Aircraft → ModalForm
 - [ ] Maintenance history per aircraft
 
