@@ -326,7 +326,7 @@
 - [x] **NEW: Generate PDF** button per contract → generates formatted contract PDF
 
 ### 6.8 Documents (`/admin/documents`)
-- [ ] DataTable: Name, Type, Category, Status, Version
+- [x] DataTable: Name, Type, Category, Status, Version
 - [ ] Upload Document → ModalForm with file input
 - [ ] Download links
 

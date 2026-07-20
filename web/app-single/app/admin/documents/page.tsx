@@ -19,12 +19,12 @@ import { useToast } from "@/components/toast";
 interface Document {
   id: string;
   name: string;
-  document_type: string;
+  type: string;
   category: string;
   status: string;
   version: string;
   file_url: string;
-  uploaded_at: string;
+  created_at: string;
 }
 
 // ── Constants ─────────────────────────────────────────────
@@ -61,6 +61,7 @@ const STATUS_COLORS: Record<string, string> = {
 // ── Helpers ───────────────────────────────────────────────
 
 function formatLabel(value: string): string {
+  if (!value) return "—";
   return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -81,7 +82,7 @@ export default function AdminDocumentsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     name: "",
-    document_type: "other",
+    type: "other",
     category: "other",
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -113,13 +114,13 @@ export default function AdminDocumentsPage() {
       ...payload
     }: {
       name: string;
-      document_type: string;
+      type: string;
       category: string;
       file: File;
     }) => {
       const formData = new FormData();
       formData.append("name", payload.name);
-      formData.append("document_type", payload.document_type);
+      formData.append("type", payload.type);
       formData.append("category", payload.category);
       formData.append("file", file);
 
@@ -149,7 +150,7 @@ export default function AdminDocumentsPage() {
     onSuccess: () => {
       showToast("success", "Document uploaded successfully");
       setUploadOpen(false);
-      setUploadForm({ name: "", document_type: "other", category: "other" });
+      setUploadForm({ name: "", type: "other", category: "other" });
       setUploadFile(null);
       queryClient.invalidateQueries({ queryKey: ["admin-documents"] });
     },
@@ -163,7 +164,7 @@ export default function AdminDocumentsPage() {
     if (!documents) return [];
     let r = documents;
     if (filterValues.type)
-      r = r.filter((i) => i.document_type === filterValues.type);
+      r = r.filter((i) => i.type === filterValues.type);
     if (filterValues.category)
       r = r.filter((i) => i.category === filterValues.category);
     if (searchValue) {
@@ -178,11 +179,11 @@ export default function AdminDocumentsPage() {
     () => [
       { key: "name", header: t("common.name", "Name") },
       {
-        key: "document_type",
+        key: "type",
         header: "Type",
         render: (i) => (
           <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-300">
-            {formatLabel(i.document_type)}
+            {formatLabel(i.type)}
           </span>
         ),
       },
@@ -210,12 +211,12 @@ export default function AdminDocumentsPage() {
       },
       { key: "version", header: "Version" },
       {
-        key: "uploaded_at",
+        key: "created_at",
         header: "Uploaded",
         render: (i) => (
           <span className="text-xs text-gray-500">
-            {i.uploaded_at
-              ? new Date(i.uploaded_at).toLocaleDateString()
+            {i.created_at
+              ? new Date(i.created_at).toLocaleDateString()
               : "—"}
           </span>
         ),
@@ -404,11 +405,11 @@ export default function AdminDocumentsPage() {
             <div>
               <label className="block text-sm text-gray-400 mb-1">Type</label>
               <select
-                value={uploadForm.document_type}
+                value={uploadForm.type}
                 onChange={(e) =>
                   setUploadForm((f) => ({
                     ...f,
-                    document_type: e.target.value,
+                    type: e.target.value,
                   }))
                 }
                 className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
