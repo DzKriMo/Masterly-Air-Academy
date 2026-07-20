@@ -11,6 +11,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -57,6 +58,9 @@ export default function AdminExamsPage() {
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // ── Detail modal ──
+  const [selected, setSelected] = useState<Exam | null>(null);
 
   // ── Auth guard ──
   useEffect(() => {
@@ -274,9 +278,80 @@ export default function AdminExamsPage() {
             title={exams?.length === 0 ? "No exams yet" : "No matching exams"}
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Exam)} />
         )}
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={!!selected}
+          onClose={() => setSelected(null)}
+          title={`Exam: ${selected?.title || selected?.code || ""}`}
+          wide
+          footer={
+            <button
+              onClick={() => setSelected(null)}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+            >
+              {t("common.close", "Close")}
+            </button>
+          }
+        >
+          {selected && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+                  Exam Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <DetailField label="Code" value={selected.code} />
+                  <DetailField
+                    label="Status"
+                    value={
+                      selected.status
+                        ? selected.status.charAt(0).toUpperCase() +
+                          selected.status.slice(1)
+                        : "—"
+                    }
+                  />
+                  <div className="col-span-2">
+                    <DetailField label="Title" value={selected.title} />
+                  </div>
+                  <DetailField label="Program" value={selected.program} />
+                  <DetailField
+                    label="Exam Type"
+                    value={
+                      selected.exam_type
+                        ? selected.exam_type
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (c) => c.toUpperCase())
+                        : "—"
+                    }
+                  />
+                  <DetailField
+                    label="Subject"
+                    value={selected.subject || "—"}
+                  />
+                  <DetailField
+                    label="Questions"
+                    value={String(selected.questions_count ?? 0)}
+                  />
+                </div>
+              </section>
+            </div>
+          )}
+        </ModalForm>
       </main>
+    </div>
+  );
+}
+
+// ── Detail Field ──────────────────────────────────────────
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm text-white">{value}</p>
     </div>
   );
 }

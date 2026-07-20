@@ -69,6 +69,7 @@ export default function AdminContractsPage() {
 
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [createForm, setCreateForm] = useState({
     student: "",
     type: "training",
@@ -336,7 +337,7 @@ export default function AdminContractsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(c) => setSelectedContract(c as Contract)} />
         )}
 
         {/* Create Contract Modal */}
@@ -447,7 +448,47 @@ export default function AdminContractsPage() {
             </div>
           </div>
         </ModalForm>
+
+        {/* Contract Detail Modal */}
+        <ModalForm
+          open={!!selectedContract}
+          onClose={() => setSelectedContract(null)}
+          title={`Contract ${selectedContract?.contract_number || ''}`}
+          footer={
+            <button onClick={() => setSelectedContract(null)}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
+              Close
+            </button>
+          }
+        >
+          {selectedContract && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <Dtl label="Contract #" value={selectedContract.contract_number} />
+                <Dtl label="Student" value={selectedContract.student_name} />
+                <Dtl label="Type" value={selectedContract.type ? selectedContract.type.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) : "—"} />
+                <Dtl label="Status" value={selectedContract.status} />
+                <Dtl label="Start" value={selectedContract.start_date ? new Date(selectedContract.start_date).toLocaleDateString() : "—"} />
+                <Dtl label="End" value={selectedContract.end_date ? new Date(selectedContract.end_date).toLocaleDateString() : "—"} />
+              </div>
+              {selectedContract.file_url && (
+                <a href={selectedContract.file_url} target="_blank" className="inline-block px-4 py-2 text-sm bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-lg hover:bg-gold-500/20 transition-colors">
+                  View Document
+                </a>
+              )}
+            </div>
+          )}
+        </ModalForm>
       </main>
+    </div>
+  );
+}
+
+function Dtl({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm text-white">{value || "—"}</p>
     </div>
   );
 }

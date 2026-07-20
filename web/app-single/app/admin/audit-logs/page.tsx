@@ -11,6 +11,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -103,6 +104,9 @@ export default function AdminAuditLogsPage() {
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // ── Detail modal state ──
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   // ── Auth guard ──
   useEffect(() => {
@@ -291,8 +295,54 @@ export default function AdminAuditLogsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelectedLog(item as AuditLog)} />
         )}
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={selectedLog !== null}
+          onClose={() => setSelectedLog(null)}
+          title="Audit Log Detail"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Action</label>
+              {selectedLog?.action ? (
+                <span className={`text-xs px-2 py-0.5 rounded ${ACTION_COLORS[selectedLog.action] || "bg-gray-500/10 text-gray-400"}`}>
+                  {fmtAction(selectedLog.action)}
+                </span>
+              ) : (
+                <p className="text-white">—</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">User</label>
+              <p className="text-white">{selectedLog?.user || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Entity</label>
+              <p className="text-white">{selectedLog?.entity || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Entity ID</label>
+              <p className="text-white font-mono">{selectedLog?.entity_id || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">IP Address</label>
+              <p className="text-white font-mono">{selectedLog?.ip_address || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Created At</label>
+              <p className="text-white">{formatDateTime(selectedLog?.created_at)}</p>
+            </div>
+            {selectedLog?.details && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Details</label>
+                <p className="text-white text-sm whitespace-pre-wrap">{selectedLog.details}</p>
+              </div>
+            )}
+          </div>
+        </ModalForm>
       </main>
     </div>
   );

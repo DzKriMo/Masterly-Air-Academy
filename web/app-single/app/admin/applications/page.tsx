@@ -82,6 +82,9 @@ export default function AdminApplicationsPage() {
   // ── Review modal state ──
   const [reviewOpen, setReviewOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+
+  // ── Detail modal state ──
+  const [detailApp, setDetailApp] = useState<Application | null>(null);
   const [reviewForm, setReviewForm] = useState({
     status: "",
     notes: "",
@@ -328,7 +331,7 @@ export default function AdminApplicationsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setDetailApp(item as Application)} />
         )}
 
         {/* Review Modal */}
@@ -437,6 +440,46 @@ export default function AdminApplicationsPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 />
               </div>
+            </div>
+          </div>
+        </ModalForm>
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={detailApp !== null}
+          onClose={() => setDetailApp(null)}
+          title={`Application: ${detailApp?.application_number || ""}`}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Application #</label>
+              <p className="text-white">{detailApp?.application_number || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Student Name</label>
+              <p className="text-white">{detailApp?.student_name || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Status</label>
+              {detailApp?.status ? (
+                <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[detailApp.status] || "bg-gray-500/10 text-gray-400"}`}>
+                  {formatStatus(detailApp.status)}
+                </span>
+              ) : (
+                <p className="text-white">—</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Submitted At</label>
+              <p className="text-white">{detailApp?.created_at ? new Date(detailApp.created_at).toLocaleDateString() : "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Reviewed At</label>
+              <p className="text-white">{detailApp?.reviewed_at ? new Date(detailApp.reviewed_at).toLocaleDateString() : "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Notes</label>
+              <p className="text-white">{detailApp?.notes || "—"}</p>
             </div>
           </div>
         </ModalForm>

@@ -119,6 +119,7 @@ export default function AdminInvoicesPage() {
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   // ── Auth guard ───────────────────────────────────────────────────
   useEffect(() => {
@@ -518,6 +519,7 @@ export default function AdminInvoicesPage() {
               columns={columns}
               data={filtered}
               keyField="id"
+              onRowClick={(inv) => setSelectedInvoice(inv as Invoice)}
             />
           </div>
         )}
@@ -898,6 +900,51 @@ export default function AdminInvoicesPage() {
         destructive
         loading={deleteMutation.isPending}
       />
+
+      {/* Invoice Detail Modal */}
+      <ModalForm
+        open={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+        title={`Invoice ${selectedInvoice?.invoice_number || ''}`}
+        footer={
+          <button onClick={() => setSelectedInvoice(null)}
+            className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
+            Close
+          </button>
+        }
+      >
+        {selectedInvoice && (
+          <div className="space-y-6">
+            <section>
+              <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Invoice Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Dtl label="Invoice #" value={selectedInvoice.invoice_number} />
+                <Dtl label="Student" value={selectedInvoice.student_name} />
+                <Dtl label="Type" value={selectedInvoice.type || "—"} />
+                <Dtl label="Amount" value={`${selectedInvoice.amount} ${selectedInvoice.currency}`} />
+                <Dtl label="Balance" value={selectedInvoice.balance ? `${selectedInvoice.balance} ${selectedInvoice.currency}` : "—"} />
+                <Dtl label="Description" value={selectedInvoice.description || "—"} />
+                <Dtl label="Due Date" value={selectedInvoice.due_at ? new Date(selectedInvoice.due_at).toLocaleDateString() : "—"} />
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Status</p>
+                  <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedInvoice.status] || "bg-gray-500/10 text-gray-400"}`}>
+                    {selectedInvoice.status ? selectedInvoice.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : "—"}
+                  </span>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+      </ModalForm>
+    </div>
+  );
+}
+
+function Dtl({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm text-white">{value || "—"}</p>
     </div>
   );
 }

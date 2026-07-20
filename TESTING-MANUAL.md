@@ -350,8 +350,8 @@
 - [x] Maintenance history per aircraft
 
 ### 6.13 Simulators (`/admin/simulators`) — NEW
-- [ ] DataTable: Name, Manufacturer, Model, Qualification, Location, Status
-- [ ] Create Simulator → ModalForm
+- [x] DataTable: Name, Manufacturer, Model, Qualification, Location, Status
+- [x] Create Simulator → ModalForm
 
 ### 6.14 Simulator Sessions (`/admin/simulator-sessions`) — NEW
 - [ ] DataTable: Simulator, Student, Instructor, Date, Duration, Status

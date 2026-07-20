@@ -60,6 +60,9 @@ export default function AdminSimulatorsPage() {
 
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedSim, setSelectedSim] = useState<Simulator | null>(null);
+  const [editingSim, setEditingSim] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", manufacturer: "", model_name: "", qualification_type: "", location: "", status: "" });
   const [createForm, setCreateForm] = useState({
     name: "",
     manufacturer: "",
@@ -67,6 +70,18 @@ export default function AdminSimulatorsPage() {
     qualification_type: "",
     location: "",
     status: "available",
+  });
+
+  // ── Detail/edit modal state ──
+  const [selectedSim, setSelectedSim] = useState<Simulator | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    manufacturer: "",
+    model_name: "",
+    qualification_type: "",
+    location: "",
+    status: "",
   });
 
   // ── Auth guard ──
@@ -84,7 +99,7 @@ export default function AdminSimulatorsPage() {
     queryKey: ["admin-simulators"],
     queryFn: async () => {
       const d = await api.get<any>("/simulators/");
-      return (d as any) ?.results || (d as any) || [];
+      return (d as any)?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
   });
@@ -103,6 +118,20 @@ export default function AdminSimulatorsPage() {
     },
     onError: (err: any) => {
       showToast("error", err.message || "Failed to add simulator");
+    },
+  });
+
+  // ── Update mutation ──
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      api.patch(`/simulators/${id}/`, data),
+    onSuccess: () => {
+      showToast("success", "Updated");
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-simulators"] });
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to update simulator");
     },
   });
 
@@ -290,7 +319,23 @@ export default function AdminSimulatorsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable
+            columns={columns}
+            data={filtered}
+            keyField="id"
+            onRowClick={(s) => {
+              setSelectedSim(s as Simulator);
+              setEditing(false);
+              setEditForm({
+                name: s.name,
+                manufacturer: s.manufacturer || "",
+                model_name: s.model_name || "",
+                qualification_type: s.qualification_type || "",
+                location: s.location || "",
+                status: s.status,
+              });
+            }}
+          />
         )}
 
         {/* Create Simulator Modal */}
@@ -402,6 +447,216 @@ export default function AdminSimulatorsPage() {
               </select>
             </div>
           </div>
+        </ModalForm>
+
+        {/* Detail / Edit Simulator Modal */}
+        <ModalForm
+          open={selectedSim !== null}
+          onClose={() => {
+            setSelectedSim(null);
+            setEditing(false);
+          }}
+          title={
+            editing
+              ? `Edit: ${selectedSim?.name}`
+              : selectedSim?.name || ""
+          }
+          footer={
+            editing ? (
+              <>
+                <button
+                  onClick={() => setEditing(false)}
+                  disabled={updateMutation.isPending}
+                  className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!selectedSim) return;
+                    updateMutation.mutate({ id: selectedSim.id, data: editForm });
+                  }}
+                  disabled={updateMutation.isPending || !editForm.name}
+                  className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
+                >
+                  {updateMutation.isPending ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setSelectedSim(null);
+                    setEditing(false);
+                  }}
+                  className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400"
+                >
+                  Edit
+                </button>
+              </>
+            )
+          }
+        >
+          {selectedSim && !editing ? (
+            /* ── View Mode ── */
+            <div className="space-y-6">
+              {/* Details Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Details
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Name</span>
+                    <span className="text-sm text-white">{selectedSim.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Manufacturer</span>
+                    <span className="text-sm text-white">{selectedSim.manufacturer || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Model</span>
+                    <span className="text-sm text-white">{selectedSim.model_name || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Qualification</span>
+                    <span className="text-sm text-white">{selectedSim.qualification_type || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Location</span>
+                    <span className="text-sm text-white">{selectedSim.location || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Status</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${
+                        STATUS_COLORS[selectedSim.status] || "bg-gray-500/10 text-gray-400"
+                      }`}
+                    >
+                      {fmtStatus(selectedSim.status)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Maintenance Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Maintenance
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Last Maintenance</span>
+                    <span className="text-sm text-white">
+                      {selectedSim.last_maintenance
+                        ? new Date(selectedSim.last_maintenance).toLocaleDateString()
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Next Maintenance</span>
+                    <span className="text-sm text-white">
+                      {selectedSim.next_maintenance
+                        ? new Date(selectedSim.next_maintenance).toLocaleDateString()
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Dates
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Created</span>
+                    <span className="text-sm text-white">
+                      {selectedSim.created_at
+                        ? new Date(selectedSim.created_at).toLocaleDateString()
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ── Edit Mode ── */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Manufacturer</label>
+                <input
+                  type="text"
+                  value={editForm.manufacturer}
+                  onChange={(e) => setEditForm((f) => ({ ...f, manufacturer: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Model</label>
+                <input
+                  type="text"
+                  value={editForm.model_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, model_name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Qualification Type</label>
+                <select
+                  value={editForm.qualification_type}
+                  onChange={(e) => setEditForm((f) => ({ ...f, qualification_type: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                >
+                  <option value="">Select...</option>
+                  {QUALIFICATION_TYPES.map((q) => (
+                    <option key={q} value={q}>{q}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={editForm.location}
+                  onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {fmtStatus(s)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </ModalForm>
       </main>
     </div>

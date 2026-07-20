@@ -11,6 +11,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -69,6 +70,9 @@ export default function AdminCertificatesPage() {
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // ── Detail modal state ──
+  const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
 
   // ── Auth guard ──
   useEffect(() => {
@@ -279,8 +283,54 @@ export default function AdminCertificatesPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelectedCert(item as Certificate)} />
         )}
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={selectedCert !== null}
+          onClose={() => setSelectedCert(null)}
+          title={`Certificate: ${selectedCert?.certificate_number || ""}`}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Certificate #</label>
+              <p className="text-white">{selectedCert?.certificate_number || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Student Name</label>
+              <p className="text-white">{selectedCert?.student_name || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Type</label>
+              {selectedCert?.certificate_type ? (
+                <span className={`text-xs px-2 py-0.5 rounded ${TYPE_COLORS[selectedCert.certificate_type] || "bg-gray-500/10 text-gray-400"}`}>
+                  {fmtLabel(selectedCert.certificate_type)}
+                </span>
+              ) : (
+                <p className="text-white">—</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Program</label>
+              <p className="text-white">{selectedCert?.program || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Issue Date</label>
+              <p className="text-white">{formatDate(selectedCert?.issue_date)}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Status</label>
+              {selectedCert?.status ? (
+                <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedCert.status] || "bg-gray-500/10 text-gray-400"}`}>
+                  {fmtLabel(selectedCert.status)}
+                </span>
+              ) : (
+                <p className="text-white">—</p>
+              )}
+            </div>
+          </div>
+        </ModalForm>
       </main>
     </div>
   );

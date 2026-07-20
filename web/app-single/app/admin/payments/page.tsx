@@ -71,6 +71,9 @@ export default function AdminPaymentsPage() {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
 
+  // ── Detail modal ──
+  const [selected, setSelected] = useState<Payment | null>(null);
+
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -346,8 +349,70 @@ export default function AdminPaymentsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Payment)} />
         )}
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={!!selected}
+          onClose={() => setSelected(null)}
+          title={`Payment: ${selected?.invoice_number || ""}`}
+          wide
+          footer={
+            <button
+              onClick={() => setSelected(null)}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+            >
+              {t("common.close", "Close")}
+            </button>
+          }
+        >
+          {selected && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+                  Payment Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <DetailField label="Student" value={selected.student_name} />
+                  <DetailField
+                    label="Amount"
+                    value={`${parseFloat(selected.amount).toLocaleString()} DZD`}
+                  />
+                  <DetailField label="Invoice #" value={selected.invoice_number} />
+                  <DetailField
+                    label="Method"
+                    value={
+                      selected.method
+                        ? selected.method
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (c) => c.toUpperCase())
+                        : "—"
+                    }
+                  />
+                  <DetailField
+                    label="Reference"
+                    value={selected.reference || "—"}
+                  />
+                  <DetailField
+                    label="Date"
+                    value={
+                      selected.created_at
+                        ? new Date(selected.created_at).toLocaleDateString()
+                        : "—"
+                    }
+                  />
+                  <div className="col-span-2">
+                    <DetailField
+                      label="Notes"
+                      value={selected.notes || "—"}
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+        </ModalForm>
 
         {/* Create Payment Modal */}
         <ModalForm
@@ -489,6 +554,17 @@ export default function AdminPaymentsPage() {
           </div>
         </ModalForm>
       </main>
+    </div>
+  );
+}
+
+// ── Detail Field ──────────────────────────────────────────
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm text-white">{value}</p>
     </div>
   );
 }

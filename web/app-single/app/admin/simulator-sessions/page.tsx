@@ -85,6 +85,9 @@ export default function AdminSimulatorSessionsPage() {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
 
+  // ── Detail modal ──
+  const [selected, setSelected] = useState<SimulatorSession | null>(null);
+
   // ── Create modal state ──
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -332,8 +335,73 @@ export default function AdminSimulatorSessionsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as SimulatorSession)} />
         )}
+
+        {/* Detail Modal */}
+        <ModalForm
+          open={!!selected}
+          onClose={() => setSelected(null)}
+          title={`Session: ${selected?.simulator_name || ""}`}
+          wide
+          footer={
+            <button
+              onClick={() => setSelected(null)}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+            >
+              {t("common.close", "Close")}
+            </button>
+          }
+        >
+          {selected && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+                  Session Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <DetailField label="Simulator" value={selected.simulator_name} />
+                  <DetailField
+                    label="Status"
+                    value={
+                      selected.status
+                        ? selected.status
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (c) => c.toUpperCase())
+                        : "—"
+                    }
+                  />
+                  <DetailField label="Student" value={selected.student_name} />
+                  <DetailField label="Instructor" value={selected.instructor_name} />
+                  <DetailField
+                    label="Scheduled Date"
+                    value={
+                      selected.scheduled_date
+                        ? new Date(selected.scheduled_date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"
+                    }
+                  />
+                  <DetailField
+                    label="Duration (hours)"
+                    value={selected.duration != null ? String(selected.duration) : "—"}
+                  />
+                  <div className="col-span-2">
+                    <DetailField
+                      label="Notes"
+                      value={selected.notes || "—"}
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+        </ModalForm>
 
         {/* Create Session Modal */}
         <ModalForm
@@ -443,6 +511,17 @@ export default function AdminSimulatorSessionsPage() {
           </div>
         </ModalForm>
       </main>
+    </div>
+  );
+}
+
+// ── Detail Field ──────────────────────────────────────────
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm text-white">{value}</p>
     </div>
   );
 }
