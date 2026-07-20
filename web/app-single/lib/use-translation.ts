@@ -335,6 +335,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Student Portal",
+    "layout.administrationPortal": "Administration",
     "layout.instructorPortal": "Instructor Portal",
     "layout.directorPortal": "Director Portal",
     "layout.financePortal": "Finance Portal",
@@ -785,6 +786,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Portail Etudiant",
+    "layout.administrationPortal": "Administration",
     "layout.instructorPortal": "Portail Instructeur",
     "layout.directorPortal": "Portail Directeur",
     "layout.financePortal": "Portail Finance",
@@ -1210,6 +1212,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "بوابة الطالب",
+    "layout.administrationPortal": "الإدارة",
     "layout.instructorPortal": "بوابة المدرب",
     "layout.directorPortal": "بوابة المدير",
     "layout.financePortal": "بوابة المالية",

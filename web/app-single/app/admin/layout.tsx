@@ -55,6 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/rooms", label: t("admin.rooms", "Classrooms"), Icon: DoorOpen },
     { href: "/admin/aircraft", label: t("admin.aircraft", "Aircraft"), Icon: Plane },
     { href: "/admin/simulators", label: t("admin.simulators", "Simulators"), Icon: Monitor },
+    { href: "/admin/simulator-sessions", label: t("admin.simulatorSessions", "Sim Sessions"), Icon: Monitor },
     { href: "/admin/exams", label: t("admin.exams", "Exams"), Icon: ClipboardList },
     { href: "/admin/certificates", label: t("admin.certificates", "Certificates"), Icon: Award },
     { href: "/admin/audit-logs", label: t("admin.auditLogs", "Audit Logs"), Icon: ScrollText },

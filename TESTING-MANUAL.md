@@ -373,7 +373,7 @@
 ### 6.18 Settings (`/admin/settings`)
 - [x] Key-value cards by category
 - [x] Edit per setting → ModalForm
-- [ ] **NEW: Backup section** — status indicator + "Trigger Manual Backup" button
+- [x] **NEW: Backup section** — status indicator + "Trigger Manual Backup" button
 
 ### 6.19 Reports (`/admin/reports`) — NEW
 - [x] Tab 1 "Student Reports": summary cards, program pie chart, status bar chart
