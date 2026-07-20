@@ -6,7 +6,7 @@ from .models import SystemSetting, AuditLog
 class SystemSettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemSetting
-        fields = ['id', 'key', 'value', 'updated_at']
+        fields = ['id', 'key', 'value', 'description', 'category', 'updated_at']
 
 
 class AuditLogSerializer(serializers.ModelSerializer):

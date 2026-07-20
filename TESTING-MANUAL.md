@@ -367,8 +367,8 @@
 ### 6.17 Audit Logs (`/admin/audit-logs`)
 - [x] DataTable: Date, User, Action, Entity, IP
 - [x] Action filter
-- [ ] Auto-refresh every 30s
-- [ ] **Export Excel** button
+- [x] Auto-refresh every 30s
+- [x] **Export Excel** button
 
 ### 6.18 Settings (`/admin/settings`)
 - [ ] Key-value cards by category
@@ -376,20 +376,20 @@
 - [ ] **NEW: Backup section** — status indicator + "Trigger Manual Backup" button
 
 ### 6.19 Reports (`/admin/reports`) — NEW
-- [ ] Tab 1 "Student Reports": summary cards, program pie chart, status bar chart
-- [ ] Tab 2 "Financial Reports": invoiced/paid/outstanding cards, status pie chart
-- [ ] Tab 3 "Exam Reports": total exams, attempts, pass rate, avg score
+- [x] Tab 1 "Student Reports": summary cards, program pie chart, status bar chart
+- [x] Tab 2 "Financial Reports": invoiced/paid/outstanding cards, status pie chart
+- [x] Tab 3 "Exam Reports": total exams, attempts, pass rate, avg score
 
 ### 6.20 Communication (`/admin/communication`) — NEW
-- [ ] Tab 1 "Send to Role": role dropdown + title + message → broadcast
-- [ ] Tab 2 "Send to User": user search + title + message → individual notification
-- [ ] Tab 3 "History": last 50 notifications
+- [x] Tab 1 "Send to Role": role dropdown + title + message → broadcast
+- [x] Tab 2 "Send to User": user search + title + message → individual notification
+- [x] Tab 3 "History": last 50 notifications
 
 ### 6.21 Roles (`/admin/roles`) — NEW
-- [ ] DataTable: Role Name, Users, Permissions
-- [ ] Create Role → ModalForm
-- [ ] Click row → permission checkboxes (toggle on/off)
-- [ ] User list per role
+- [x] DataTable: Role Name, Users, Permissions
+- [x] Create Role → ModalForm
+- [x] Click row → permission checkboxes (toggle on/off)
+- [x] User list per role
 
 ---
 
