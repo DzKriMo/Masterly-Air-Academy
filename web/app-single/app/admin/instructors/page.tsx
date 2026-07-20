@@ -11,6 +11,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 
 // ── Types ─────────────────────────────────────────────────
@@ -24,6 +25,8 @@ interface Instructor {
   status: string;
   student_count?: number;
   phone?: string;
+  total_flight_hours?: number;
+  instruction_hours?: number;
 }
 
 interface GroundInstructor extends Instructor {}
@@ -50,6 +53,9 @@ export default function AdminInstructorsPage() {
 
   // ── Tabs ──
   const [activeTab, setActiveTab] = useState<"ground" | "flight">("ground");
+
+  // ── Detail modal ──
+  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
 
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
@@ -291,9 +297,85 @@ export default function AdminInstructorsPage() {
             columns={columns}
             data={filtered}
             keyField="id"
+            onRowClick={(i) => setSelectedInstructor(i as Instructor)}
           />
         )}
       </main>
+
+      {/* Instructor Detail Modal */}
+      <ModalForm
+        open={!!selectedInstructor}
+        onClose={() => setSelectedInstructor(null)}
+        title={selectedInstructor?.name || ''}
+        footer={
+          <button
+            onClick={() => setSelectedInstructor(null)}
+            className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+          >
+            {t("common.close", "Close")}
+          </button>
+        }
+      >
+        {selectedInstructor && (
+          <div className="space-y-6">
+            <section>
+              <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Contact</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Email</p>
+                  <p className="text-sm text-white">{selectedInstructor.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Phone</p>
+                  <p className="text-sm text-white">{selectedInstructor.phone || "—"}</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Professional</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">License #</p>
+                  <p className="text-sm text-white">{selectedInstructor.license_number || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Status</p>
+                  <p className="text-sm text-white">{selectedInstructor.status ? selectedInstructor.status.charAt(0).toUpperCase() + selectedInstructor.status.slice(1).replace(/_/g, " ") : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Total Flight Hours</p>
+                  <p className="text-sm text-white">{selectedInstructor.total_flight_hours ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Instruction Hours</p>
+                  <p className="text-sm text-white">{selectedInstructor.instruction_hours ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Students Assigned</p>
+                  <p className="text-sm text-white">{selectedInstructor.student_count ?? 0}</p>
+                </div>
+              </div>
+            </section>
+
+            {selectedInstructor.qualifications && (Array.isArray(selectedInstructor.qualifications) ? selectedInstructor.qualifications.length > 0 : true) && (
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Qualifications</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Array.isArray(selectedInstructor.qualifications)
+                    ? selectedInstructor.qualifications.map((q: string, i: number) => (
+                        <span key={i} className="text-xs px-2 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{q}</span>
+                      ))
+                    : typeof selectedInstructor.qualifications === 'string'
+                    ? <span className="text-sm text-white">{selectedInstructor.qualifications}</span>
+                    : null
+                  }
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </ModalForm>
     </div>
   );
 }

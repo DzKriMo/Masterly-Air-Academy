@@ -331,7 +331,7 @@
 - [x] Download links
 
 ### 6.9 Instructors (`/admin/instructors`)
-- [ ] Tab switcher: Ground Instructors | Flight Instructors
+- [x] Tab switcher: Ground Instructors | Flight Instructors
 - [x] DataTable per tab with relevant fields
 - [x] FilterBar
 
