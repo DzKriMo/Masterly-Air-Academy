@@ -327,17 +327,17 @@
 
 ### 6.8 Documents (`/admin/documents`)
 - [x] DataTable: Name, Type, Category, Status, Version
-- [ ] Upload Document → ModalForm with file input
+- [x] Upload Document → ModalForm with file input
 - [ ] Download links
 
 ### 6.9 Instructors (`/admin/instructors`)
 - [ ] Tab switcher: Ground Instructors | Flight Instructors
-- [ ] DataTable per tab with relevant fields
-- [ ] FilterBar
+- [x] DataTable per tab with relevant fields
+- [x] FilterBar
 
 ### 6.10 Subjects (`/admin/subjects`)
-- [ ] DataTable: Code, Title, Program, Hours, Status
-- [ ] Click row → detail modal with modules
+- [x] DataTable: Code, Title, Program, Hours, Status
+- [x] Click row → detail modal with modules
 - [ ] **NEW: bibliography, required_documents, prerequisites** fields in detail view
 
 ### 6.11 Classrooms (`/admin/rooms`)

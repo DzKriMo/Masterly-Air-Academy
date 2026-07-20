@@ -228,7 +228,7 @@ export default function AdminDocumentsPage() {
         render: (i) =>
           i.file_url ? (
             <a
-              href={i.file_url}
+              href={`/api/documents/${i.id}/download/`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

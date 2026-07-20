@@ -175,6 +175,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 return qs.none()
         return qs
 
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        doc = self.get_object()
+        from django.core.files.storage import default_storage
+        from django.http import StreamingHttpResponse
+        try:
+            f = default_storage.open(doc.file_url, 'rb')
+            response = StreamingHttpResponse(f, content_type=doc.mime_type or 'application/octet-stream')
+            response['Content-Disposition'] = f'inline; filename="{doc.name}"'
+            return response
+        except Exception:
+            return Response({'error': 'File not found'}, status=404)
+
     @action(detail=False, methods=['post'])
     def upload(self, request):
         file = request.FILES.get('file')
