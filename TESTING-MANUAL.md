@@ -322,7 +322,7 @@
 
 ### 6.7 Contracts (`/admin/contracts`)
 - [x] DataTable: Contract#, Student, Type, Start, End, Status
-- [ ] Create Contract → ModalForm
+- [x] Create Contract → ModalForm
 - [x] **NEW: Generate PDF** button per contract → generates formatted contract PDF
 
 ### 6.8 Documents (`/admin/documents`)

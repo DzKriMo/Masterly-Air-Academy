@@ -58,24 +58,30 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from django.conf import settings
+        from django.db import IntegrityError
         from apps.notifications.services import NotificationService
         year = timezone.now().year
         prefix = f'INV-{year}-'
-        # Find the highest numeric invoice number for this year
-        max_num = 0
-        for inv in Invoice.objects.filter(invoice_number__startswith=prefix):
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            # Find the highest numeric invoice number for this year
+            max_num = 0
+            for inv in Invoice.objects.filter(invoice_number__startswith=prefix):
+                try:
+                    suffix = inv.invoice_number[len(prefix):]
+                    n = int(suffix)
+                    if n > max_num:
+                        max_num = n
+                except (ValueError, IndexError):
+                    pass
+            num = max_num + 1
             try:
-                suffix = inv.invoice_number[len(prefix):]
-                # Only count purely numeric suffixes (skip A001, etc.)
-                n = int(suffix)
-                if n > max_num:
-                    max_num = n
-            except (ValueError, IndexError):
-                pass
-        num = max_num + 1
-        invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=year, num=num))
-        # Auto-notify student that a new invoice was created
-        NotificationService.invoice_created(invoice)
+                invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=year, num=num))
+                NotificationService.invoice_created(invoice)
+                return
+            except IntegrityError:
+                if attempt == max_attempts - 1:
+                    raise
 
     @action(detail=False, methods=['get'])
     def overdue(self, request):
@@ -197,15 +203,24 @@ class ContractViewSet(viewsets.ModelViewSet):
     filterset_fields = ['student', 'status', 'type']
 
     def perform_create(self, serializer):
+        from django.db import IntegrityError
         year = timezone.now().year
-        last = Contract.objects.filter(contract_number__startswith=f'CTR-{year}-').order_by('-contract_number').first()
-        num = 1
-        if last:
+        prefix = f'CTR-{year}-'
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            last = Contract.objects.filter(contract_number__startswith=prefix).order_by('-contract_number').first()
+            num = 1
+            if last:
+                try:
+                    num = int(last.contract_number.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    num = 1
             try:
-                num = int(last.contract_number.split('-')[-1]) + 1
-            except (ValueError, IndexError):
-                num = 1
-        serializer.save(contract_number=f'CTR-{year}-{num:04d}')
+                serializer.save(contract_number=f'{prefix}{num:04d}')
+                return
+            except IntegrityError:
+                if attempt == max_attempts - 1:
+                    raise
 
     @action(detail=True, methods=['post'])
     def generate_pdf(self, request, pk=None):
