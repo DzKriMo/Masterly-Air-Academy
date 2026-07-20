@@ -19,11 +19,15 @@ interface Exam {
   id: string;
   code: string;
   title: string;
-  subject?: string;
+  subject?: any;
   program: string;
-  exam_type: string;
-  questions_count?: number;
+  type: string;
+  question_count?: number;
   status: string;
+  duration?: number;
+  passing_grade?: number;
+  open_date?: string;
+  close_date?: string;
 }
 
 // ── Constants ─────────────────────────────────────────────
@@ -88,8 +92,8 @@ export default function AdminExamsPage() {
     let r = exams;
     if (filterValues.program)
       r = r.filter((e) => e.program === filterValues.program);
-    if (filterValues.exam_type)
-      r = r.filter((e) => e.exam_type === filterValues.exam_type);
+    if (filterValues.type)
+      r = r.filter((e) => e.type === filterValues.type);
     if (filterValues.status)
       r = r.filter((e) => e.status === filterValues.status);
     if (searchValue) {
@@ -119,24 +123,24 @@ export default function AdminExamsPage() {
       { key: "subject", header: "Subject" },
       { key: "program", header: "Program" },
       {
-        key: "exam_type",
+        key: "type",
         header: "Type",
         render: (e) => (
           <span
             className={`text-xs px-2 py-0.5 rounded ${
-              TYPE_COLORS[e.exam_type] || "bg-gray-500/10 text-gray-400"
+              TYPE_COLORS[e.type] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtLabel(e.exam_type)}
+            {fmtLabel(e.type)}
           </span>
         ),
       },
       {
-        key: "questions_count",
+        key: "question_count",
         header: "Questions",
         render: (e) => (
           <span className="text-sm text-white font-mono">
-            {e.questions_count ?? 0}
+            {e.question_count ?? 0}
           </span>
         ),
       },
@@ -162,10 +166,10 @@ export default function AdminExamsPage() {
     if (!exams) return { total: 0, theory: 0, practical: 0, mock: 0, final: 0 };
     return {
       total: exams.length,
-      theory: exams.filter((e) => e.exam_type === "theory").length,
-      practical: exams.filter((e) => e.exam_type === "practical").length,
-      mock: exams.filter((e) => e.exam_type === "mock").length,
-      final: exams.filter((e) => e.exam_type === "final").length,
+      theory: exams.filter((e) => e.type === "theory").length,
+      practical: exams.filter((e) => e.type === "practical").length,
+      mock: exams.filter((e) => e.type === "mock").length,
+      final: exams.filter((e) => e.type === "final").length,
     };
   }, [exams]);
 
@@ -238,7 +242,7 @@ export default function AdminExamsPage() {
               })),
             },
             {
-              key: "exam_type",
+              key: "type",
               label: "All Types",
               options: TYPES.map((t) => ({
                 value: t,
@@ -320,8 +324,8 @@ export default function AdminExamsPage() {
                   <DetailField
                     label="Exam Type"
                     value={
-                      selected.exam_type
-                        ? selected.exam_type
+                      selected.type
+                        ? selected.type
                             .replace(/_/g, " ")
                             .replace(/\b\w/g, (c) => c.toUpperCase())
                         : "—"
@@ -333,7 +337,7 @@ export default function AdminExamsPage() {
                   />
                   <DetailField
                     label="Questions"
-                    value={String(selected.questions_count ?? 0)}
+                    value={String(selected.question_count ?? 0)}
                   />
                 </div>
               </section>

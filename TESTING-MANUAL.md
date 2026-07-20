@@ -358,7 +358,7 @@
 - [ ] Create Session → ModalForm
 
 ### 6.15 Exams (`/admin/exams`)
-- [ ] DataTable: Code, Title, Subject, Program, Type, Status
+- [x] DataTable: Code, Title, Subject, Program, Type, Status
 - [ ] FilterBar: program + type + status
 
 ### 6.16 Certificates (`/admin/certificates`)
