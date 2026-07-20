@@ -22,10 +22,27 @@ interface Aircraft {
   manufacturer: string;
   model: string;
   serial_number?: string;
-  year?: number;
+  year_of_manufacture?: number;
   status: string;
+  airframe_hours?: number;
+  engine_hours?: number;
   total_hours?: number;
+  last_maintenance?: string;
   next_maintenance?: string;
+  insurance_expiry?: string;
+  certification_expiry?: string;
+  base_location?: string;
+}
+
+interface MaintRecord {
+  id: string;
+  type: string;
+  description?: string;
+  start_date: string;
+  end_date?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
 }
 
 // ── Constants ─────────────────────────────────────────────
@@ -87,6 +104,14 @@ export default function AdminAircraftPage() {
     status: "active",
   });
 
+  // ── Detail / Edit / Maintenance modal ──
+  const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
+  const [editingAircraft, setEditingAircraft] = useState(false);
+  const [editStatus, setEditStatus] = useState("");
+  const [maintHistory, setMaintHistory] = useState<MaintRecord[]>([]);
+  const [showScheduleMaint, setShowScheduleMaint] = useState(false);
+  const [maintForm, setMaintForm] = useState({ type: "", description: "", start_date: "", end_date: "", notes: "" });
+
   // ── Auth guard ──
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push("/login");
@@ -123,6 +148,62 @@ export default function AdminAircraftPage() {
       showToast("error", err.message || "Failed to add aircraft");
     },
   });
+
+  // ── Update aircraft mutation ──
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/aircraft/${id}/`, data),
+    onSuccess: () => {
+      showToast("success", "Aircraft updated");
+      setEditingAircraft(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-aircraft"] });
+    },
+    onError: (err: any) => showToast("error", err.message || "Failed to update"),
+  });
+
+  // ── Schedule maintenance mutation ──
+  const scheduleMaintMutation = useMutation({
+    mutationFn: (payload: any) => api.post("/maintenance-records/", payload),
+    onSuccess: () => {
+      showToast("success", "Maintenance scheduled");
+      setShowScheduleMaint(false);
+      setMaintForm({ type: "", description: "", start_date: "", end_date: "", notes: "" });
+      if (selectedAircraft) loadMaintHistory(selectedAircraft.id);
+      queryClient.invalidateQueries({ queryKey: ["admin-aircraft"] });
+    },
+    onError: (err: any) => showToast("error", err.message || "Failed to schedule"),
+  });
+
+  const loadMaintHistory = async (aircraftId: string) => {
+    try {
+      const d = await api.get<any>(`/maintenance-records/?aircraft=${aircraftId}`);
+      setMaintHistory((d as any)?.results || []);
+    } catch { setMaintHistory([]); }
+  };
+
+  const openDetail = (a: Aircraft) => {
+    setSelectedAircraft(a);
+    setEditingAircraft(false);
+    setEditStatus(a.status);
+    setShowScheduleMaint(false);
+    loadMaintHistory(a.id);
+  };
+
+  const saveStatus = () => {
+    if (selectedAircraft) updateMutation.mutate({ id: selectedAircraft.id, data: { status: editStatus } });
+  };
+
+  const handleScheduleMaint = () => {
+    if (!selectedAircraft || !maintForm.type || !maintForm.start_date) return;
+    scheduleMaintMutation.mutate({
+      aircraft: selectedAircraft.id,
+      type: maintForm.type,
+      description: maintForm.description,
+      start_date: maintForm.start_date,
+      end_date: maintForm.end_date || null,
+      notes: maintForm.notes,
+      status: 'scheduled',
+    });
+  };
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -320,7 +401,7 @@ export default function AdminAircraftPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(a) => openDetail(a as Aircraft)} />
         )}
 
         {/* Create Aircraft Modal */}
@@ -435,7 +516,180 @@ export default function AdminAircraftPage() {
             </div>
           </div>
         </ModalForm>
+
+        {/* Aircraft Detail / Edit / Maintenance Modal */}
+        <ModalForm
+          open={!!selectedAircraft}
+          onClose={() => { setSelectedAircraft(null); setEditingAircraft(false); setShowScheduleMaint(false); }}
+          title={selectedAircraft ? `${selectedAircraft.registration} — ${selectedAircraft.manufacturer} ${selectedAircraft.model}` : ''}
+          wide
+          footer={
+            <div className="flex gap-2 w-full justify-between">
+              <div className="flex gap-2">
+                {!editingAircraft && !showScheduleMaint && (
+                  <button onClick={() => { setEditingAircraft(true); setEditStatus(selectedAircraft?.status || ''); }}
+                    className="px-4 py-2 text-sm bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors">
+                    Edit Status
+                  </button>
+                )}
+                {!editingAircraft && !showScheduleMaint && (
+                  <button onClick={() => setShowScheduleMaint(true)}
+                    className="px-4 py-2 text-sm bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-colors">
+                    + Schedule Maintenance
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {editingAircraft ? (
+                  <>
+                    <button onClick={() => setEditingAircraft(false)} disabled={updateMutation.isPending}
+                      className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">
+                      Cancel
+                    </button>
+                    <button onClick={saveStatus} disabled={updateMutation.isPending}
+                      className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">
+                      {updateMutation.isPending ? "Saving..." : "Save"}
+                    </button>
+                  </>
+                ) : showScheduleMaint ? (
+                  <>
+                    <button onClick={() => setShowScheduleMaint(false)} disabled={scheduleMaintMutation.isPending}
+                      className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">
+                      Cancel
+                    </button>
+                    <button onClick={handleScheduleMaint}
+                      disabled={scheduleMaintMutation.isPending || !maintForm.type || !maintForm.start_date}
+                      className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">
+                      {scheduleMaintMutation.isPending ? "Scheduling..." : "Schedule"}
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setSelectedAircraft(null)}
+                    className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
+                    Close
+                  </button>
+                )}
+              </div>
+            </div>
+          }
+        >
+          {selectedAircraft && !showScheduleMaint && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Details</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <Field label="Registration" value={selectedAircraft.registration} mono />
+                  <Field label="Manufacturer" value={selectedAircraft.manufacturer} />
+                  <Field label="Model" value={selectedAircraft.model} />
+                  <Field label="Serial #" value={selectedAircraft.serial_number || "—"} />
+                  <Field label="Year" value={selectedAircraft.year_of_manufacture || "—"} />
+                  <Field label="Base" value={selectedAircraft.base_location || "—"} />
+                  <Field label="Airframe Hours" value={selectedAircraft.airframe_hours ?? "—"} mono />
+                  <Field label="Engine Hours" value={selectedAircraft.engine_hours ?? "—"} mono />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Status</p>
+                    {editingAircraft ? (
+                      <select value={editStatus} onChange={e => setEditStatus(e.target.value)}
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
+                        {STATUSES.map(s => <option key={s} value={s}>{fmtStatus(s)}</option>)}
+                      </select>
+                    ) : (
+                      <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedAircraft.status] || "bg-gray-500/10 text-gray-400"}`}>
+                        {fmtStatus(selectedAircraft.status)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Dates</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Last Maintenance" value={formatDate(selectedAircraft.last_maintenance)} />
+                  <Field label="Next Maintenance" value={formatDate(selectedAircraft.next_maintenance)} />
+                  <Field label="Insurance Expiry" value={formatDate(selectedAircraft.insurance_expiry)} />
+                  <Field label="Certification Expiry" value={formatDate(selectedAircraft.certification_expiry)} />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
+                  Maintenance History ({maintHistory.length})
+                </h3>
+                {maintHistory.length === 0 ? (
+                  <p className="text-sm text-gray-500">No maintenance records found.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {maintHistory.map(m => (
+                      <div key={m.id} className="bg-navy-900 rounded-lg p-3 border border-navy-700 flex items-center justify-between">
+                        <div>
+                          <span className="text-sm text-white font-medium">{m.type}</span>
+                          {m.description && <span className="text-xs text-gray-400 ml-2">— {m.description.slice(0, 60)}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span>{formatDate(m.start_date)}</span>
+                          {m.end_date && <span>→ {formatDate(m.end_date)}</span>}
+                          <span className={`px-2 py-0.5 rounded ${m.status === 'completed' ? 'bg-green-500/10 text-green-400' : m.status === 'in_progress' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {fmtStatus(m.status)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          {showScheduleMaint && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Schedule Maintenance for {selectedAircraft?.registration}</h3>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Type <span className="text-red-400">*</span></label>
+                <select value={maintForm.type} onChange={e => setMaintForm(p => ({ ...p, type: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
+                  <option value="">Select...</option>
+                  {['routine','scheduled','unscheduled','inspection','repair','overhaul','modification','other'].map(t => (
+                    <option key={t} value={t}>{fmtStatus(t)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Description</label>
+                <input type="text" value={maintForm.description} onChange={e => setMaintForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Annual inspection, engine overhaul..."
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Start Date <span className="text-red-400">*</span></label>
+                  <input type="date" value={maintForm.start_date} onChange={e => setMaintForm(p => ({ ...p, start_date: e.target.value }))}
+                    className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">End Date</label>
+                  <input type="date" value={maintForm.end_date} onChange={e => setMaintForm(p => ({ ...p, end_date: e.target.value }))}
+                    className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                <textarea value={maintForm.notes} onChange={e => setMaintForm(p => ({ ...p, notes: e.target.value }))} rows={3}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none resize-none" />
+              </div>
+            </div>
+          )}
+        </ModalForm>
       </main>
+    </div>
+  );
+}
+
+function Field({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+      <p className={`text-sm ${mono ? 'text-white font-mono' : 'text-white'}`}>{value ?? "—"}</p>
     </div>
   );
 }

@@ -37,9 +37,19 @@ class AircraftSerializer(serializers.ModelSerializer):
 
 
 class AircraftListSerializer(serializers.ModelSerializer):
+    total_hours = serializers.SerializerMethodField()
+
     class Meta:
         model = Aircraft
-        fields = ['id', 'registration', 'manufacturer', 'model', 'status', 'airframe_hours', 'next_maintenance']
+        fields = [
+            'id', 'registration', 'manufacturer', 'model', 'serial_number',
+            'year_of_manufacture', 'status', 'airframe_hours', 'engine_hours',
+            'total_hours', 'last_maintenance', 'next_maintenance',
+            'insurance_expiry', 'certification_expiry', 'base_location',
+        ]
+
+    def get_total_hours(self, obj):
+        return float(obj.airframe_hours or 0)
 
 
 class FlightLessonSerializer(serializers.ModelSerializer):
