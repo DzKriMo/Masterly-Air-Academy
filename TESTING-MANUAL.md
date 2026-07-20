@@ -365,8 +365,8 @@
 - [x] DataTable: Certificate#, Student, Type, Program, Date, Status
 
 ### 6.17 Audit Logs (`/admin/audit-logs`)
-- [ ] DataTable: Date, User, Action, Entity, IP
-- [ ] Action filter
+- [x] DataTable: Date, User, Action, Entity, IP
+- [x] Action filter
 - [ ] Auto-refresh every 30s
 - [ ] **Export Excel** button
 

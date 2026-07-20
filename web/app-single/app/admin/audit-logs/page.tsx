@@ -22,6 +22,8 @@ interface AuditLog {
   action: string;
   entity: string;
   entity_id: string;
+  entity_name?: string;
+  summary?: string;
   ip_address: string;
   user_agent?: string;
   created_at: string;
@@ -190,9 +192,9 @@ export default function AdminAuditLogsPage() {
         render: (l) => (
           <div>
             <span className="text-sm text-gray-300">{l.entity}</span>
-            {l.entity_id && (
-              <span className="text-xs text-gray-500 ml-1 font-mono">
-                #{l.entity_id}
+            {l.entity_name && (
+              <span className="text-xs text-gold-500 ml-1">
+                — {l.entity_name}
               </span>
             )}
           </div>
@@ -318,17 +320,19 @@ export default function AdminAuditLogsPage() {
                 <p className="text-white">—</p>
               )}
             </div>
+            {selectedLog?.summary && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Summary</label>
+                <p className="text-white text-sm">{selectedLog.summary}</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm text-gray-400 mb-1">User</label>
-              <p className="text-white">{selectedLog?.user || "—"}</p>
+              <p className="text-white">{selectedLog?.user_email || "—"}</p>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Entity</label>
-              <p className="text-white">{selectedLog?.entity || "—"}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Entity ID</label>
-              <p className="text-white font-mono">{selectedLog?.entity_id || "—"}</p>
+              <p className="text-white">{selectedLog?.entity_name ? `${selectedLog.entity} — ${selectedLog.entity_name}` : selectedLog?.entity || "—"}</p>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">IP Address</label>
@@ -338,11 +342,19 @@ export default function AdminAuditLogsPage() {
               <label className="block text-sm text-gray-400 mb-1">Created At</label>
               <p className="text-white">{formatDateTime(selectedLog?.created_at)}</p>
             </div>
-            {selectedLog?.details && (
+            {(selectedLog?.old_values && Object.keys(selectedLog.old_values).length > 0) || (selectedLog?.new_values && Object.keys(selectedLog.new_values).length > 0) ? (
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Details</label>
-                <p className="text-white text-sm whitespace-pre-wrap">{selectedLog.details}</p>
+                <label className="block text-sm text-gray-400 mb-1">Changes</label>
+                <div className="bg-navy-900 rounded-lg p-3 space-y-1 text-sm">
+                  {selectedLog?.old_values && Object.keys(selectedLog.old_values).length > 0 && (
+                    <p className="text-red-400">← {JSON.stringify(selectedLog.old_values)}</p>
+                  )}
+                  {selectedLog?.new_values && Object.keys(selectedLog.new_values).length > 0 && (
+                    <p className="text-green-400">→ {JSON.stringify(selectedLog.new_values)}</p>
+                  )}
+                </div>
               </div>
+            ) : null}
             )}
           </div>
         </ModalForm>
