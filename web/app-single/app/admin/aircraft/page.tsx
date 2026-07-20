@@ -167,8 +167,16 @@ export default function AdminAircraftPage() {
       showToast("success", "Maintenance scheduled");
       setShowScheduleMaint(false);
       setMaintForm({ type: "", description: "", start_date: "", end_date: "", notes: "" });
-      if (selectedAircraft) loadMaintHistory(selectedAircraft.id);
+      // Refresh aircraft list & detail
       queryClient.invalidateQueries({ queryKey: ["admin-aircraft"] });
+      if (selectedAircraft) {
+        loadMaintHistory(selectedAircraft.id);
+        // Refetch the aircraft to update next_maintenance in the modal
+        api.get<any>(`/aircraft/${selectedAircraft.id}/`).then(d => {
+          const updated = (d as any)?.data || d;
+          setSelectedAircraft(updated);
+        }).catch(() => {});
+      }
     },
     onError: (err: any) => showToast("error", err.message || "Failed to schedule"),
   });

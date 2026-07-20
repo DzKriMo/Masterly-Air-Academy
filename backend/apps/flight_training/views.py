@@ -269,6 +269,16 @@ class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     required_permission = 'fleet.view'
     filterset_fields = ['aircraft', 'type', 'status']
 
+    def perform_create(self, serializer):
+        record = serializer.save()
+        # Update the aircraft's next_maintenance to match this record
+        if record.aircraft:
+            aircraft = record.aircraft
+            aircraft.next_maintenance = record.start_date
+            if aircraft.status == 'active':
+                aircraft.status = 'in_maintenance'
+            aircraft.save(update_fields=['next_maintenance', 'status'])
+
 
 class SimulatorViewSet(viewsets.ModelViewSet):
     queryset = Simulator.objects.all()
