@@ -21,6 +21,12 @@ export interface AuthUser {
   last_login_at: string | null;
   permissions: string[];
   roles?: string[];
+  instructor?: {
+    id: string;
+    authorized_aircraft_types: string[];
+    license_number: string;
+    total_flight_hours: number;
+  };
 }
 
 interface AuthState {

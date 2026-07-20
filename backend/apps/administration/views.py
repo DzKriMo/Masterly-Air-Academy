@@ -35,6 +35,15 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     search_fields = ['invoice_number', 'student__first_name', 'student__last_name']
 
     def get_queryset(self):
+        # Auto-mark past-due invoices as overdue before returning
+        from django.db.models import Q
+        overdue_candidates = Invoice.objects.filter(
+            Q(status='draft') | Q(status='sent'),
+            due_at__lt=timezone.now().date(),
+        )
+        if overdue_candidates.exists():
+            overdue_candidates.update(status='overdue')
+
         qs = Invoice.objects.select_related('student').prefetch_related('payments').all()
         if self.request.user.role == 'student':
             from apps.students.models import Student
@@ -50,14 +59,21 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from django.conf import settings
         from apps.notifications.services import NotificationService
-        last = Invoice.objects.order_by('-created_at').first()
-        num = 1
-        if last and last.invoice_number:
+        year = timezone.now().year
+        prefix = f'INV-{year}-'
+        # Find the highest numeric invoice number for this year
+        max_num = 0
+        for inv in Invoice.objects.filter(invoice_number__startswith=prefix):
             try:
-                num = int(last.invoice_number.split('-')[-1]) + 1
+                suffix = inv.invoice_number[len(prefix):]
+                # Only count purely numeric suffixes (skip A001, etc.)
+                n = int(suffix)
+                if n > max_num:
+                    max_num = n
             except (ValueError, IndexError):
                 pass
-        invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=timezone.now().year, num=num))
+        num = max_num + 1
+        invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=year, num=num))
         # Auto-notify student that a new invoice was created
         NotificationService.invoice_created(invoice)
 
@@ -73,6 +89,32 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(overdue_invoices, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'post'])
+    def payments(self, request, pk=None):
+        invoice = self.get_object()
+        if request.method == 'GET':
+            payments = invoice.payments.all().order_by('-paid_at')
+            return Response(PaymentSerializer(payments, many=True).data)
+        # POST: create a payment for this invoice
+        data = {
+            **request.data,
+            'invoice': str(invoice.id),
+            'student': str(invoice.student.id),
+        }
+        serializer = PaymentSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        payment = serializer.save()
+        # Re-fetch invoice to get fresh payments list (avoids stale queryset cache)
+        invoice = Invoice.objects.prefetch_related('payments').get(id=invoice.id)
+        paid = sum(float(p.amount) for p in invoice.payments.all())
+        if paid >= float(invoice.amount):
+            invoice.status = 'paid'
+            invoice.paid_at = timezone.now()
+        elif paid > 0:
+            invoice.status = 'partially_paid'
+        invoice.save(update_fields=['status', 'paid_at'] if invoice.status == 'paid' else ['status'])
+        return Response(PaymentSerializer(payment).data, status=201)
 
 
 class PaymentViewSet(viewsets.ModelViewSet):

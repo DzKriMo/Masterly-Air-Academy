@@ -78,7 +78,13 @@ class ApiClient {
       this.onLogoutHandler?.();
     }
 
-    const raw = await response.json();
+    // Handle empty responses (e.g. 204 No Content from DELETE)
+    let raw: any = null;
+    try {
+      raw = await response.json();
+    } catch {
+      raw = {};
+    }
 
     if (!response.ok) {
       throw new ApiError(

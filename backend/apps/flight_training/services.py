@@ -95,6 +95,17 @@ class ConflictDetectionService:
         return []
 
     @staticmethod
+    def _is_authorized_for_model(authorized_types: list, model: str) -> bool:
+        """Check if a model matches any authorized type (substring match)."""
+        if not authorized_types or not model:
+            return True  # No restrictions set
+        model_upper = model.upper()
+        for auth in authorized_types:
+            if auth.upper() in model_upper:
+                return True
+        return False
+
+    @staticmethod
     def check_instructor_qualification(instructor_id, aircraft_id):
         from .models import Aircraft
         from apps.students.models import FlightInstructor
@@ -102,7 +113,9 @@ class ConflictDetectionService:
             aircraft = Aircraft.objects.get(id=aircraft_id)
             instructor = FlightInstructor.objects.get(id=instructor_id)
             if aircraft.model and instructor.authorized_aircraft_types:
-                if aircraft.model not in instructor.authorized_aircraft_types:
+                if not ConflictDetectionService._is_authorized_for_model(
+                    instructor.authorized_aircraft_types, aircraft.model
+                ):
                     authorized = ', '.join(instructor.authorized_aircraft_types)
                     return [f'You are not qualified to fly {aircraft.registration} ({aircraft.model}). Your authorized types: {authorized}']
         except (Aircraft.DoesNotExist, FlightInstructor.DoesNotExist):

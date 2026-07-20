@@ -15,12 +15,16 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const fetchUnread = () => {
       api.get("/notifications/unread-count/")
         .then((d: any) => setUnreadNotifCount(d.count ?? 0))
+        .catch(() => {});
+      api.get("/messages/unread-count/")
+        .then((d: any) => setUnreadMsgCount(d.count ?? 0))
         .catch(() => {});
     };
     fetchUnread();
@@ -41,7 +45,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/medical", label: t("student.medical", "Medical"), Icon: Heart },
     { href: "/student/notifications", label: t("student.notifications", "Notifications"), Icon: Bell, badge: unreadNotifCount },
     { href: "/student/certificates", label: t("student.certificates"), Icon: Award },
-    { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare },
+    { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare, badge: unreadMsgCount },
     { href: "/student/profile", label: t("student.profile"), Icon: User },
   ];
 

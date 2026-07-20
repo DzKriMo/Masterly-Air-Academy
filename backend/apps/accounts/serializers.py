@@ -39,7 +39,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Add user info to response
         user = self.user
-        data['user'] = {
+        user_data = {
             'id': str(user.id),
             'name': user.get_full_name() or user.email,
             'email': user.email,
@@ -50,6 +50,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'permissions': list(user.get_all_permissions()),
             'roles': list(user.groups.values_list('name', flat=True)),
         }
+
+        # Include instructor profile for flight/chief instructors
+        if user.role in ('flight_instructor', 'chief_flight_instructor'):
+            try:
+                from apps.students.models import FlightInstructor
+                fi = FlightInstructor.objects.get(user=user)
+                user_data['instructor'] = {
+                    'id': str(fi.id),
+                    'authorized_aircraft_types': fi.authorized_aircraft_types or [],
+                    'license_number': fi.license_number or '',
+                    'total_flight_hours': float(fi.total_flight_hours),
+                }
+            except Exception:
+                pass
+
+        data['user'] = user_data
 
         # Update last login
         user.last_login_at = timezone.now()

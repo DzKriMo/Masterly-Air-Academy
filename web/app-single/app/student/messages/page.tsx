@@ -64,6 +64,18 @@ export default function StudentMessagesPage() {
   const [replyBody, setReplyBody] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
+  // View message modal
+  const [viewMsg, setViewMsg] = useState<Msg | null>(null);
+
+  const openView = (msg: Msg) => {
+    setViewMsg(msg);
+    // Mark as read if unread and in inbox
+    if (activeTab === 'inbox' && !msg.is_read) {
+      api.post(`/messages/${msg.id}/mark_read/`).catch(() => {});
+      setReceived(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
+    }
+  };
+
   useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
 
   // Load recipients (admin and instructor roles - filter client-side)
@@ -269,6 +281,7 @@ export default function StudentMessagesPage() {
                   columns={activeTab === "inbox" ? inboxColumns : sentColumns}
                   data={filteredMessages as any}
                   keyField="id"
+                  onRowClick={(msg) => openView(msg as Msg)}
                   emptyMessage={t('student.noMessagesFilter', 'No messages match your filters.')}
                 />
               </>
@@ -340,6 +353,28 @@ export default function StudentMessagesPage() {
               className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500 resize-none" />
           </div>
         </div>
+      </ModalForm>
+
+      {/* View Message Modal */}
+      <ModalForm
+        open={!!viewMsg}
+        onClose={() => setViewMsg(null)}
+        title={viewMsg?.subject || ''}
+      >
+        {viewMsg && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <span className="text-gray-500">{activeTab === 'inbox' ? t('student.from', 'From') : t('student.to', 'To')}: </span>
+                <span className="text-white font-medium">{activeTab === 'inbox' ? viewMsg.sender_name : viewMsg.receiver_name}</span>
+              </div>
+              <span className="text-xs text-gray-600">{new Date(viewMsg.created_at).toLocaleString()}</span>
+            </div>
+            <div className="bg-navy-900 border border-navy-700 rounded-lg p-4">
+              <p className="text-sm text-gray-300 whitespace-pre-wrap break-words">{viewMsg.body}</p>
+            </div>
+          </div>
+        )}
       </ModalForm>
     </div>
   );

@@ -13,7 +13,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 
-interface Msg { id: string; sender_name: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
+interface Msg { id: string; sender: string; sender_name: string; receiver: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
 
 export default function InstructorMessagesPage() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -30,6 +30,13 @@ export default function InstructorMessagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+  const [viewMsg, setViewMsg] = useState<Msg | null>(null);
+
+  // Reply state
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
 
@@ -66,6 +73,36 @@ export default function InstructorMessagesPage() {
     }
   };
 
+  const handleReply = async () => {
+    if (!replyBody.trim()) { showToast("error", t("instructor.enterMessage", "Please enter a message.")); return; }
+    setSendingReply(true);
+    try {
+      await api.post("/messages/", { receiver: replyTo!.sender, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
+      showToast("success", t("instructor.replySent", "Reply sent successfully"));
+      setReplyOpen(false);
+      setReplyBody("");
+      setReplyTo(null);
+      fetchMessages();
+    } catch (err: any) {
+      showToast("error", err.message || t("instructor.connectionError", "Connection error"));
+    } finally { setSendingReply(false); }
+  };
+
+  const openView = (msg: Msg) => {
+    setViewMsg(msg);
+    // Mark as read if unread and in inbox
+    if (tab === 'inbox' && !msg.is_read) {
+      api.post(`/messages/${msg.id}/mark_read/`).catch(() => {});
+      setReceived(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
+    }
+  };
+
+  const openReply = (msg: Msg) => {
+    setReplyTo(msg);
+    setReplyBody("");
+    setReplyOpen(true);
+  };
+
   const display = tab === "inbox" ? received : sent;
 
   const filtered = useMemo(() => {
@@ -83,14 +120,23 @@ export default function InstructorMessagesPage() {
       <div className="w-2 h-2 rounded-full bg-gold-500" />
     ) : <div className="w-2 h-2" />},
     { key: "contact", header: tab === "inbox" ? t("inbox.from", "From") : t("inbox.to", "To"), render: (m) => (
-      <span className="text-white text-sm font-medium">{tab === "inbox" ? m.sender_name : m.receiver_name}</span>
+      <span className={`text-sm ${tab === 'inbox' && !m.is_read ? 'text-white font-medium' : 'text-gray-400'}`}>{tab === "inbox" ? m.sender_name : m.receiver_name}</span>
     )},
-    { key: "subject", header: t("common.subject", "Subject") },
+    { key: "subject", header: t("common.subject", "Subject"), render: (m) => (
+      <span className={tab === 'inbox' && !m.is_read ? 'text-white font-medium' : 'text-gray-300'}>{m.subject}</span>
+    )},
     { key: "body", header: t("common.message", "Message"), render: (m) => (
       <span className="text-xs text-gray-400">{m.body.length > 80 ? m.body.slice(0, 80) + "..." : m.body}</span>
     )},
     { key: "created_at", header: t("common.date", "Date"), render: (m) => (
       <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleDateString()}</span>
+    )},
+    { key: "actions", header: "", sortable: false, render: (m) => (
+      tab === 'inbox' ? (
+        <button onClick={(e) => { e.stopPropagation(); openReply(m); }} className="px-2 py-1 text-xs text-gold-500 border border-gold-500/30 rounded hover:bg-gold-500/10 transition-colors">
+          {t('instructor.reply', 'Reply')}
+        </button>
+      ) : null
     )},
   ], [tab, t]);
 
@@ -168,6 +214,67 @@ export default function InstructorMessagesPage() {
           </form>
         </ModalForm>
 
+        {/* View Message Modal */}
+        <ModalForm
+          open={!!viewMsg}
+          onClose={() => setViewMsg(null)}
+          title={viewMsg?.subject || ''}
+          footer={viewMsg && tab === 'inbox' ? (
+            <button
+              onClick={() => { setViewMsg(null); openReply(viewMsg); }}
+              className="px-4 py-2 text-sm bg-gold-500 text-navy-900 rounded-lg font-semibold hover:bg-gold-400 transition-colors"
+            >
+              {t('instructor.reply', 'Reply')}
+            </button>
+          ) : undefined}
+        >
+          {viewMsg && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="text-gray-500">{tab === 'inbox' ? t('inbox.from', 'From') : t('inbox.to', 'To')}: </span>
+                  <span className="text-white font-medium">{tab === 'inbox' ? viewMsg.sender_name : viewMsg.receiver_name}</span>
+                </div>
+                <span className="text-xs text-gray-600">{new Date(viewMsg.created_at).toLocaleString()}</span>
+              </div>
+              <div className="bg-navy-900 border border-navy-700 rounded-lg p-4">
+                <p className="text-sm text-gray-300 whitespace-pre-wrap break-words">{viewMsg.body}</p>
+              </div>
+            </div>
+          )}
+        </ModalForm>
+
+        {/* Reply Modal */}
+        <ModalForm
+          open={replyOpen}
+          onClose={() => { setReplyOpen(false); setReplyBody(""); setReplyTo(null); }}
+          title={replyTo ? `${t('instructor.replyTo', 'Reply to')} ${replyTo.sender_name}` : t('instructor.reply', 'Reply')}
+          footer={
+            <>
+              <button onClick={() => { setReplyOpen(false); setReplyBody(""); setReplyTo(null); }} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white transition-colors">
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button onClick={handleReply} disabled={sendingReply} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 rounded-lg font-semibold hover:bg-gold-400 transition-colors disabled:opacity-50">
+                {sendingReply ? t('common.sending', 'Sending...') : t('common.send', 'Send')}
+              </button>
+            </>
+          }>
+          <div className="space-y-4">
+            {replyTo && (
+              <div className="bg-navy-900/50 border border-navy-700 rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-1">{t('instructor.originalMessage', 'Original message')}:</p>
+                <p className="text-sm text-gray-300 font-medium">{replyTo.subject}</p>
+                <p className="text-xs text-gray-500 mt-1">{replyTo.body.slice(0, 200)}</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">{t('common.message', 'Message')} *</label>
+              <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)} rows={5}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500 resize-none" />
+            </div>
+          </div>
+        </ModalForm>
+
         {loading ? (
           <LoadingSkeleton type="table" rows={6} />
         ) : filtered.length === 0 ? (
@@ -177,7 +284,7 @@ export default function InstructorMessagesPage() {
             action={display.length === 0 && tab === "inbox" ? { label: t("inbox.compose", "Compose Message"), onClick: () => setShowCompose(true) } : undefined}
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(msg) => openView(msg as Msg)} />
         )}
       </main>
     </div>

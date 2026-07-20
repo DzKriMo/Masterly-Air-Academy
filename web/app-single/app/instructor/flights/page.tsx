@@ -23,8 +23,9 @@ interface Flight {
   has_preparation: boolean;
 }
 
-interface Aircraft { id: string; registration: string; model: string; }
+interface Aircraft { id: string; registration: string; model: string; status: string; next_maintenance?: string; }
 interface Student { id: string; full_name: string; student_number: string; }
+interface AircraftOption extends Aircraft { disabled: boolean; reason: string; }
 
 const statusClass = (s: string) =>
   s === "scheduled" ? "bg-blue-500/10 text-blue-400" :
@@ -77,6 +78,30 @@ export default function FlightsPage() {
   useEffect(() => {
     fetchFlights();
   }, [isAuthenticated]);
+
+  // Smart aircraft dropdown: show only qualified/available, grey out others with reasons
+  const aircraftOptions = useMemo((): AircraftOption[] => {
+    const authorized = user?.instructor?.authorized_aircraft_types || [];
+    const selectedDate = form.scheduled_date;
+    return aircraft
+      .map(a => {
+        const reasons: string[] = [];
+        if (!['available', 'in_use'].includes(a.status)) {
+          reasons.push(`${t('instructor.statusLabel', 'Status')}: ${a.status}`);
+        }
+        if (authorized.length > 0 && a.model && !authorized.some((t: string) => a.model.toUpperCase().includes(t.toUpperCase()))) {
+          reasons.push(`${t('instructor.notQualified', 'Not qualified')}: ${a.model}`);
+        }
+        if (a.next_maintenance && selectedDate && a.next_maintenance < selectedDate) {
+          reasons.push(`${t('instructor.maintenanceDue', 'Maintenance')}: ${a.next_maintenance}`);
+        }
+        return { ...a, disabled: reasons.length > 0, reason: reasons.join('; ') };
+      })
+      .sort((a, b) => {
+        if (a.disabled !== b.disabled) return a.disabled ? 1 : -1;
+        return a.registration.localeCompare(b.registration);
+      });
+  }, [aircraft, user, form.scheduled_date, t]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setError(null);
@@ -198,7 +223,18 @@ export default function FlightsPage() {
       if (f.status !== "scheduled") return null;
       return (
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => router.push(`/instructor/flights/${f.id}/prep`)} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20">{t('instructor.prep')}</button>
+          <button
+            onClick={() => !f.has_preparation && router.push(`/instructor/flights/${f.id}/prep`)}
+            disabled={f.has_preparation}
+            title={f.has_preparation ? t('instructor.prepAlreadyDone', 'Preparation already completed') : ''}
+            className={`px-3 py-1.5 rounded text-xs border transition-colors ${
+              f.has_preparation
+                ? 'bg-green-500/10 border-green-500/30 text-green-400 cursor-not-allowed'
+                : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+            }`}
+          >
+            {f.has_preparation ? t('instructor.prepDone', 'Prepped ✓') : t('instructor.prep')}
+          </button>
           <button onClick={() => router.push(`/instructor/flights/${f.id}/evaluate`)} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900">{t('instructor.evaluate')}</button>
           <button
             onClick={() => {
@@ -288,8 +324,22 @@ export default function FlightsPage() {
                 <label className="block text-sm text-gray-400 mb-1">{t('instructor.aircraftLabel')}</label>
                 <select value={form.aircraft} onChange={e => setForm({...form, aircraft: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
                   <option value="">{t('instructor.selectOption')}</option>
-                  {aircraft.map(a => <option key={a.id} value={a.id}>{a.registration} ({a.model})</option>)}
+                  {aircraftOptions.filter(a => !a.disabled).map(a => (
+                    <option key={a.id} value={a.id}>{a.registration} ({a.model})</option>
+                  ))}
+                  {aircraftOptions.filter(a => a.disabled).length > 0 && (
+                    <optgroup label={t('instructor.unavailableAircraft', 'Unavailable')}>
+                      {aircraftOptions.filter(a => a.disabled).map(a => (
+                        <option key={a.id} value={a.id} disabled className="text-gray-600">
+                          {a.registration} ({a.model}) — {a.reason}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
+                {form.scheduled_date && aircraftOptions.filter(a => a.disabled).length > 0 && (
+                  <p className="text-xs text-gray-600 mt-1">{aircraftOptions.filter(a => a.disabled).length} aircraft unavailable for selected date</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t('instructor.dateLabel')}</label>
@@ -335,7 +385,18 @@ export default function FlightsPage() {
                   className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
                 >
                   <option value="">{t('instructor.selectOption', 'Keep current aircraft')}</option>
-                  {aircraft.map(a => <option key={a.id} value={a.id}>{a.registration} ({a.model})</option>)}
+                  {aircraftOptions.filter(a => !a.disabled).map(a => (
+                    <option key={a.id} value={a.id}>{a.registration} ({a.model})</option>
+                  ))}
+                  {aircraftOptions.filter(a => a.disabled).length > 0 && (
+                    <optgroup label={t('instructor.unavailableAircraft', 'Unavailable')}>
+                      {aircraftOptions.filter(a => a.disabled).map(a => (
+                        <option key={a.id} value={a.id} disabled className="text-gray-600">
+                          {a.registration} ({a.model}) — {a.reason}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div>

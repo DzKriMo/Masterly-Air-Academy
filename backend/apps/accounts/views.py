@@ -16,20 +16,36 @@ class CurrentUserView(views.APIView):
 
     def get(self, request):
         user = request.user
+        data = {
+            'id': str(user.id),
+            'name': user.get_full_name() or user.email,
+            'email': user.email,
+            'role': user.role,
+            'status': user.status,
+            'is_active': user.is_active,
+            'last_login_at': user.last_login_at,
+            'created_at': user.date_joined,
+            'permissions': user.permissions_list,
+            'roles': user.role_list,
+        }
+
+        # Include instructor profile for flight/chief instructors
+        if user.role in ('flight_instructor', 'chief_flight_instructor'):
+            try:
+                from apps.students.models import FlightInstructor
+                fi = FlightInstructor.objects.get(user=user)
+                data['instructor'] = {
+                    'id': str(fi.id),
+                    'authorized_aircraft_types': fi.authorized_aircraft_types or [],
+                    'license_number': fi.license_number or '',
+                    'total_flight_hours': float(fi.total_flight_hours),
+                }
+            except Exception:
+                pass  # Instructor profile may not exist yet
+
         return Response({
             'success': True,
-            'data': {
-                'id': str(user.id),
-                'name': user.get_full_name() or user.email,
-                'email': user.email,
-                'role': user.role,
-                'status': user.status,
-                'is_active': user.is_active,
-                'last_login_at': user.last_login_at,
-                'created_at': user.date_joined,
-                'permissions': user.permissions_list,
-                'roles': user.role_list,
-            },
+            'data': data,
         })
 
 

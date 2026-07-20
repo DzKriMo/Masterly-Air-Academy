@@ -346,8 +346,8 @@ export default function AdminUsersPage() {
       const q = searchValue.toLowerCase();
       result = result.filter(
         (u) =>
-          u.email.toLowerCase().includes(q) ||
-          u.username.toLowerCase().includes(q) ||
+          (u.email || "").toLowerCase().includes(q) ||
+          (u.username || "").toLowerCase().includes(q) ||
           (u.name || "").toLowerCase().includes(q),
       );
     }

@@ -15,12 +15,16 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const fetchUnread = () => {
       api.get("/notifications/unread-count/")
         .then((d: any) => setUnreadNotifCount(d.count ?? 0))
+        .catch(() => {});
+      api.get("/messages/unread-count/")
+        .then((d: any) => setUnreadMsgCount(d.count ?? 0))
         .catch(() => {});
     };
     fetchUnread();
@@ -39,7 +43,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     { href: "/instructor/courses", label: t("instructor.myCourses"), Icon: BookOpen },
     { href: "/instructor/modules", label: t("instructor.moduleContent"), Icon: FileText },
     { href: "/instructor/students", label: t("instructor.myStudents"), Icon: Users },
-    { href: "/instructor/messages", label: t("instructor.messages"), Icon: MessageSquare, badge: unreadNotifCount },
+    { href: "/instructor/messages", label: t("instructor.messages"), Icon: MessageSquare, badge: unreadMsgCount },
     { href: "/instructor/flights/progress-check", label: t("instructor.progressChecks"), Icon: ClipboardCheck },
     { href: "/instructor/flights/skill-test", label: t("instructor.skillTests"), Icon: Target },
   ];

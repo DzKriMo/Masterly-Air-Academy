@@ -48,3 +48,17 @@ class MessageViewSet(viewsets.ModelViewSet):
     def sent(self, request):
         sent = Message.objects.filter(sender=request.user).order_by('-created_at')
         return Response(MessageSerializer(sent, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = Message.objects.filter(receiver=request.user, is_read=False).count()
+        return Response({'count': count})
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        msg = self.get_object()
+        if not msg.is_read:
+            msg.is_read = True
+            msg.read_at = timezone.now()
+            msg.save(update_fields=['is_read', 'read_at'])
+        return Response(MessageSerializer(msg).data)

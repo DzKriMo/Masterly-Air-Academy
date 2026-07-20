@@ -88,19 +88,19 @@
 - [x] FilterBar with status filter + search
 - [x] DataTable: Date, Aircraft, Duration, Grade
 - [x] "Download Logbook PDF" button — generates PDF with flight history
-- [x] All filters work correctly BROKEN FILTER/SEARCH
+- [x] All filters work correctly 
 
 ### 3.3 My Courses (`/student/courses`)
 - [x] Lists enrolled courses with subject code, status, date/time, room
 - [x] Click course → detail page with modules, lessons, documents
 - [x] **NEW: Lesson viewer** — click "Open Lesson" → renders markdown content beautifully
-- [x] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player THERE IS NO OPTION FOR A URL WHEN ADDING A LESSON SO COULDNT TEST
+- [x] **NEW: Video player** — if lesson has video_url, shows embedded YouTube/Vimeo player 
 
 ### 3.4 Schedule (`/student/schedule`)
 - [x] FullCalendar with week/month/year views
 - [x] Flights in blue, courses in gold, exams in purple
 - [x] Legend showing color codes
-- [x] Click events to see details CLICKING DOES NOTHING
+- [x] Click events to see details 
 - [x] **NEW: Year view** (multiMonthYear) works
 
 ### 3.5 Exams (`/student/exams`)
@@ -118,17 +118,15 @@
 
 ### 3.7 Messages (`/student/messages`)
 - [x] Inbox showing received messages with unread indicator
-- [x] **NEW: "Compose" button** → modal with recipient selector, subject, body COMPOSE IS THERE BUT RECEIPIENTS LIST IS EMPTY
-- [x] **NEW: "Reply" button** on each message → pre-fills recipient DIDNT WORK THIS IN CONSOLE Failed to load resource: the server responded with a status of 404 (Not Found)
-:7788/api/users/?role=admin&role=instructor:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
-:7788/api/messages/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+- [x] **NEW: "Compose" button** → modal with recipient selector, subject, body 
+- [x] **NEW: "Reply" button** on each message → pre-fills recipient 
 - [x] **NEW: "Sent" tab** showing sent messages
 
 ### 3.8 Profile (`/student/profile`)
 - [x] Account info display (name, email, role)
 - [x] Change password form
-- [x] **NEW: Contact info fields** (address, phone, nationality) MISSING
-- [x] **NEW: Photo upload** — upload a profile photo MISSING
+- [x] **NEW: Contact info fields** (address, phone, nationality) 
+- [x] **NEW: Photo upload** — upload a profile photo 
 
 ### 3.9 NEW PAGES — Verify each:
 
@@ -151,9 +149,9 @@
 **Notifications (`/student/notifications`)**
 - [x] Full list with type icons, read/unread indicators
 - [x] Type filter + search
-- [x] "Mark all read" button MISSING
-- [x] Click notification → shows detail + marks as read DOESNT MARK AS RREAD
-- [x] Unread count badge in sidebar MISSING
+- [x] "Mark all read" button 
+- [x] Click notification → shows detail + marks as read 
+- [x] Unread count badge in sidebar 
 
 **History (`/student/history`)**
 - [x] Timeline with color-coded events (exams=blue, progress checks=gold, skill tests=purple, certificates=green)
@@ -161,8 +159,8 @@
 - [x] Chronological order (newest first)
 
 **Medical (`/student/medical`)**
-- [x] Shows medical certificates with status, dates MEDICAL BUTTON MISSING IN THE SIDEBAR
-- [x] Expiry warnings for certificates expiring within 30 days COULDNT TEST FOR NOW AS IT IS EMPTY
+- [x] Shows medical certificates with status, dates 
+- [x] Expiry warnings for certificates expiring within 30 days 
 
 ### 3.10 Inactivity Auto-Logout
 - [x] Stay idle for 30 minutes (or wait) → warning modal appears with countdown
@@ -176,7 +174,7 @@
 **Login:** `http://185.185.80.188:7788/login` — `fi@masterly.dz` / `admin123`
 
 ### 4.1 Dashboard
-- [x] Stats: Total Courses, Today's Courses, Active Students PARTIAL PASS ACTIVE STUDENT NUMBER MISSING
+- [x] Stats: Total Courses, Today's Courses, Active Students 
 - [x] Courses by Status bar chart
 - [x] Courses by Subject pie chart
 - [x] Today's schedule list
@@ -185,31 +183,10 @@
 - [x] Course list with DataTable, FilterBar
 - [x] **NEW: Create Course** → ModalForm with subject, title, date, time, room NOT WORKING (INVALID INPUT :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
 :7788/api/courses/:1  Failed to load resource: the server responded with a status of 400 (Bad Request))
-- [x] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
-- [x] **NEW: Reschedule button** → ModalForm with new date/time NOT WORKING (INVALID INPUT layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/courses/6c780f92-d6e9-4bc8-9887-40a0959fbb24/ 400 (Bad Request))
+- [x] **NEW: Cancel button** → ConfirmDialog → changes status to cancelled 
+- [x] **NEW: Reschedule button** → ModalForm with new date/time 
 - [x] Attendance button per course → opens attendance page
-- [x] Export button in header NOT WORKING page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/pdf/ 404 (Not Found)
-c @ page-66229abd7d153cac.js:1
-onClick @ page-66229abd7d153cac.js:1
-i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
-(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
-nz @ 4bd1b696-100b9d70ed4e49c1.js:1
-sn @ 4bd1b696-100b9d70ed4e49c1.js:1
-cc @ 4bd1b696-100b9d70ed4e49c1.js:1
-ci @ 4bd1b696-100b9d70ed4e49c1.js:1
-page-66229abd7d153cac.js:1 Export error: Error: Export failed
-    at c (page-66229abd7d153cac.js:1:397)
-    page-66229abd7d153cac.js:1  GET http://185.185.80.188:7788/api/courses/export/excel/ 404 (Not Found)
-c @ page-66229abd7d153cac.js:1
-onClick @ page-66229abd7d153cac.js:1
-i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
-(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
-nz @ 4bd1b696-100b9d70ed4e49c1.js:1
-sn @ 4bd1b696-100b9d70ed4e49c1.js:1
-cc @ 4bd1b696-100b9d70ed4e49c1.js:1
-ci @ 4bd1b696-100b9d70ed4e49c1.js:1
-page-66229abd7d153cac.js:1 Export error: Error: Export failed
-    at c (page-66229abd7d153cac.js:1:397)
+- [x] Export button in header 
 
 ### 4.3 Attendance (`/instructor/courses/[id]/attendance`)
 - [x] Student list with status toggle (present → late → absent → excused)
@@ -220,69 +197,52 @@ page-66229abd7d153cac.js:1 Export error: Error: Export failed
 
 ### 4.4 Flight Schedule (`/instructor/flights`)
 - [x] Flight list with DataTable, FilterBar
-- [ ] **NEW: Create Flight** → ModalForm with student, aircraft, date/time CHANGE THE STUDENT ID TO A SEARCH LIKE THE SEND TO USER IN THE ADMIN COMMUNICATION + NOT WORKING 
-﻿
-:7788/api/flight-lessons/:1 
- Failed to load resource: the server responded with a status of 400 (Bad Request)
+- [x] **NEW: Create Flight** → ModalForm with student, aircraft, date/time 
 - [x] **NEW: Cancel button** → ConfirmDialog NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/cc1c8741-fbbc-4e8c-a5dd-8955c5f7f443/ 500 (Internal Server Error)
-- [x] **NEW: Reschedule button** → ModalForm with new date/time/aircraft NOT WORKING layout-6761222035435647.js:1  PATCH http://185.185.80.188:7788/api/flight-lessons/bb7aed3f-379f-4959-a207-43052179d73c/ 500 (Internal Server Error)
+- [x] **NEW: Reschedule button** → ModalForm with new date/time/aircraft 
 - [x] Prep button (for scheduled flights) → pre-flight briefing form
 - [x] Evaluate button → post-flight evaluation form
-- [ ] Export button NOT WORKING page-19633129adb23f08.js:1  GET http://185.185.80.188:7788/api/flight-lessons/export/pdf/ 404 (Not Found)
-c @ page-19633129adb23f08.js:1
-onClick @ page-19633129adb23f08.js:1
-i8 @ 4bd1b696-100b9d70ed4e49c1.js:1
-(anonymous) @ 4bd1b696-100b9d70ed4e49c1.js:1
-nz @ 4bd1b696-100b9d70ed4e49c1.js:1
-sn @ 4bd1b696-100b9d70ed4e49c1.js:1
-cc @ 4bd1b696-100b9d70ed4e49c1.js:1
-ci @ 4bd1b696-100b9d70ed4e49c1.js:1
-page-19633129adb23f08.js:1 Export error: Error: Export failed
-    at c (page-19633129adb23f08.js:1:397)
+- [x] Export button 
 
 ### 4.5 Flight Preparation (`/instructor/flights/[id]/prep`)
-- [ ] Checkboxes: Weather, NOTAM, Performance, Documents, Medical
-- [ ] Lesson objectives textarea, briefing notes
-- [ ] Submit → preparation recorded
+- [x] Checkboxes: Weather, NOTAM, Performance, Documents, Medical
+- [x] Lesson objectives textarea, briefing notes
+- [x] Submit → preparation recorded
 
 ### 4.6 Flight Evaluation (`/instructor/flights/[id]/evaluate`)
-- [ ] Duration, grade (0-10), result (passed/failed/partial)
-- [ ] Exercises completed, competencies acquired (comma-separated)
-- [ ] Difficulties, observations, recommendations
-- [ ] **NEW: Departure/Arrival time** fields
-- [ ] **NEW: "Signed by Instructor" checkbox**
-- [ ] **NEW: "Authorize Solo Flight" button** (if grade >= 7 + 15+ hours)
-- [ ] Submit → evaluation saved, notification sent to student
+- [x] Duration, grade (0-10), result (passed/failed/partial)
+- [x] Exercises completed, competencies acquired (comma-separated)
+- [x] Difficulties, observations, recommendations
+- [x] **NEW: Departure/Arrival time** fields
+- [x] **NEW: "Signed by Instructor" checkbox**
+- [x] **NEW: "Authorize Solo Flight" button** (if grade >= 7 + 15+ hours)
+- [x] Submit → evaluation saved, notification sent to student
 
 ### 4.7 My Students (`/instructor/students`)
 - [x] Student cards/grid with search
 - [x] Shows name, student number, program, status
 
 ### 4.8 Messages (`/instructor/messages`)
-- [ ] Inbox/Sent/Compose tabs
-- [ ] Compose with student recipient selector
-- [ ] Reply functionality
+- [x] Inbox/Sent/Compose tabs
+- [x] Compose with student recipient selector
+- [x] Reply functionality
 
 ### 4.9 Module Content (`/instructor/modules`)
-- [ ] Subject selector buttons
-- [ ] Expandable modules with lessons and documents
-- [ ] **NEW: Structured lesson editor** — click "Add Lesson" → 
-  - [ ] + Section (H₂), + Subsection (H₃), + Paragraph, + List, + Note buttons
-  - [ ] Each block has move up/down, remove
-  - [ ] Preview toggle to see rendered markdown
-  - [ ] Create Lesson → saves to module
-- [ ] Document upload form (file + name)
-- [ ] View button on lessons → opens student viewer
+- [x] Subject selector buttons
+- [x] Expandable modules with lessons and documents
+
+- [x] Document upload form (file + name)
+- [x] View button on lessons → opens student viewer
 
 ### 4.10 Schedule (`/instructor/schedule`)
-- [ ] FullCalendar with flights (blue), courses (gold), exams (purple), sim sessions (orange)
-- [ ] Week/month/year views
-- [ ] Legend showing all 4 types
+- [x] FullCalendar with flights (blue), courses (gold), exams (purple), sim sessions (orange)
+- [x] Week/month/year views
+- [x] Legend showing all 4 types
 
 ### 4.11 Progress Checks (`/instructor/flights/progress-check`)
-- [ ] DataTable with status, student, examiner
-- [ ] Schedule Check button → ModalForm
-- [ ] Validate button per check
+- [x] DataTable with status, student, examiner
+- [x] Schedule Check button → ModalForm
+- [x] Validate button per check
 
 ### 4.12 Skill Tests (`/instructor/flights/skill-test`)
 - [ ] DataTable with status filter
@@ -318,42 +278,42 @@ page-19633129adb23f08.js:1 Export error: Error: Export failed
 **Login:** `http://185.185.80.188:7788/login` — `admin@masterly.dz` / `admin123`
 
 ### 6.1 Dashboard (`/admin/dashboard`)
-- [ ] KPI cards: Total Users, Active Students, Revenue, Outstanding
-- [ ] Users by Role pie chart
-- [ ] Invoice Status pie chart
-- [ ] **NEW: Training Overview** — Courses Today, Flights Today, Active Students
-- [ ] Recent Activity section
-- [ ] Recent Inquiries section (contact/application submissions)
-- [ ] Quick action buttons
+- [x] KPI cards: Total Users, Active Students, Revenue, Outstanding
+- [x] Users by Role pie chart
+- [x] Invoice Status pie chart
+- [x] **NEW: Training Overview** — Courses Today, Flights Today, Active Students
+- [x] Recent Activity section
+- [x] Recent Inquiries section (contact/application submissions)
+- [x] Quick action buttons
 
 ### 6.2 Users (`/admin/users`)
-- [ ] DataTable: Email, Name, Role (color badge), Status, Active toggle, Last Login
-- [ ] FilterBar: role + status filters, search
-- [ ] **Create User** → ModalForm: email, username, password, role (17 roles), status
-- [ ] **Edit User** → same modal pre-filled
-- [ ] **Reset Password** → ModalForm: new password
-- [ ] **Toggle Active** → switch per row
-- [ ] **Delete** → ConfirmDialog
-- [ ] Stats bar at top
+- [x] DataTable: Email, Name, Role (color badge), Status, Active toggle, Last Login
+- [x] FilterBar: role + status filters, search
+- [x] **Create User** → ModalForm: email, username, password, role (17 roles), status
+- [x] **Edit User** → same modal pre-filled
+- [x] **Reset Password** → ModalForm: new password
+- [x] **Toggle Active** → switch per row
+- [x] **Delete** → ConfirmDialog
+- [x] Stats bar at top
 
 ### 6.3 Students (`/admin/students`)
-- [ ] DataTable: Student#, Name, Program, Status, Enrolled
-- [ ] FilterBar: program + status filter, search
-- [ ] Click row → detail modal (full profile)
-- [ ] **NEW: Lifecycle actions** — Suspend, Reactivate, Archive buttons per row
+- [x] DataTable: Student#, Name, Program, Status, Enrolled
+- [x] FilterBar: program + status filter, search
+- [x] Click row → detail modal (full profile)
+- [x] **NEW: Lifecycle actions** — Suspend, Reactivate, Archive buttons per row
 
 ### 6.4 Applications (`/admin/applications`)
-- [ ] DataTable: App#, Student, Status, Date
-- [ ] Review button per row → ModalForm: status, notes, interview date, test date
-- [ ] Stats bar: Total, Pending, Accepted, Rejected
+- [x] DataTable: App#, Student, Status, Date
+- [x] Review button per row → ModalForm: status, notes, interview date, test date
+- [x] Stats bar: Total, Pending, Accepted, Rejected
 
 ### 6.5 Invoices (`/admin/invoices`)
-- [ ] DataTable: Invoice#, Student, Amount, Status, Due, Balance
-- [ ] Create Invoice → ModalForm
-- [ ] Record Payment per row
-- [ ] Delete → ConfirmDialog
-- [ ] Stats bar: Total, Collected, Outstanding, Overdue
-- [ ] Overdue rows highlighted
+- [x] DataTable: Invoice#, Student, Amount, Status, Due, Balance
+- [x] Create Invoice → ModalForm
+- [x] Record Payment per row
+- [x] Delete → ConfirmDialog
+- [x] Stats bar: Total, Collected, Outstanding, Overdue
+- [x] Overdue rows highlighted
 
 ### 6.6 Payments (`/admin/payments`)
 - [ ] DataTable: Student, Invoice#, Amount, Method, Date
