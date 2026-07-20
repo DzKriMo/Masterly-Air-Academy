@@ -19,8 +19,8 @@ interface Instructor {
   id: string;
   name: string;
   email: string;
-  license?: string;
-  qualifications?: string;
+  license_number?: string;
+  qualifications?: any;
   status: string;
   student_count?: number;
   phone?: string;
@@ -96,7 +96,7 @@ export default function AdminInstructorsPage() {
         (i) =>
           i.name?.toLowerCase().includes(q) ||
           i.email?.toLowerCase().includes(q) ||
-          (i.license || "").toLowerCase().includes(q)
+          (i.license_number || "").toLowerCase().includes(q)
       );
     }
     return r;
@@ -120,7 +120,7 @@ export default function AdminInstructorsPage() {
         header: "License / Quals",
         render: (i) => (
           <span className="text-xs text-gray-300">
-            {i.license || i.qualifications || "—"}
+            {i.license_number || (typeof i.qualifications === 'string' ? i.qualifications : Array.isArray(i.qualifications) ? i.qualifications.join(', ') : '') || "—"}
           </span>
         ),
       },

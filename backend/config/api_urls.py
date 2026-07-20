@@ -38,7 +38,7 @@ from apps.quality_safety.views import (
     QualityDashboardView,
 )
 from apps.quality_safety.serializers import QualityDocumentSerializer
-from apps.students.views import StudentViewSet, MedicalCertificateViewSet, AdminProfileViewSet, FlightInstructorViewSet
+from apps.students.views import StudentViewSet, MedicalCertificateViewSet, AdminProfileViewSet, FlightInstructorViewSet, GroundInstructorViewSet
 from apps.exams.serializers import CertificateSerializer
 from apps.notifications.views import NotificationViewSet, MessageViewSet
 from apps.core.views import SystemSettingViewSet
@@ -685,6 +685,7 @@ router.register(r'module-exercises', ModuleExerciseViewSet)
 router.register(r'ground-evaluations', GroundEvaluationViewSet)
 router.register(r'quiz-attempts', QuizAttemptViewSet)
 router.register(r'flight-instructors', FlightInstructorViewSet)
+router.register(r'ground-instructors', GroundInstructorViewSet, basename='ground-instructor')
 router.register(r'admin-profiles', AdminProfileViewSet)
 router.register(r'system-settings', SystemSettingViewSet)
 router.register(r'notifications', NotificationViewSet, basename='notification')

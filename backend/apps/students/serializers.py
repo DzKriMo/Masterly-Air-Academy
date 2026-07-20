@@ -52,9 +52,34 @@ class MedicalCertificateSerializer(serializers.ModelSerializer):
 
 
 class FlightInstructorSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    email = serializers.CharField(source='user.email', read_only=True)
+    phone = serializers.CharField(source='user.phone', read_only=True, allow_null=True)
+    qualifications = serializers.JSONField(source='qualifications', read_only=True)
+    student_count = serializers.SerializerMethodField()
+
     class Meta:
         model = FlightInstructor
-        fields = ['id', 'first_name', 'last_name', 'license_number', 'status', 'total_flight_hours', 'instruction_hours']
+        fields = ['id', 'name', 'email', 'phone', 'license_number', 'qualifications', 'status', 'total_flight_hours', 'instruction_hours', 'student_count']
+
+    def get_name(self, obj):
+        return f'{obj.first_name} {obj.last_name}'
+
+    def get_student_count(self, obj):
+        return obj.assigned_students.count()
+
+
+class GroundInstructorSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    email = serializers.CharField()
+    phone = serializers.CharField(allow_null=True, default='')
+    license_number = serializers.CharField(allow_null=True, default='')
+    qualifications = serializers.ListField(default=list)
+    status = serializers.CharField()
+    total_flight_hours = serializers.FloatField(default=0)
+    instruction_hours = serializers.FloatField(default=0)
+    student_count = serializers.IntegerField(default=0)
 
 
 class AdminProfileSerializer(serializers.ModelSerializer):

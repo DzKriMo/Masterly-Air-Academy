@@ -75,3 +75,31 @@ class FlightInstructorViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'students.view'
     search_fields = ['first_name', 'last_name']
+
+
+class GroundInstructorViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'students.view'
+
+    def list(self, request):
+        from django.contrib.auth import get_user_model
+        from .serializers import GroundInstructorSerializer
+        User = get_user_model()
+        instructors = User.objects.filter(
+            role__in=['ground_instructor', 'chief_ground_instructor']
+        ).values('id', 'email', 'phone', 'status', 'first_name', 'last_name')
+        data = []
+        for u in instructors:
+            data.append({
+                'id': str(u['id']),
+                'name': f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or u['email'],
+                'email': u['email'],
+                'phone': u.get('phone') or '',
+                'license_number': '',
+                'qualifications': [],
+                'status': u.get('status', 'active'),
+                'total_flight_hours': 0,
+                'instruction_hours': 0,
+                'student_count': 0,
+            })
+        return Response(GroundInstructorSerializer(data, many=True).data)

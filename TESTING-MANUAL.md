@@ -328,7 +328,7 @@
 ### 6.8 Documents (`/admin/documents`)
 - [x] DataTable: Name, Type, Category, Status, Version
 - [x] Upload Document → ModalForm with file input
-- [ ] Download links
+- [x] Download links
 
 ### 6.9 Instructors (`/admin/instructors`)
 - [ ] Tab switcher: Ground Instructors | Flight Instructors
