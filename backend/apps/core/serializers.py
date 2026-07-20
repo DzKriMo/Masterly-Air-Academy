@@ -65,9 +65,10 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
     def get_summary(self, obj):
         """Generate a human-readable one-line summary."""
-        user = obj.user_email or 'System'
+        user = obj.user.email if obj.user else 'System'
         action = obj.get_action_display() if hasattr(obj, 'get_action_display') else obj.action
         entity_label = obj.entity
-        if obj.entity_name:
-            entity_label = f'{obj.entity} "{obj.entity_name}"'
+        name = self.get_entity_name(obj)
+        if name:
+            entity_label = f'{obj.entity} "{name}"'
         return f'{user} {action.lower()} {entity_label}'
