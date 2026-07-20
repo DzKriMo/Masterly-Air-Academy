@@ -4,6 +4,8 @@ from .models import SystemSetting, AuditLog
 
 
 class SystemSettingSerializer(serializers.ModelSerializer):
+    key = serializers.CharField(read_only=True)
+
     class Meta:
         model = SystemSetting
         fields = ['id', 'key', 'value', 'description', 'category', 'updated_at']

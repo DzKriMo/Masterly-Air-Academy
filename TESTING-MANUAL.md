@@ -371,8 +371,8 @@
 - [x] **Export Excel** button
 
 ### 6.18 Settings (`/admin/settings`)
-- [ ] Key-value cards by category
-- [ ] Edit per setting → ModalForm
+- [x] Key-value cards by category
+- [x] Edit per setting → ModalForm
 - [ ] **NEW: Backup section** — status indicator + "Trigger Manual Backup" button
 
 ### 6.19 Reports (`/admin/reports`) — NEW
