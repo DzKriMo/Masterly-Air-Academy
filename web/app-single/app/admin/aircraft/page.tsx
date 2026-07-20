@@ -176,8 +176,12 @@ export default function AdminAircraftPage() {
   const loadMaintHistory = async (aircraftId: string) => {
     try {
       const d = await api.get<any>(`/maintenance-records/?aircraft=${aircraftId}`);
-      setMaintHistory((d as any)?.results || []);
-    } catch { setMaintHistory([]); }
+      const results = (d as any)?.results || (Array.isArray(d) ? d : []);
+      setMaintHistory(results);
+    } catch (err) {
+      console.error('Failed to load maintenance history:', err);
+      setMaintHistory([]);
+    }
   };
 
   const openDetail = (a: Aircraft) => {

@@ -346,8 +346,8 @@
 
 ### 6.12 Aircraft (`/admin/aircraft`)
 - [x] DataTable: Registration, Manufacturer, Model, Status, Hours
-- [ ] Create Aircraft → ModalForm
-- [ ] Maintenance history per aircraft
+- [x] Create Aircraft → ModalForm
+- [x] Maintenance history per aircraft
 
 ### 6.13 Simulators (`/admin/simulators`) — NEW
 - [ ] DataTable: Name, Manufacturer, Model, Qualification, Location, Status
