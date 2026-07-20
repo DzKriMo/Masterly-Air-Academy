@@ -605,12 +605,18 @@ def trigger_backup(request):
     """POST /api/system/backup/ — trigger a manual database backup."""
     import subprocess, os, gzip
     from django.conf import settings
+    from django.db import connections
     try:
+        db_settings = settings.DATABASES['default']
+        env = os.environ.copy()
+        env['PGPASSWORD'] = db_settings['PASSWORD']
         result = subprocess.run(
-            ['docker', 'compose', 'exec', '-T', 'db', 'pg_dump', '-U', 'masterly', 'masterly'],
-            capture_output=True, text=True, timeout=60,
-            cwd=os.path.join(settings.BASE_DIR, '..')
+            ['pg_dump', '-h', db_settings['HOST'], '-p', str(db_settings['PORT']),
+             '-U', db_settings['USER'], db_settings['NAME']],
+            capture_output=True, text=True, timeout=60, env=env
         )
+        if result.returncode != 0:
+            return Response({'error': result.stderr or 'pg_dump failed'}, status=500)
         # Save to backup dir
         backup_dir = os.path.join(settings.BASE_DIR, '..', 'backups')
         os.makedirs(backup_dir, exist_ok=True)
