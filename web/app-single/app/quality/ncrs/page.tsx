@@ -28,6 +28,8 @@ export default function NCRsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ title: "", description: "", severity: "major", audit: "", responsible: "", due_date: "" });
+  const [closeNcr, setCloseNcr] = useState<any>(null);
+  const [closeForm, setCloseForm] = useState({ root_cause: "", closing_notes: "" });
   const { t } = useTranslation();
 
   const { data: ncrs=[], isLoading } = useQuery({
@@ -58,6 +60,17 @@ export default function NCRsPage() {
       setEditing(null);
       setForm({ title: "", description: "", severity: "major", audit: "", responsible: "", due_date: "" });
       showToast("success", editing ? t('quality.ncrUpdated', 'NCR updated.') : t('quality.ncrCreated', 'NCR created.'));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.post(`/non-conformities/${id}/close/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quality-ncrs"] });
+      setCloseNcr(null);
+      setCloseForm({ root_cause: "", closing_notes: "" });
+      showToast("success", t('quality.ncrClosed', 'NCR closed.'));
     },
     onError: (e: Error) => showToast("error", e.message),
   });
@@ -129,7 +142,10 @@ export default function NCRsPage() {
       sortable: false,
       render: (n) => (
         n.status === "open" ? (
-          <button onClick={(e) => { e.stopPropagation(); openEdit(n); }} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">{t('common.edit', 'Edit')}</button>
+          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => openEdit(n)} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">{t('common.edit', 'Edit')}</button>
+            <button onClick={() => { setCloseNcr(n); setCloseForm({ root_cause: "", closing_notes: "" }); }} className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded text-xs hover:bg-green-500/20 transition-colors">{t('quality.close', 'Close')}</button>
+          </div>
         ) : null
       ),
     },
@@ -161,6 +177,32 @@ export default function NCRsPage() {
           </select>
           <input value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})} type="datetime-local" className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"/>
         </form>
+      </ModalForm>
+
+      {/* Close NCR Modal */}
+      <ModalForm
+        open={!!closeNcr}
+        onClose={() => setCloseNcr(null)}
+        title={`Close NCR: ${closeNcr?.title || ''}`}
+        footer={
+          <>
+            <button onClick={() => setCloseNcr(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">{t('common.cancel', 'Cancel')}</button>
+            <button onClick={() => closeNcr && closeMutation.mutate({ id: closeNcr.id, data: closeForm })} disabled={closeMutation.isPending || !closeForm.root_cause} className="px-6 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-lg text-sm">
+              {closeMutation.isPending ? t('common.loading', '...') : t('quality.confirmClose', 'Confirm Close')}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('quality.rootCause', 'Root Cause')} <span className="text-red-400">*</span></label>
+            <textarea value={closeForm.root_cause} onChange={e => setCloseForm(p => ({ ...p, root_cause: e.target.value }))} rows={3} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder={t('quality.rootCausePlaceholder', 'Describe the root cause...')} />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('quality.closingNotes', 'Closing Notes')}</label>
+            <textarea value={closeForm.closing_notes} onChange={e => setCloseForm(p => ({ ...p, closing_notes: e.target.value }))} rows={2} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+          </div>
+        </div>
       </ModalForm>
 
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:ncrs.length===0?<EmptyState message={t('quality.noNcrs', 'No NCRs found.')}/>:<>

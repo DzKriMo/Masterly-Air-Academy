@@ -401,14 +401,14 @@
 - [x] Tabbed layout showing all 6 categories (expandable)
 - [x] Export button
 - [x] **NEW: Upcoming Deadlines** section — color-coded by urgency
-- [ ] Risk matrix (5×5) on risks tab
+- [x] Risk matrix (5×5) on risks tab
 
 ### 7.2 Audits (`/quality/audits`)
 - [x] DataTable: Title, Type, Scope, Status
 - [x] **NEW: Create Audit** → ModalForm with type dropdown (5 types), checklist items
 - [x] **NEW: Checklist items** — add/remove dynamic checklist in create/edit form
 - [x] Edit button per row
-- [ ] PDF download per audit
+- [x] PDF download per audit
 
 ### 7.3 NCRs (`/quality/ncrs`)
 - [x] DataTable with severity pie chart
@@ -423,19 +423,19 @@
 - [ ] Close button → requires closing_notes
 
 ### 7.5 Risk Assessments (`/quality/risks`)
-- [ ] 5×5 risk matrix visualization (Probability × Severity)
-- [ ] **NEW: Create Risk** → ModalForm
+- [x] 5×5 risk matrix visualization (Probability × Severity)
+- [x] **NEW: Create Risk** → ModalForm
 - [ ] Edit button
-- [ ] Color-coded cells
+- [x] Color-coded cells
 
 ### 7.6 Safety Events (`/quality/safety`)
-- [ ] DataTable with confidential indicator
-- [ ] Report Event form (already had create)
-- [ ] **NEW: Investigation workflow**:
-  - [ ] "Investigate" button (when status=reported)
-  - [ ] "Analyze" button → modal with analysis textarea (when status=investigating)
-  - [ ] "Resolve" button → ConfirmDialog (when status=analyzed)
-- [ ] Status colors: reported=gray, investigating=blue, analyzed=purple, resolved=green, closed=dark
+- [x] DataTable with confidential indicator
+- [x] Report Event form (already had create)
+- [x] **NEW: Investigation workflow**:
+  - [x] "Investigate" button (when status=reported)
+  - [x] "Analyze" button → modal with analysis textarea (when status=investigating)
+  - [x] "Resolve" button → ConfirmDialog (when status=analyzed)
+- [x] Status colors: reported=gray, investigating=blue, analyzed=purple, resolved=green, closed=dark
 
 ### 7.7 Quality Documents (`/quality/documents`)
 - [ ] DataTable with author, approver, version, revision date
