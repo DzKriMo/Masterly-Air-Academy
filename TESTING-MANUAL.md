@@ -398,28 +398,28 @@
 **Login:** `qm@masterly.dz` / `admin123`
 
 ### 7.1 Dashboard (`/quality/dashboard`)
-- [ ] Tabbed layout showing all 6 categories (expandable)
-- [ ] Export button
-- [ ] **NEW: Upcoming Deadlines** section — color-coded by urgency
+- [x] Tabbed layout showing all 6 categories (expandable)
+- [x] Export button
+- [x] **NEW: Upcoming Deadlines** section — color-coded by urgency
 - [ ] Risk matrix (5×5) on risks tab
 
 ### 7.2 Audits (`/quality/audits`)
-- [ ] DataTable: Title, Type, Scope, Status
-- [ ] **NEW: Create Audit** → ModalForm with type dropdown (5 types), checklist items
-- [ ] **NEW: Checklist items** — add/remove dynamic checklist in create/edit form
-- [ ] Edit button per row
+- [x] DataTable: Title, Type, Scope, Status
+- [x] **NEW: Create Audit** → ModalForm with type dropdown (5 types), checklist items
+- [x] **NEW: Checklist items** — add/remove dynamic checklist in create/edit form
+- [x] Edit button per row
 - [ ] PDF download per audit
 
 ### 7.3 NCRs (`/quality/ncrs`)
-- [ ] DataTable with severity pie chart
-- [ ] **NEW: Create NCR** → ModalForm with auto-generated NCR number
-- [ ] Edit button per row
+- [x] DataTable with severity pie chart
+- [x] **NEW: Create NCR** → ModalForm with auto-generated NCR number
+- [x] Edit button per row
 - [ ] Close button → requires root_cause
 
 ### 7.4 CAPAs (`/quality/capas`)
-- [ ] DataTable with type (corrective/preventive) badges, auto-generated CAPA number
-- [ ] **NEW: Create CAPA** → ModalForm
-- [ ] Edit button
+- [x] DataTable with type (corrective/preventive) badges, auto-generated CAPA number
+- [x] **NEW: Create CAPA** → ModalForm
+- [x] Edit button
 - [ ] Close button → requires closing_notes
 
 ### 7.5 Risk Assessments (`/quality/risks`)
