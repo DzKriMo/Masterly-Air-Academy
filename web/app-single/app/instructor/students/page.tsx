@@ -41,7 +41,7 @@ export default function InstructorStudentsPage() {
     if (filterValues.status) result = result.filter(s => s.status === filterValues.status);
     if (searchValue) {
       const q = searchValue.toLowerCase();
-      result = result.filter(s => s.full_name.toLowerCase().includes(q) || s.student_number.includes(q));
+      result = result.filter(s => (s.full_name || "").toLowerCase().includes(q) || (s.student_number || "").includes(q));
     }
     return result;
   }, [students, filterValues, searchValue]);

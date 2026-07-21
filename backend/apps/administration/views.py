@@ -17,6 +17,12 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status', 'student']
     search_fields = ['application_number', 'student__first_name', 'student__last_name']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        return qs
+
     @action(detail=True, methods=['post'])
     def review(self, request, pk=None):
         app = self.get_object()
@@ -225,6 +231,12 @@ class ContractViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'documents.view'
     filterset_fields = ['student', 'status', 'type']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        return qs
 
     def perform_create(self, serializer):
         from django.db import IntegrityError

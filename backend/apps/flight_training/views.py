@@ -213,6 +213,24 @@ class FlightPreparationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(flight_lesson__student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            from apps.students.models import FlightInstructor
+            try:
+                fi = FlightInstructor.objects.get(user=self.request.user)
+                return qs.filter(flight_lesson__instructor=fi)
+            except FlightInstructor.DoesNotExist:
+                return qs.none()
+        return qs
+
 
 class ResourceBookingViewSet(viewsets.ModelViewSet):
     queryset = ResourceBooking.objects.all()
@@ -220,6 +238,14 @@ class ResourceBookingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'schedule.view'
     filterset_fields = ['resource_type', 'status']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(created_by=self.request.user)
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(created_by=self.request.user)
+        return qs
 
 
 class InstructorAvailabilityViewSet(viewsets.ModelViewSet):
@@ -296,3 +322,21 @@ class SimulatorSessionViewSet(viewsets.ModelViewSet):
     required_permission = 'flight_training.view'
     filterset_fields = ['simulator', 'student', 'instructor', 'status']
     search_fields = ['simulator__name', 'student__first_name', 'student__last_name']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            from apps.students.models import FlightInstructor
+            try:
+                fi = FlightInstructor.objects.get(user=self.request.user)
+                return qs.filter(instructor=fi)
+            except FlightInstructor.DoesNotExist:
+                return qs.none()
+        return qs

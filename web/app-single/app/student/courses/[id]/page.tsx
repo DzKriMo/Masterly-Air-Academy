@@ -94,7 +94,7 @@ export default function StudentCourseDetailPage() {
       if (found) setCourse(found);
 
       const materialsData = materialsRes as unknown as any;
-      setModules(materialsData.modules || []);
+      setModules(materialsData?.modules || []);
 
       const attendanceList = (attendanceRes as unknown as any).results || [];
       setAttendance(attendanceList);

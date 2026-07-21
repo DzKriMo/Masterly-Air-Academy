@@ -221,6 +221,14 @@ class CourseEnrollmentViewSet(viewsets.ModelViewSet):
     required_permission = 'ground_training.view'
     filterset_fields = ['course', 'student', 'status']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        if self.request.user.role == 'ground_instructor':
+            return qs.filter(course__instructor__user=self.request.user)
+        return qs
+
     @action(detail=False, methods=['post'])
     def bulk_enroll(self, request):
         course_id = request.data.get('course_id')
@@ -306,3 +314,11 @@ class GroundEvaluationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.evaluate'
     filterset_fields = ['course', 'student', 'flagged']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        if self.request.user.role == 'ground_instructor':
+            return qs.filter(course__instructor__user=self.request.user)
+        return qs

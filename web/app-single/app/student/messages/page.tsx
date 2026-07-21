@@ -174,9 +174,9 @@ export default function StudentMessagesPage() {
     if (filters.is_read === "unread" && m.is_read) return false;
     if (filters.is_read === "read" && !m.is_read) return false;
     if (activeTab === "inbox") {
-      if (search && !m.subject.toLowerCase().includes(search.toLowerCase()) && !m.sender_name.toLowerCase().includes(search.toLowerCase()) && !m.body.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !(m.subject || "").toLowerCase().includes(search.toLowerCase()) && !(m.sender_name || "").toLowerCase().includes(search.toLowerCase()) && !(m.body || "").toLowerCase().includes(search.toLowerCase())) return false;
     } else {
-      if (search && !m.subject.toLowerCase().includes(search.toLowerCase()) && !m.receiver_name.toLowerCase().includes(search.toLowerCase()) && !m.body.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !(m.subject || "").toLowerCase().includes(search.toLowerCase()) && !(m.receiver_name || "").toLowerCase().includes(search.toLowerCase()) && !(m.body || "").toLowerCase().includes(search.toLowerCase())) return false;
     }
     return true;
   });

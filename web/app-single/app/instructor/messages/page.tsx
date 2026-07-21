@@ -47,8 +47,8 @@ export default function InstructorMessagesPage() {
       .then(data => { setReceived((data as unknown as any).results || []); setError(null); })
       .catch(err => { console.error("Failed to load messages:", err); setError(t("instructor.failedToLoadMessages", "Failed to load messages. Please try again.")); });
     api.get<any>("/messages/sent/")
-      .then(data => { setSent(data as unknown as any[] || []); })
-      .catch(() => {});
+      .then(data => { setSent((data as unknown as any).results || (data as unknown as any) || []); })
+      .catch(() => { setSent([]); });
     api.get<any>("/students/")
       .then(data => { setUsers((data as unknown as any).results || (data as unknown as any) || []); })
       .catch(() => {});
@@ -110,7 +110,7 @@ export default function InstructorMessagesPage() {
     if (filterValues.readStatus === "unread" && tab === "inbox") result = result.filter(m => !m.is_read);
     if (searchValue) {
       const q = searchValue.toLowerCase();
-      result = result.filter(m => m.subject.toLowerCase().includes(q) || m.body.toLowerCase().includes(q) || (tab === "inbox" ? m.sender_name : m.receiver_name).toLowerCase().includes(q));
+      result = result.filter(m => (m.subject || "").toLowerCase().includes(q) || (m.body || "").toLowerCase().includes(q) || (tab === "inbox" ? (m.sender_name || "") : (m.receiver_name || "")).toLowerCase().includes(q));
     }
     return result;
   }, [display, filterValues, searchValue, tab]);

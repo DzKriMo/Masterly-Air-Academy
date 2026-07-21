@@ -138,7 +138,7 @@ export default function CoursesPage() {
     if (filterValues.status) result = result.filter(c => c.status === filterValues.status);
     if (searchValue) {
       const q = searchValue.toLowerCase();
-      result = result.filter(c => c.title.toLowerCase().includes(q) || c.subject_code.toLowerCase().includes(q));
+      result = result.filter(c => (c.title || "").toLowerCase().includes(q) || (c.subject_code || "").toLowerCase().includes(q));
     }
     return result;
   }, [courses, filterValues, searchValue]);

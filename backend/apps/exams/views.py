@@ -42,6 +42,17 @@ class ExamViewSet(viewsets.ModelViewSet):
     required_permission = 'exams.view'
     filterset_fields = ['program', 'type', 'status']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(program=student.program)
+            except Student.DoesNotExist:
+                return qs.none()
+        return qs
+
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         exam = self.get_object()
@@ -167,6 +178,17 @@ class QuizViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'exams.view'
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(module__subject__program=student.program)
+            except Student.DoesNotExist:
+                return qs.none()
+        return qs
+
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         quiz = self.get_object()
@@ -235,12 +257,26 @@ class StudentCompetencyViewSet(viewsets.ModelViewSet):
     required_permission = 'exams.view'
     filterset_fields = ['student', 'program', 'status']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        return qs
+
 
 class ProgressCheckViewSet(viewsets.ModelViewSet):
     queryset = ProgressCheck.objects.select_related('student', 'examiner').all()
     serializer_class = ProgressCheckSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(examiner__user=self.request.user)
+        return qs
 
     @action(detail=True, methods=['post'])
     def validate(self, request, pk=None):
@@ -270,6 +306,14 @@ class SkillTestViewSet(viewsets.ModelViewSet):
     serializer_class = SkillTestSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(examiner__user=self.request.user)
+        return qs
 
     @action(detail=True, methods=['post'])
     def authorize(self, request, pk=None):
@@ -320,6 +364,14 @@ class PracticalEvaluationViewSet(viewsets.ModelViewSet):
     serializer_class = PracticalEvaluationSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.filter(student__user=self.request.user)
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(instructor__user=self.request.user)
+        return qs
 
 
 class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
