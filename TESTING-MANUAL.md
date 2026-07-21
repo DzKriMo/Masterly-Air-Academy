@@ -458,8 +458,8 @@
 
 ### 8.2 Invoices (`/finance/invoices`)
 - [x] DataTable with full CRUD
-- [ ] Create/Edit Invoice → ModalForm
-- [ ] Record Payment per row
+- [x] Create/Edit Invoice → ModalForm
+- [x] Record Payment per row
 - [ ] Download PDF per invoice
 
 ### 8.3 Contracts (`/finance/contracts`)

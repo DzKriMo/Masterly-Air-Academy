@@ -17,7 +17,7 @@ import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 
-interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
+interface Invoice { id: string; invoice_number: string; student: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 
 export default function InvoicesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -65,7 +65,7 @@ export default function InvoicesPage() {
 
   const recordPayment = useMutation({
     mutationFn: async ({ inv, amount }: { inv: Invoice; amount: number }) => {
-      await api.post("/payments/", { student: "", invoice: inv.id, amount, currency: inv.currency, method: "bank_transfer" });
+      await api.post("/invoices/"+inv.id+"/payments/", { amount, currency: inv.currency, method: "bank_transfer" });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -121,7 +121,7 @@ export default function InvoicesPage() {
       sortable: false,
       render: (inv) => (
         <div className="flex items-center gap-2">
-          <button onClick={(e)=>{e.stopPropagation(); const a=document.createElement("a"); a.href=`/api/invoices/${inv.id}/pdf/`; a.target="_blank"; a.click();}} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
+          <button onClick={async(e)=>{e.stopPropagation(); try{const token=api.getAccessToken();const r=await fetch(`/api/invoices/${inv.id}/pdf/`,{headers:{Authorization:`Bearer ${token}`}});if(r.ok){const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`${inv.invoice_number}.pdf`;a.click();URL.revokeObjectURL(u);}}catch{}}} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
           {inv.status !== 'paid' && inv.status !== 'cancelled' && (
             <button onClick={(e)=>{e.stopPropagation(); handleRecordPayment(inv);}} disabled={recordPayment.isPending} className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded text-xs hover:bg-green-500 hover:text-white transition-colors">{t('finance.pay', 'Pay')}</button>
           )}
