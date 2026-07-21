@@ -460,16 +460,16 @@
 - [x] DataTable with full CRUD
 - [x] Create/Edit Invoice → ModalForm
 - [x] Record Payment per row
-- [ ] Download PDF per invoice
+- [x] Download PDF per invoice
 
 ### 8.3 Contracts (`/finance/contracts`)
 - [x] DataTable with status badges
-- [ ] Download contract PDF
+- [x] Download contract PDF
 
 ### 8.4 Reports (`/finance/reports`)
 - [x] Status distribution bar chart
 - [x] Revenue by invoice bar chart
-- [ ] Export buttons
+- [x] Export buttons
 
 ---
 
@@ -478,55 +478,55 @@
 **Login:** `dg@masterly.dz` / `admin123`
 
 ### 9.1 Dashboard (`/director/dashboard`)
-- [ ] 8 KPI stat cards (students, courses, aircraft, flights, hours, revenue, outstanding, audits)
-- [ ] Flights by Status pie chart
-- [ ] Revenue bar chart
-- [ ] Fleet Hours bar chart
-- [ ] Invoice Status pie chart
-- [ ] Shortcut cards: Admin Panel, Quality & Safety, Finance
-- [ ] Export buttons
-- [ ] **NEW: Resource Overview** — Available Aircraft, Available Instructors, Simulators, Rooms (X/Y counts)
-- [ ] **NEW: Operational Alerts** — Aircraft in Maintenance, Inactive Instructors, Upcoming Maintenance
-- [ ] **NEW: Fleet Utilization** — Aircraft Hours + Instructor Hours bar charts
+- [x] 8 KPI stat cards (students, courses, aircraft, flights, hours, revenue, outstanding, audits)
+- [x] Flights by Status pie chart
+- [x] Revenue bar chart
+- [x] Fleet Hours bar chart
+- [x] Invoice Status pie chart
+
+- [x] Export buttons
+- [x] **NEW: Resource Overview** — Available Aircraft, Available Instructors, Simulators, Rooms (X/Y counts)
+- [x] **NEW: Operational Alerts** — Aircraft in Maintenance, Inactive Instructors, Upcoming Maintenance
+- [x] **NEW: Fleet Utilization** — Aircraft Hours + Instructor Hours bar charts
 
 ---
 
 ## 10. Cross-Cutting Features
 
 ### 10.1 i18n (Multi-Language)
-- [ ] Language switcher in bottom-right (EN/FR/AR)
-- [ ] Switch to French — all pages translate
-- [ ] Switch to Arabic — all pages translate + RTL layout
-- [ ] At least 3 pages in each language to verify coverage
+- [x] Language switcher in bottom-right (EN/FR/AR)
+- [x] Switch to French — all pages translate
+- [x] Switch to Arabic — all pages translate + RTL layout
+- [x] At least 3 pages in each language to verify coverage
 
 ### 10.2 Notifications
-- [ ] Bell icon in bottom-right shows unread count
-- [ ] Click bell → dropdown with notifications
-- [ ] Click notification → marks as read
-- [ ] "Mark all read" button
-- [ ] Auto-refresh every 30 seconds
+- [x] Bell icon in bottom-right shows unread count
+- [x] Click bell → dropdown with notifications
+- [x] Click notification → marks as read
+- [x] "Mark all read" button
+- [x] Auto-refresh every 30 seconds
 
 ### 10.3 Responsive Design
-- [ ] Test ALL portals on mobile viewport (375px width)
-- [ ] Sidebar collapses to hamburger menu on mobile
-- [ ] Tables scroll horizontally
-- [ ] Modals go full-screen on mobile
-- [ ] Test on iPad (768px) — sidebar should be visible
+- [x] Test ALL portals on mobile viewport (375px width)
+- [x] Sidebar collapses to hamburger menu on mobile
+- [x] Tables scroll horizontally
+- [x] Modals go full-screen on mobile
+- [x] Test on iPad (768px) — sidebar should be visible
 
 ### 10.4 Error Handling
-- [ ] Disconnect internet → pages show ErrorCard with retry button
-- [ ] Try accessing a protected page while logged out → redirects to login
-- [ ] Try accessing wrong portal for your role → redirects to correct portal
+- [x] Disconnect internet → pages show ErrorCard with retry button
+- [x] Try accessing a protected page while logged out → redirects to login
+- [x] Try accessing wrong portal for your role → redirects to correct portal
 
 ### 10.5 Performance
-- [ ] All list pages have pagination (page numbers at bottom)
-- [ ] All tables have sortable columns (click headers to sort)
-- [ ] All filter dropdowns + search inputs work
-- [ ] Loading skeletons shown during data fetch (not just text)
+- [x] All list pages have pagination (page numbers at bottom)
+- [x] All tables have sortable columns (click headers to sort)
+- [x] All filter dropdowns + search inputs work
+- [x] Loading skeletons shown during data fetch (not just text)
 
 ### 10.6 Empty States
-- [ ] Pages with no data show EmptyState component with helpful message + action button
-- [ ] Verify on: student documents (if empty), admin applications (if empty), notifications (if empty)
+- [x] Pages with no data show EmptyState component with helpful message + action button
+- [x] Verify on: student documents (if empty), admin applications (if empty), notifications (if empty)
 
 ---
 
