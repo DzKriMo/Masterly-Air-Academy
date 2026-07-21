@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { LayoutDashboard, Users, BookOpen, Plane, FileText, BarChart3, Shield, Bell } from "lucide-react";
+import { LayoutDashboard, Bell } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function DirectorLayout({ children }: { children: React.ReactNode }) {
@@ -29,8 +29,6 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
 
   const NAV = [
     { href: "/director/dashboard", label: t("director.dashboard"), Icon: LayoutDashboard },
-    { href: "/quality/dashboard", label: t("quality_safety"), Icon: Shield },
-    { href: "/finance/dashboard", label: t("finance"), Icon: BarChart3 },
     { href: "/director/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];
 
