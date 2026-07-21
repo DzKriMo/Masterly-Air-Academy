@@ -22,7 +22,8 @@ PERMISSION_DOMAINS = {
     'fleet': ['view', 'create', 'update', 'delete', 'manage'],
     'schedule': ['view', 'create', 'update', 'delete', 'manage', 'view_own'],
     'finance': ['view', 'create', 'update', 'delete', 'manage', 'view_reports'],
-    'invoicing': ['view', 'create', 'update', 'delete', 'manage'],
+    'invoicing': ['view', 'view_own', 'create', 'update', 'delete', 'manage'],
+    'finance': ['view', 'view_own', 'create', 'update', 'delete', 'manage', 'view_reports'],
     'quality': ['view', 'create', 'update', 'delete', 'manage', 'approve'],
     'safety': ['view', 'create', 'update', 'delete', 'manage'],
     'audit_logs': ['view'],
@@ -233,6 +234,8 @@ ROLE_DEFINITIONS = {
             'documents': ['view_own'],
             'schedule': ['view_own'],
             'academic_years': ['view'],
+            'invoicing': ['view_own'],
+            'finance': ['view_own'],
         },
     },
     'candidate': {

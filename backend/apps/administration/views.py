@@ -130,6 +130,17 @@ class PaymentViewSet(viewsets.ModelViewSet):
     required_permission = 'invoicing.view'
     filterset_fields = ['student', 'invoice', 'method', 'currency']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        return qs
+
     def perform_create(self, serializer):
         from apps.notifications.services import NotificationService
         payment = serializer.save()
