@@ -67,7 +67,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const fmtStatus = (s: string) =>
-  s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";

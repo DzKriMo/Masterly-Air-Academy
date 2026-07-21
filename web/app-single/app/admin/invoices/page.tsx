@@ -58,7 +58,7 @@ const STATUS_COLORS: Record<string, string> = {
 const CURRENCIES = ["DZD", "USD", "EUR"];
 
 const fmtStatus = (s: string) =>
-  s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 const fmtCurrency = (amount: string | number, currency = "DZD") => {
   const n = typeof amount === "string" ? parseFloat(amount) : amount;

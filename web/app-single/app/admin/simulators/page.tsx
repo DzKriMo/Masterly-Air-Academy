@@ -43,7 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
 const QUALIFICATION_TYPES = ["FNPT II", "FNPT II MCC", "FTD", "FFS", "Other"];
 
 const fmtStatus = (s: string) =>
-  s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 // ── Component ─────────────────────────────────────────────
 
