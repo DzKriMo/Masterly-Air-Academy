@@ -29,6 +29,9 @@ export default function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ status: "", due_at: "" });
   const { t } = useTranslation();
 
   useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
@@ -160,8 +163,23 @@ export default function InvoicesPage() {
 
         {loading ? <LoadingSkeleton type="table" rows={8}/> : filtered.length === 0 && invoices.length === 0 ? <EmptyState message={t('finance.noInvoices', 'No invoices found.')} /> : <>
           <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('finance.searchInvoices', 'Search invoices...')}/>
-          <DataTable columns={columns} data={filtered} keyField="id"/>
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(inv) => { setSelected(inv as Invoice); setEditing(false); setEditForm({ status: inv.status || "", due_at: inv.due_at || "" }); }}/>
         </>}
+
+      <ModalForm open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} title={editing ? `Edit: ${selected?.invoice_number}` : selected?.invoice_number || ''} footer={editing ? (<><button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Cancel</button><button onClick={async () => { try { await api.patch(`/invoices/${selected!.id}/`, editForm); showToast("success", "Updated"); setEditing(false); setSelected(null); qc.invalidateQueries({ queryKey: ["invoices"] }); } catch(e:any) { showToast("error", e.message); }}} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Save</button></>) : (<><button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button><button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Edit</button></>)}>
+        {selected && (<div className="space-y-6"><div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-gray-500 mb-0.5">Invoice #</p><p className="text-sm text-white">{selected.invoice_number}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Student</p><p className="text-sm text-white">{selected.student_name}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Amount</p><p className="text-sm text-white">{parseFloat(selected.amount).toLocaleString()} {selected.currency}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Balance</p><p className="text-sm text-white">{parseFloat(selected.balance).toLocaleString()} {selected.currency}</p></div>
+          {editing ? (
+            <div><p className="text-xs text-gray-500 mb-0.5">Status</p><select value={editForm.status} onChange={e => setEditForm(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm"><option value="draft">Draft</option><option value="issued">Issued</option><option value="paid">Paid</option><option value="partially_paid">Partially Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option></select></div>
+          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selected.status}</p></div>)}
+          {editing ? (
+            <div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><input type="date" value={editForm.due_at} onChange={e => setEditForm(p => ({...p, due_at: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm" /></div>
+          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><p className="text-sm text-white">{selected.due_at ? new Date(selected.due_at).toLocaleDateString() : '—'}</p></div>)}
+        </div></div>)}
+      </ModalForm>
       </main>
     </div>
   );
