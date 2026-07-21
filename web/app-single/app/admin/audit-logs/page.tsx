@@ -355,7 +355,6 @@ export default function AdminAuditLogsPage() {
                 </div>
               </div>
             ) : null}
-            )}
           </div>
         </ModalForm>
       </main>
