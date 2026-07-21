@@ -27,6 +27,7 @@ export default function CAPAsPage() {
   const [form, setForm] = useState({ type: "corrective", title: "", description: "", non_conformity: "", responsible: "", due_date: "" });
   const [closeCapa, setCloseCapa] = useState<any>(null);
   const [closeForm, setCloseForm] = useState({ closing_notes: "" });
+  const [selectedCapa, setSelectedCapa] = useState<any>(null);
   const { t } = useTranslation();
 
   const { data: capas=[], isLoading } = useQuery({
@@ -201,6 +202,19 @@ export default function CAPAsPage() {
 
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:capas.length===0?<EmptyState message={t('quality.noCapas', 'No CAPAs found.')}/>:<>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchCapas', 'Search CAPAs...')}/>
-        <DataTable columns={columns} data={filtered} keyField="id"/>
-      </>}</main></div>);
+        <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(c) => setSelectedCapa(c as any)}/>
+      </>}
+
+      <ModalForm open={!!selectedCapa} onClose={() => setSelectedCapa(null)} title={selectedCapa?.title || ''} footer={<button onClick={() => setSelectedCapa(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        {selectedCapa && (<div className="space-y-4"><div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-gray-500 mb-0.5">CAPA #</p><p className="text-sm text-white">{selectedCapa.capa_number||'—'}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Type</p><p className="text-sm text-white">{selectedCapa.type}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Related NCR</p><p className="text-sm text-white">{selectedCapa.ncr_title||'—'}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selectedCapa.status}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><p className="text-sm text-white">{selectedCapa.due_date?.slice(0,10)||'—'}</p></div>
+          <div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Description</p><p className="text-sm text-white">{selectedCapa.description||'—'}</p></div>
+          {selectedCapa.closing_notes&&<div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Closing Notes</p><p className="text-sm text-white">{selectedCapa.closing_notes}</p></div>}
+        </div></div>)}
+      </ModalForm>
+      </main></div>);
 }

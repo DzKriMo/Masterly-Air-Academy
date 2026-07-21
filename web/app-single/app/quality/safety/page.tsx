@@ -29,6 +29,7 @@ export default function SafetyPage() {
 
   // Resolve confirm dialog state
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   const { data: eventsData, isLoading } = useQuery({
     queryKey: ['quality-safety'],
@@ -216,6 +217,17 @@ export default function SafetyPage() {
 
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0&&events.length===0?<EmptyState message={t('quality.noEvents', 'No events reported.')}/>:<>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchEvents', 'Search events...')}/>
-        <DataTable columns={columns} data={filtered} keyField="id"/>
-      </>}</main></div>);
+        <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(e) => setSelectedEvent(e as any)}/>
+      </>}
+
+      <ModalForm open={!!selectedEvent} onClose={() => setSelectedEvent(null)} title={selectedEvent?.title || ''} footer={<button onClick={() => setSelectedEvent(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        {selectedEvent && (<div className="space-y-4"><div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-gray-500 mb-0.5">Type</p><p className="text-sm text-white">{selectedEvent.type}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selectedEvent.status}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Reported At</p><p className="text-sm text-white">{selectedEvent.created_at?.slice(0,10)||'—'}</p></div>
+          <div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Description</p><p className="text-sm text-white">{selectedEvent.description||'—'}</p></div>
+          {selectedEvent.analysis&&<div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Analysis</p><p className="text-sm text-white">{selectedEvent.analysis}</p></div>}
+        </div></div>)}
+      </ModalForm>
+      </main></div>);
 }

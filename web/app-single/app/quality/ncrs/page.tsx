@@ -30,6 +30,7 @@ export default function NCRsPage() {
   const [form, setForm] = useState({ title: "", description: "", severity: "major", audit: "", responsible: "", due_date: "" });
   const [closeNcr, setCloseNcr] = useState<any>(null);
   const [closeForm, setCloseForm] = useState({ root_cause: "", closing_notes: "" });
+  const [selectedNcr, setSelectedNcr] = useState<any>(null);
   const { t } = useTranslation();
 
   const { data: ncrs=[], isLoading } = useQuery({
@@ -208,6 +209,19 @@ export default function NCRsPage() {
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:ncrs.length===0?<EmptyState message={t('quality.noNcrs', 'No NCRs found.')}/>:<>
         <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8"><h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('quality.ncrsBySeverity', 'NCRs by Severity')}</h3><ResponsiveContainer width="100%" height={200}><PieChart><Pie data={[{name:t('quality.critical','Critical'),value:ncrs.filter((n:any)=>n.severity==="critical").length},{name:t('quality.major','Major'),value:ncrs.filter((n:any)=>n.severity==="major").length},{name:t('quality.minor','Minor'),value:ncrs.filter((n:any)=>n.severity==="minor").length}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({name,value}:any)=>`${name}: ${value}`}>{[0,1,2].map(i=><Cell key={i} fill={NCR_COLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer></div>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchNcrs', 'Search NCRs...')}/>
-        <DataTable columns={columns} data={filtered} keyField="id"/>
-      </>}</main></div>);
+        <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(n) => setSelectedNcr(n as any)}/>
+      </>}
+
+      <ModalForm open={!!selectedNcr} onClose={() => setSelectedNcr(null)} title={selectedNcr?.title || ''} footer={<button onClick={() => setSelectedNcr(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        {selectedNcr && (<div className="space-y-4"><div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-gray-500 mb-0.5">NCR #</p><p className="text-sm text-white">{selectedNcr.ncr_number||'—'}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Audit</p><p className="text-sm text-white">{selectedNcr.audit_title||'—'}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Severity</p><p className="text-sm text-white">{selectedNcr.severity}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selectedNcr.status}</p></div>
+          <div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Description</p><p className="text-sm text-white">{selectedNcr.description||'—'}</p></div>
+          {selectedNcr.finding&&<div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Finding</p><p className="text-sm text-white">{selectedNcr.finding}</p></div>}
+          {selectedNcr.root_cause&&<div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Root Cause</p><p className="text-sm text-white">{selectedNcr.root_cause}</p></div>}
+        </div></div>)}
+      </ModalForm>
+      </main></div>);
 }

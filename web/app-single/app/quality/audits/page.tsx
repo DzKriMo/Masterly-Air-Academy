@@ -31,6 +31,7 @@ export default function AuditsPage() {
   const [form, setForm] = useState({ title: "", type: "internal", scope: "", scheduled_date: "", lead_auditor: "" });
   const [checklistItems, setChecklistItems] = useState<{text: string; status: string}[]>([]);
   const [newItemText, setNewItemText] = useState("");
+  const [selectedAudit, setSelectedAudit] = useState<any>(null);
   const { t } = useTranslation();
 
   const { data: audits=[], isLoading } = useQuery({
@@ -257,6 +258,17 @@ export default function AuditsPage() {
 
       {isLoading?<LoadingSkeleton type="table" rows={5}/>:audits.length===0?<EmptyState message={t('quality.noAudits', 'No audits found.')}/>:<>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchAudits', 'Search audits...')}/>
-        <DataTable columns={columns} data={filtered} keyField="id"/>
-      </>}</main></div>);
+        <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(a) => setSelectedAudit(a as any)}/>
+      </>}
+
+      <ModalForm open={!!selectedAudit} onClose={() => setSelectedAudit(null)} title={selectedAudit?.title || ''} footer={<button onClick={() => setSelectedAudit(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        {selectedAudit && (<div className="space-y-4"><div className="grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-gray-500 mb-0.5">Type</p><p className="text-sm text-white">{selectedAudit.type}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selectedAudit.status}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Scheduled</p><p className="text-sm text-white">{selectedAudit.scheduled_date?.slice(0,10)||'—'}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">NCR Count</p><p className="text-sm text-white">{selectedAudit.ncr_count||0}</p></div>
+          <div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Scope</p><p className="text-sm text-white">{selectedAudit.scope||'—'}</p></div>
+        </div></div>)}
+      </ModalForm>
+      </main></div>);
 }

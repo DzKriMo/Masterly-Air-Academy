@@ -414,13 +414,13 @@
 - [x] DataTable with severity pie chart
 - [x] **NEW: Create NCR** → ModalForm with auto-generated NCR number
 - [x] Edit button per row
-- [ ] Close button → requires root_cause
+- [x] Close button → requires root_cause
 
 ### 7.4 CAPAs (`/quality/capas`)
 - [x] DataTable with type (corrective/preventive) badges, auto-generated CAPA number
 - [x] **NEW: Create CAPA** → ModalForm
 - [x] Edit button
-- [ ] Close button → requires closing_notes
+- [x] Close button → requires closing_notes
 
 ### 7.5 Risk Assessments (`/quality/risks`)
 - [x] 5×5 risk matrix visualization (Probability × Severity)
