@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { Search, AlertTriangle, ClipboardList, ShieldAlert, Shield, FileText, Bell } from "lucide-react";
+import { LayoutDashboard, Search, AlertTriangle, ClipboardList, ShieldAlert, Shield, FileText, Bell } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function QualityLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +28,7 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
   }, [isAuthenticated]);
 
   const NAV = [
+    { href: "/quality/dashboard", label: t("quality.dashboard"), Icon: LayoutDashboard },
     { href: "/quality/audits", label: t("quality.audits"), Icon: Search },
     { href: "/quality/ncrs", label: t("quality.nonConformities"), Icon: AlertTriangle },
     { href: "/quality/capas", label: t("quality.capas"), Icon: ClipboardList },

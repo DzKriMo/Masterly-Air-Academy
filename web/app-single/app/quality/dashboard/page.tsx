@@ -26,14 +26,14 @@ export default function QualityDashboard() {
 
   const { data, isLoading:loading } = useQuery({
     queryKey: ['quality-all'],
-    queryFn: () => Promise.all(["/audits/","/non-conformities/","/capas/","/safety-events/","/risk-assessments/","/quality-documents/"].map(u=>api.get(u).then(r=>r.data).catch(()=>({results:[]})))),
+    queryFn: () => Promise.all(["/audits/","/non-conformities/","/capas/","/safety-events/","/risk-assessments/","/quality-documents/"].map(u=>api.get(u).catch(()=>({results:[]})))),
     enabled: isAuthenticated,
   });
   const [audits=[],ncrs=[],capas=[],events=[],risks=[],documents=[]] = data ? data.map((d:any)=>d.results||[]) : [[],[],[],[],[],[]];
 
   const { data: dashboardData } = useQuery({
     queryKey: ['quality-dashboard'],
-    queryFn: () => api.get("/quality/dashboard/").then(r=>r.data).catch(()=>({upcoming_deadlines:[]})),
+    queryFn: () => api.get("/quality/dashboard/").catch(()=>({upcoming_deadlines:[]})),
     enabled: isAuthenticated,
   });
   const upcoming_deadlines = dashboardData?.upcoming_deadlines || [];

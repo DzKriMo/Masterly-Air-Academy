@@ -354,8 +354,8 @@
 - [x] Create Simulator → ModalForm
 
 ### 6.14 Simulator Sessions (`/admin/simulator-sessions`) — NEW
-- [ ] DataTable: Simulator, Student, Instructor, Date, Duration, Status
-- [ ] Create Session → ModalForm
+- [x] DataTable: Simulator, Student, Instructor, Date, Duration, Status
+- [x] Create Session → ModalForm
 
 ### 6.15 Exams (`/admin/exams`)
 - [x] DataTable: Code, Title, Subject, Program, Type, Status
