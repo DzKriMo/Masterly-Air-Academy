@@ -31,3 +31,13 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation (excluded from repo)
+docs/
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
