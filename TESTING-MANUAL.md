@@ -425,7 +425,7 @@
 ### 7.5 Risk Assessments (`/quality/risks`)
 - [x] 5×5 risk matrix visualization (Probability × Severity)
 - [x] **NEW: Create Risk** → ModalForm
-- [ ] Edit button
+- [x] Edit button
 - [x] Color-coded cells
 
 ### 7.6 Safety Events (`/quality/safety`)
@@ -448,27 +448,27 @@
 **Login:** `finance@masterly.dz` / `admin123`
 
 ### 8.1 Dashboard (`/finance/dashboard`)
-- [ ] Stat cards: Total Issued, Collected, Outstanding, Overdue
-- [ ] Revenue bar chart
-- [ ] Invoice status pie chart
-- [ ] **NEW: Outstanding by Age bar chart**
-- [ ] **NEW: Top Debtors table**
-- [ ] **NEW: Collection Rate KPI**
-- [ ] Export button
+- [x] Stat cards: Total Issued, Collected, Outstanding, Overdue
+- [x] Revenue bar chart
+- [x] Invoice status pie chart
+- [x] **NEW: Outstanding by Age bar chart**
+- [x] **NEW: Top Debtors table**
+- [x] **NEW: Collection Rate KPI**
+- [x] Export button
 
 ### 8.2 Invoices (`/finance/invoices`)
-- [ ] DataTable with full CRUD
+- [x] DataTable with full CRUD
 - [ ] Create/Edit Invoice → ModalForm
 - [ ] Record Payment per row
 - [ ] Download PDF per invoice
 
 ### 8.3 Contracts (`/finance/contracts`)
-- [ ] DataTable with status badges
+- [x] DataTable with status badges
 - [ ] Download contract PDF
 
 ### 8.4 Reports (`/finance/reports`)
-- [ ] Status distribution bar chart
-- [ ] Revenue by invoice bar chart
+- [x] Status distribution bar chart
+- [x] Revenue by invoice bar chart
 - [ ] Export buttons
 
 ---
