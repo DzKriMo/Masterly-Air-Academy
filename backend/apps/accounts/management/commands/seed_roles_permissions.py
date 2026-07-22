@@ -321,15 +321,18 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'    → Group created')
 
-        # Assign system_admin group to admin superuser
+        # Assign all users to their corresponding role groups
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        admin = User.objects.filter(email='admin@masterly-air-academy.dz').first()
-        if admin and system_admin_group:
-            admin.groups.add(system_admin_group)
+        assigned = 0
+        for user in User.objects.all():
+            group = Group.objects.filter(name=user.role).first()
+            if group and not user.groups.filter(id=group.id).exists():
+                user.groups.add(group)
+                assigned += 1
+        if assigned:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'\nAdmin user assigned to system_admin group '
-                    f'({system_admin_group.permissions.count()} permissions)'
+                    f'\n{assigned} users assigned to their role groups'
                 )
             )
