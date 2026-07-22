@@ -109,7 +109,7 @@ export default function StudentDashboard() {
           <LoadingSkeleton type="card" rows={4} />
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 mb-8">
               <Stat title={t('student.flightHours')} value={`${flightHours}h`} />
               <Stat title={t('student.lessonsCompleted')} value={lessonsCompleted} />
               <Stat title={t('student.examAverage')} value={examAvg > 0 ? `${examAvg}%` : "-"} />
@@ -199,7 +199,7 @@ export default function StudentDashboard() {
 }
 
 function Stat({ title, value }: { title: string; value: string | number }) {
-  return <div className="bg-navy-800 rounded-xl border border-navy-700 p-6"><p className="text-3xl font-bold text-white">{value}</p><p className="text-sm text-gray-400 mt-1">{title}</p></div>;
+  return <div className="bg-navy-800 rounded-xl border border-navy-700 p-3 sm:p-4 md:p-6"><p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white truncate">{value}</p><p className="text-[10px] sm:text-xs md:text-sm text-gray-400 mt-1 truncate">{title}</p></div>;
 }
 
 function ProgressBar({ label, pct, color }: { label: string; pct: number; color: string }) {
