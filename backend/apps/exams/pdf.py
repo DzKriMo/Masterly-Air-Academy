@@ -18,13 +18,9 @@ def _logo_base64():
             try:
                 from PIL import Image
                 img = Image.open(path).convert('RGBA')
-                # Create white background for the transparent logo
-                bg = Image.new('RGBA', img.size, (255, 255, 255, 255))
-                bg.paste(img, (0, 0), img)
-                # Resize to a good display size
-                bg.thumbnail((300, 300), Image.LANCZOS)
+                img.thumbnail((300, 300), Image.LANCZOS)
                 buf = io.BytesIO()
-                bg.save(buf, format='PNG', optimize=True)
+                img.save(buf, format='PNG', optimize=True)
                 return base64.b64encode(buf.getvalue()).decode()
             except Exception:
                 with open(path, 'rb') as f:
