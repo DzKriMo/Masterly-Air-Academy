@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -28,11 +28,23 @@ interface Subject {
   title_en: string;
   title_ar?: string;
   title_fr?: string;
+  description_en?: string;
   program: string;
   total_hours: number;
   status: string;
   modules_count?: number;
   modules?: SubjectModule[];
+}
+
+interface SubjectFormData {
+  code: string;
+  title_en: string;
+  title_fr: string;
+  title_ar: string;
+  description_en: string;
+  program: string;
+  total_hours: string;
+  status: string;
 }
 
 // ── Constants ─────────────────────────────────────────────
@@ -57,9 +69,63 @@ export default function AdminSubjectsPage() {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
 
-  // ── Detail modal state ──
+  // ── Modal states ──
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [form, setForm] = useState<SubjectFormData>({
+    code: "", title_en: "", title_fr: "", title_ar: "",
+    description_en: "", program: "PPL", total_hours: "", status: "active",
+  });
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: (data: SubjectFormData) =>
+      api.post("/subjects/", { ...data, total_hours: parseInt(data.total_hours, 10) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subjects"] });
+      setCreateOpen(false);
+      resetForm();
+    },
+    onError: (err: any) => setMutationError(err?.message || "Failed to create subject"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SubjectFormData> }) =>
+      api.patch(`/subjects/${id}/`, {
+        ...data,
+        ...(data.total_hours ? { total_hours: parseInt(data.total_hours, 10) } : {}),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subjects"] });
+      setEditOpen(false);
+    },
+    onError: (err: any) => setMutationError(err?.message || "Failed to update subject"),
+  });
+
+  const resetForm = () => setForm({
+    code: "", title_en: "", title_fr: "", title_ar: "",
+    description_en: "", program: "PPL", total_hours: "", status: "active",
+  });
+
+  const openEdit = useCallback((subject: Subject) => {
+    setForm({
+      code: subject.code,
+      title_en: subject.title_en,
+      title_fr: subject.title_fr || "",
+      title_ar: subject.title_ar || "",
+      description_en: subject.description_en || "",
+      program: subject.program,
+      total_hours: String(subject.total_hours),
+      status: subject.status,
+    });
+    setSelectedSubject(subject);
+    setDetailOpen(false);
+    setEditOpen(true);
+  }, []);
 
   // ── Auth guard ──
   useEffect(() => {
@@ -183,13 +249,12 @@ export default function AdminSubjectsPage() {
               </button>
             </div>
           </div>
-          <a
-            href="/django-admin/subjects/"
-            target="_blank"
+          <button
+            onClick={() => { resetForm(); setMutationError(null); setCreateOpen(true); }}
             className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
           >
             + {t("common.create", "Create Subject")}
-          </a>
+          </button>
         </div>
       </nav>
 
@@ -276,17 +341,14 @@ export default function AdminSubjectsPage() {
               >
                 {t("common.close", "Close")}
               </button>
-              <a
-                href={
-                  selectedSubject
-                    ? `/django-admin/subjects/${selectedSubject.id}/change/`
-                    : "/django-admin/subjects/"
-                }
-                target="_blank"
-                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-              >
-                Edit in Django Admin
-              </a>
+              {selectedSubject && (
+                <button
+                  onClick={() => openEdit(selectedSubject)}
+                  className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
+                >
+                  Edit Subject
+                </button>
+              )}
             </>
           }
         >
@@ -381,7 +443,141 @@ export default function AdminSubjectsPage() {
             </div>
           )}
         </ModalForm>
+
+        {/* Create Modal */}
+        <ModalForm
+          open={createOpen}
+          onClose={() => { setCreateOpen(false); resetForm(); setMutationError(null); }}
+          title="Create Subject"
+          wide
+          footer={
+            <>
+              <button
+                onClick={() => { setCreateOpen(false); resetForm(); setMutationError(null); }}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => createMutation.mutate(form)}
+                disabled={createMutation.isPending || !form.code || !form.title_en || !form.total_hours}
+                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50"
+              >
+                {createMutation.isPending ? "Creating..." : "Create Subject"}
+              </button>
+            </>
+          }
+        >
+          {mutationError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 mb-4">{mutationError}</div>
+          )}
+          <SubjectFormFields form={form} onChange={setForm} isEdit={false} />
+        </ModalForm>
+
+        {/* Edit Modal */}
+        <ModalForm
+          open={editOpen}
+          onClose={() => { setEditOpen(false); resetForm(); setMutationError(null); }}
+          title={`Edit Subject: ${selectedSubject?.code || ""}`}
+          wide
+          footer={
+            <>
+              <button
+                onClick={() => { setEditOpen(false); resetForm(); setMutationError(null); }}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedSubject) updateMutation.mutate({ id: selectedSubject.id, data: form });
+                }}
+                disabled={updateMutation.isPending || !form.code || !form.title_en || !form.total_hours}
+                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </>
+          }
+        >
+          {mutationError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 mb-4">{mutationError}</div>
+          )}
+          <SubjectFormFields form={form} onChange={setForm} isEdit={true} />
+        </ModalForm>
       </main>
+    </div>
+  );
+}
+
+// ── Subject Form Fields Sub-component ────────────────────
+
+function SubjectFormFields({
+  form, onChange, isEdit,
+}: {
+  form: SubjectFormData;
+  onChange: (f: SubjectFormData) => void;
+  isEdit: boolean;
+}) {
+  const set = (key: keyof SubjectFormData, value: string) => onChange({ ...form, [key]: value });
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Code *</label>
+          <input type="text" value={form.code} onChange={(e) => set("code", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
+            placeholder="e.g. AV101" disabled={isEdit} />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Program *</label>
+          <select value={form.program} onChange={(e) => set("program", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
+            {PROGRAMS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">Title (EN) *</label>
+        <input type="text" value={form.title_en} onChange={(e) => set("title_en", e.target.value)}
+          className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
+          placeholder="English title" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Title (FR)</label>
+          <input type="text" value={form.title_fr} onChange={(e) => set("title_fr", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
+            placeholder="Titre en français" />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Title (AR)</label>
+          <input type="text" value={form.title_ar} onChange={(e) => set("title_ar", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
+            placeholder="العنوان بالعربية" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">Description (EN)</label>
+        <textarea value={form.description_en} onChange={(e) => set("description_en", e.target.value)}
+          className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm resize-y"
+          rows={3} placeholder="Optional description" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Total Hours *</label>
+          <input type="number" value={form.total_hours} onChange={(e) => set("total_hours", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
+            placeholder="e.g. 60" min={1} />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Status</label>
+          <select value={form.status} onChange={(e) => set("status", e.target.value)}
+            className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
+            {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
