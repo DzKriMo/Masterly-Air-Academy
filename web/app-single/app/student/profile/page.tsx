@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { ErrorCard } from "@/components/error-card";
 import { useToast } from "@/components/toast";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 export default function StudentProfilePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -28,7 +29,7 @@ export default function StudentProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   // Load existing profile data
   useEffect(() => {
@@ -106,7 +107,15 @@ export default function StudentProfilePage() {
   };
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110}/><div><h1 className="text-lg font-bold text-white">{t('student.profile')}</h1><button onClick={()=>router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div></div><button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></div></nav>
+    <PageHeader
+        title={t('student.profile')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-4xl"
+        actions={
+          <button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
+        }
+      />
     <main className="max-w-4xl mx-auto px-6 py-8">
       {error && <ErrorCard message={error} />}
       <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mb-8"><h2 className="text-lg font-bold text-white mb-4">{t('profile.accountInfo', 'Account Info')}</h2><div className="space-y-3"><div><span className="text-sm text-gray-400">{t('profile.email', 'Email:')}</span><span className="text-white ml-3">{user?.email}</span></div><div><span className="text-sm text-gray-400">{t('profile.name', 'Name:')}</span><span className="text-white ml-3">{user?.name||t('common.na', 'N/A')}</span></div><div><span className="text-sm text-gray-400">{t('profile.role', 'Role:')}</span><span className="text-white ml-3">{user?.role?.replace(/_/g," ")||t('common.na', 'N/A')}</span></div></div></div>

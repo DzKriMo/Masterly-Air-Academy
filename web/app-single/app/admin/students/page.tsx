@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -14,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
+import { StatsCard } from "@/components/stats-card";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -62,6 +64,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminStudentsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -95,9 +98,6 @@ export default function AdminStudentsPage() {
   }, [confirmAction, showToast]);
 
   // ── Auth guard ──
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Data query ──
   const {
@@ -241,24 +241,7 @@ export default function AdminStudentsPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.students", "Students")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PageHeader title={t("admin.students", "Students")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Error */}
@@ -271,22 +254,8 @@ export default function AdminStudentsPage() {
 
         {/* Stats bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Total Active
-            </p>
-            <p className="text-2xl font-bold text-green-400 mt-1">
-              {isLoading ? "—" : stats?.total_active ?? 0}
-            </p>
-          </div>
-          <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Total Students
-            </p>
-            <p className="text-2xl font-bold text-white mt-1">
-              {isLoading ? "—" : stats?.total ?? 0}
-            </p>
-          </div>
+          <StatsCard label="Total Active" value={isLoading ? "—" : stats?.total_active ?? 0} valueClassName="text-green-400" />
+          <StatsCard label="Total Students" value={isLoading ? "—" : stats?.total ?? 0} />
           {programEntries.map(([program, count]) => (
             <div
               key={program}

@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { courseSchema } from "@/lib/validators";
@@ -66,7 +68,7 @@ export default function CoursesPage() {
     defaultValues: { subject: "", title: "", scheduled_date: "", start_time: "", end_time: "", room: "" },
   });
 
-  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   const { data: coursesData, isLoading, error: coursesError, refetch } = useQuery({
     queryKey: ["instructor-courses"],
@@ -203,15 +205,15 @@ export default function CoursesPage() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t("instructor.myCourses", "My Courses")}</h1>
+      <PageHeader
+        title={t("instructor.myCourses", "My Courses")}
+        actions={
           <div className="flex items-center gap-3">
             <ExportButton exports={[{label:t('instructor.exportExcel','Excel'),url:'/export/courses/',filename:'courses.xlsx',type:'excel'}]} />
             <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors">{t("instructor.createCourse", "+ New Course")}</button>
           </div>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {coursesError && <ErrorCard message={coursesError.message} onRetry={refetch} />}

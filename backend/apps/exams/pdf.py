@@ -135,11 +135,14 @@ def generate_certificate_pdf(certificate):
 
 def generate_invoice_pdf(invoice):
     """Generate a PDF invoice."""
+    logo_b64 = _logo_base64()
     paid = sum(float(p.amount) for p in invoice.payments.all())
     balance = float(invoice.amount) - paid
     rows = ""
     for p in invoice.payments.all():
         rows += f"<tr><td>{p.paid_at.strftime('%d/%m/%Y') if p.paid_at else 'N/A'}</td><td>{p.method or ''}</td><td>{p.reference or ''}</td><td style='text-align:right'>{p.amount:,.2f} {invoice.currency}</td></tr>"
+
+    logo_img = f'<img src="data:image/png;base64,{logo_b64}" width="70" height="70" style="display:block;" />' if logo_b64 else '<div style="font-size:28px;color:#c4943c;font-weight:bold;">MAA</div>'
 
     html = f"""
     <html><head><meta charset="utf-8"><style>
@@ -152,7 +155,7 @@ def generate_invoice_pdf(invoice):
       td {{ padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }}
       .total {{ font-size: 16px; font-weight: bold; margin-top: 20px; text-align: right; }}
     </style></head><body>
-      <div class="header"><div><div class="logo">MAA</div><div>Masterly Air Academy</div></div><div style="text-align:right"><h2>INVOICE</h2><p>#{invoice.invoice_number}<br>Date: {invoice.issued_at.strftime('%d/%m/%Y') if invoice.issued_at else 'N/A'}<br>Due: {invoice.due_at.strftime('%d/%m/%Y') if invoice.due_at else 'N/A'}</p></div></div>
+      <div class="header"><div><div class="logo">{logo_img}</div><div>Masterly Air Academy</div></div><div style="text-align:right"><h2>INVOICE</h2><p>#{invoice.invoice_number}<br>Date: {invoice.issued_at.strftime('%d/%m/%Y') if invoice.issued_at else 'N/A'}<br>Due: {invoice.due_at.strftime('%d/%m/%Y') if invoice.due_at else 'N/A'}</p></div></div>
       <p><strong>Student:</strong> {invoice.student.full_name} ({invoice.student.student_number})</p>
       <p><strong>Description:</strong> {invoice.description or 'N/A'}</p>
       <h3>Payment History</h3>

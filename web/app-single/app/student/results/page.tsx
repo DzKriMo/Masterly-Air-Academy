@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -9,6 +8,8 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Attempt {
   id: string;
@@ -41,8 +42,7 @@ interface Competency {
 type Tab = "theory" | "practical" | "competencies";
 
 export default function StudentResultsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("theory");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [evals, setEvals] = useState<PracticalEval[]>([]);
@@ -53,7 +53,7 @@ export default function StudentResultsPage() {
 
   const programs = ["PPL", "CPL", "IR", "MEP", "MCC"];
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadData = useCallback(() => {
     if (!isAuthenticated) return;
@@ -139,11 +139,7 @@ export default function StudentResultsPage() {
   };
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">{t('student.results', 'Results')}</h1>
-      </div>
-    </nav>
+    <PageHeader title={t('student.results', 'Results')} backHref="/student/dashboard" maxWidth="max-w-5xl" />
     <main className="max-w-5xl mx-auto px-6 py-8">
       {error && <ErrorCard message={error} onRetry={loadData} />}
       {loading ? <LoadingSkeleton type="card" rows={4} /> : (

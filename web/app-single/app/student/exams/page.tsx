@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -13,12 +12,14 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Exam { id: string; code: string; title: string; program: string; type: string; duration: number; passing_grade: number; max_attempts: number; status: string; }
 interface Attempt { id: string; exam_code: string; attempt: number; score: number | null; is_passed: boolean | null; completed_at: string | null; }
 
 export default function StudentExamsPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -28,7 +29,7 @@ export default function StudentExamsPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadData = () => {
     if (!isAuthenticated) return;
@@ -83,13 +84,12 @@ export default function StudentExamsPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {error && <div className="max-w-5xl mx-auto px-6 pt-4"><ErrorCard message={error} onRetry={loadData} /></div>}
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          <div><h1 className="text-lg font-bold text-white">{t('student.exams')}</h1>
-            <button onClick={() => router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t('student.exams')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <FilterBar

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -14,12 +13,13 @@ import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { ExportButton } from "@/components/export-button";
 import { QRCodeSVG } from 'qrcode.react';
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Cert { id: string; certificate_number: string; type: string; title: string; program: string; issue_date: string; expiry_date: string | null; status: string; }
 
 export default function StudentCertificatesPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [certs, setCerts] = useState<Cert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function StudentCertificatesPage() {
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadCerts = useCallback(() => {
     if (!isAuthenticated) return;
@@ -106,16 +106,18 @@ export default function StudentCertificatesPage() {
   ];
 
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">{t('student.certificates')}</h1>
+    <PageHeader
+      title={t('student.certificates')}
+      backHref="/student/dashboard"
+      maxWidth="max-w-5xl"
+      actions={
         <ExportButton
           exports={[
             { label: t('common.export', 'Export All'), url: "/export/certificates/", filename: "certificates.xlsx", type: "excel" as const },
           ]}
         />
-      </div>
-    </nav>
+      }
+    />
     <main className="max-w-5xl mx-auto px-6 py-8">
       {error && <ErrorCard message={error} onRetry={loadCerts} />}
       {loading ? <LoadingSkeleton type="table" rows={4} /> : certs.length === 0 ? (

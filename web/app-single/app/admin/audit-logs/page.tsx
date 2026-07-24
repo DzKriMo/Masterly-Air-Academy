@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -103,6 +104,7 @@ function formatDateTime(dateStr: string | null | undefined): string {
 
 export default function AdminAuditLogsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -114,9 +116,6 @@ export default function AdminAuditLogsPage() {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   // ── Auth guard ──
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Query ──
   const {
@@ -216,22 +215,7 @@ export default function AdminAuditLogsPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.auditLogs", "Audit Logs")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader title={t("admin.auditLogs", "Audit Logs")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">
               Auto-refreshes every 30s
@@ -250,8 +234,7 @@ export default function AdminAuditLogsPage() {
               Refresh
             </button>
           </div>
-        </div>
-      </nav>
+        } />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Error */}

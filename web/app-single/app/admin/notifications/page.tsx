@@ -1,7 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -12,6 +11,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { PageHeader } from "@/components/page-header";
 
 interface Notif {
   id: string; type: string; title: string; message: string;
@@ -69,19 +69,11 @@ export default function AdminNotificationsPage() {
   ];
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          <div><h1 className="text-lg font-bold text-white">{t("admin.notifications", "Notifications")}</h1>
-            <button onClick={() => router.push("/admin/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t("common.back", "Back to Dashboard")}</button>
-          </div>
-        </div>
-        <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
-          {t("common.markAllRead", "Mark All Read")}
-        </button>
-      </div>
-    </nav>
+    <PageHeader title={t("admin.notifications", "Notifications")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
+      <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
+        {t("common.markAllRead", "Mark All Read")}
+      </button>
+    } />
     <main className="max-w-5xl mx-auto px-6 py-8">
       <FilterBar filters={[{ key: "read", label: t("common.all", "All"), options: [{ value: "unread", label: t("common.unread", "Unread") }, { value: "read", label: t("common.read", "Read") }] }]} values={filters} onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))} onClear={() => { setFilters({}); setSearch(""); }} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t("common.search", "Search...")} />
       {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={t("common.noNotifications", "No notifications.")} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(n) => openDetail(n as Notif)} />}

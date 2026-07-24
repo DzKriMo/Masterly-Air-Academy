@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -12,6 +11,8 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import multiMonthPlugin from '@fullcalendar/multimonth';
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 export default function StudentSchedulePage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -21,7 +22,7 @@ export default function StudentSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadSchedule = () => {
     if (!isAuthenticated) return;
@@ -44,7 +45,15 @@ export default function StudentSchedulePage() {
   useEffect(()=>{loadSchedule();},[isAuthenticated]);
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110}/><div><h1 className="text-lg font-bold text-white">{t('student.schedule')}</h1><button onClick={()=>router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div></div><button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></div></nav>
+    <PageHeader
+        title={t('student.schedule')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-4xl"
+        actions={
+          <button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
+        }
+      />
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={loadSchedule} />}<div className="flex gap-4 mb-4"><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">{t('student.scheduleFlights', 'Flights')}</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">{t('student.scheduleCourses', 'Courses')}</span></div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#8b5cf6"}}/><span className="text-xs text-gray-400">{t('student.scheduleExams', 'Exams')}</span></div></div>
       {loading?<LoadingSkeleton type="table" rows={5} />:events.length===0?<EmptyState message={t('student.noEvents', 'No events scheduled.')} />:
       <div className="fc-wrapper">

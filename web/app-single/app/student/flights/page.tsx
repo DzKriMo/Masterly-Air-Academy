@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -15,6 +14,8 @@ import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; }
 
@@ -28,9 +29,7 @@ export default function StudentFlightsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) { router.push("/student/login"); return; }
-  }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadFlights = useCallback(() => {
     if (!isAuthenticated) return;
@@ -121,18 +120,17 @@ export default function StudentFlightsPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          <div><h1 className="text-lg font-bold text-white">{t('student.flightLog')}</h1>
-            <button onClick={() => router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div>
-          {lessons.length > 0 && (
-            <button onClick={downloadLogbookPDF} className="ml-auto px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900 transition-colors whitespace-nowrap">
-              {t('student.downloadLogbook')}
-            </button>
-          )}
-        </div>
-      </nav>
+      <PageHeader
+        title={t('student.flightLog')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-5xl"
+        actions={lessons.length > 0 && (
+          <button onClick={downloadLogbookPDF} className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-sm hover:bg-gold-500 hover:text-navy-900 transition-colors whitespace-nowrap">
+            {t('student.downloadLogbook')}
+          </button>
+        )}
+      />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         {loading ? (

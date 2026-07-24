@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -77,9 +78,7 @@ export default function ModulesPage() {
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) { router.push("/login"); return; }
-  }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -197,22 +196,16 @@ export default function ModulesPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">{t("instructor.moduleContent", "Module Content")}</h1>
-              <button onClick={() => router.push("/instructor/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">
-                {t("instructor.backToDashboard", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader
+        title={t("instructor.moduleContent", "Module Content")}
+        backHref="/instructor/dashboard"
+        backLabel={t("instructor.backToDashboard", "Back to Dashboard")}
+        actions={
           <span className="px-4 py-2 text-sm border border-navy-600 rounded-lg text-gray-400">
             {t("instructor.myModules", "My Modules")}
           </span>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} />}

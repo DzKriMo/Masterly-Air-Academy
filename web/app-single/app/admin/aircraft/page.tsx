@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -13,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { StatsCard } from "@/components/stats-card";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -84,6 +86,7 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export default function AdminAircraftPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -113,9 +116,6 @@ export default function AdminAircraftPage() {
   const [maintForm, setMaintForm] = useState({ type: "", description: "", start_date: "", end_date: "", notes: "" });
 
   // ── Auth guard ──
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Query ──
   const {
@@ -308,30 +308,14 @@ export default function AdminAircraftPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.aircraft", "Fleet")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader title={t("admin.aircraft", "Fleet")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <button
             onClick={() => setCreateOpen(true)}
             className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
           >
             + {t("common.create", "Add Aircraft")}
           </button>
-        </div>
-      </nav>
+        } />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Error */}
@@ -345,22 +329,10 @@ export default function AdminAircraftPage() {
         {/* Stats Bar */}
         {!isLoading && aircraft && aircraft.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Total Fleet</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Active</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">{stats.active}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">In Maintenance</p>
-              <p className="text-2xl font-bold text-amber-400 mt-1">{stats.inMaintenance}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Grounded</p>
-              <p className="text-2xl font-bold text-red-400 mt-1">{stats.grounded}</p>
-            </div>
+            <StatsCard label="Total Fleet" value={stats.total} />
+            <StatsCard label="Active" value={stats.active} valueClassName="text-green-400" />
+            <StatsCard label="In Maintenance" value={stats.inMaintenance} valueClassName="text-amber-400" />
+            <StatsCard label="Grounded" value={stats.grounded} valueClassName="text-red-400" />
           </div>
         )}
 

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { useToast } from "@/components/toast";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Question { id: string; question_text: string; question_type: string; options: string[]; }
 interface Result { score: number; total: number; percentage: number; is_passed: boolean; passing_grade: number; details: { question_id: string; question: string; your_answer: string; correct_answer: string; is_correct: boolean }[]; }
@@ -37,7 +38,7 @@ export default function TakeExamPage() {
   const attemptIdRef = useRef(attemptId);
   const examIdRef = useRef(examId);
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const startExam = () => {
     if (!isAuthenticated || !examId || showModal) return;
@@ -150,13 +151,12 @@ export default function TakeExamPage() {
   if (submitted && result) {
     return (
       <div className="min-h-screen bg-navy-900">
-        <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-          <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div><h1 className="text-lg font-bold text-white">{t("exam.resultsTitle")}</h1>
-              <button onClick={() => router.push("/student/exams")} className="text-xs text-gray-500 hover:text-gold-500">{t("exam.backToExams")}</button></div>
-          </div>
-        </nav>
+        <PageHeader
+            title={t("exam.resultsTitle")}
+            backHref="/student/exams"
+            backLabel={t("exam.backToExams")}
+            maxWidth="max-w-4xl"
+          />
         <main className="max-w-4xl mx-auto px-6 py-8">
           <div className={`rounded-xl p-8 mb-8 text-center ${result.is_passed ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/30"}`}>
             <p className="text-5xl font-bold mb-2" style={{ color: result.is_passed ? "#4ade80" : "#f87171" }}>{result.percentage}%</p>
@@ -188,15 +188,13 @@ export default function TakeExamPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {error && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50"><ErrorCard message={error} onRetry={startExam} /></div>}
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <h1 className="text-lg font-bold text-white">{t("exam.inProgress")}</h1>
-          </div>
+      <PageHeader
+        title={t("exam.inProgress")}
+        maxWidth="max-w-4xl"
+        actions={
           <span className={`text-lg font-mono font-bold ${timeLeft < 300 ? "text-red-400" : "text-gold-500"}`}>{fmt(timeLeft)}</span>
-        </div>
-      </nav>
+        }
+      />
       <main className="max-w-4xl mx-auto px-6 py-8">
         {cheatWarnings > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">

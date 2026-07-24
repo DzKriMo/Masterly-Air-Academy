@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -13,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { StatsCard } from "@/components/stats-card";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -43,6 +45,7 @@ const fmtStatus = (s: string) =>
 
 export default function AdminRoomsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -71,9 +74,6 @@ export default function AdminRoomsPage() {
   const [editNewEquipment, setEditNewEquipment] = useState("");
 
   // ── Auth guard ──
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Query ──
   const {
@@ -231,30 +231,14 @@ export default function AdminRoomsPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.rooms", "Classrooms")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader title={t("admin.rooms", "Classrooms")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <button
             onClick={() => setCreateOpen(true)}
             className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
           >
             + {t("common.create", "Create Room")}
           </button>
-        </div>
-      </nav>
+        } />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Error */}
@@ -268,22 +252,10 @@ export default function AdminRoomsPage() {
         {/* Stats Bar */}
         {!isLoading && rooms && rooms.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Total Rooms</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Available</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">{stats.available}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Occupied</p>
-              <p className="text-2xl font-bold text-red-400 mt-1">{stats.occupied}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Maintenance</p>
-              <p className="text-2xl font-bold text-amber-400 mt-1">{stats.maintenance}</p>
-            </div>
+            <StatsCard label="Total Rooms" value={stats.total} />
+            <StatsCard label="Available" value={stats.available} valueClassName="text-green-400" />
+            <StatsCard label="Occupied" value={stats.occupied} valueClassName="text-red-400" />
+            <StatsCard label="Maintenance" value={stats.maintenance} valueClassName="text-amber-400" />
           </div>
         )}
 

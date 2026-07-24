@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoiceSchema } from "@/lib/validators";
@@ -14,14 +14,15 @@ import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 
 interface Invoice { id: string; invoice_number: string; student: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 
 export default function InvoicesPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+  useAuthGuard(isAuthenticated, isLoading);
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
@@ -33,8 +34,6 @@ export default function InvoicesPage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ status: "", due_at: "" });
   const { t } = useTranslation();
-
-  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
 
   const { data: invoicesData, isLoading: loading } = useQuery({
     queryKey: ["invoices"],
@@ -139,12 +138,10 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t('finance.invoices', 'Invoices')}</h1>
-          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">{showForm ? t('common.cancel', 'Cancel') : t('finance.createInvoice', '+ New Invoice')}</button>
-        </div>
-      </nav>
+      <PageHeader
+        title={t('finance.invoices', 'Invoices')}
+        actions={<button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">{showForm ? t('common.cancel', 'Cancel') : t('finance.createInvoice', '+ New Invoice')}</button>}
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={() => setError(null)}/>}

@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { ModalForm } from "@/components/modal-form";
+import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/components/toast";
 
 interface Notif {
@@ -63,14 +64,13 @@ export default function FinanceNotificationsPage() {
   ];
 
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">{t("common.notifications", "Notifications")}</h1>
-        <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
-          {t("common.markAllRead", "Mark All Read")}
-        </button>
-      </div>
-    </nav>
+    <PageHeader
+      title={t("common.notifications", "Notifications")}
+      maxWidth="max-w-5xl"
+      actions={<button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
+        {t("common.markAllRead", "Mark All Read")}
+      </button>}
+    />
     <main className="max-w-5xl mx-auto px-6 py-8">
       <FilterBar filters={[{ key: "read", label: t("common.all", "All"), options: [{ value: "unread", label: t("common.unread", "Unread") }, { value: "read", label: t("common.read", "Read") }] }]} values={filters} onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))} onClear={() => { setFilters({}); setSearch(""); }} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t("common.search", "Search...")} />
       {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={t("common.noNotifications", "No notifications.")} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(n) => openDetail(n as Notif)} />}

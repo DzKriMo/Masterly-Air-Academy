@@ -5,6 +5,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 
 interface MedicalCert {
   id: string;
@@ -37,11 +38,7 @@ export default function MedicalPage() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center">
-          <h1 className="text-lg font-bold text-white">{t("student.medical", "Medical Certificates")}</h1>
-        </div>
-      </nav>
+      <PageHeader title={t("student.medical", "Medical Certificates")} backHref="/student/dashboard" maxWidth="max-w-5xl" />
       <main className="max-w-5xl mx-auto px-6 py-8">
         {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
         {isLoading ? (

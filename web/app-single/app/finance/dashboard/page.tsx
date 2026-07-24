@@ -8,6 +8,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 const FCOLORS = ["#22c55e","#3b82f6","#ef4444","#f59e0b"];
 const BUCKET_COLORS = ["#22c55e","#f59e0b","#f97316","#ef4444"];
@@ -59,15 +60,10 @@ export default function FinanceDashboard() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t('finance.dashboard', 'Finance Dashboard')}</h1>
-          <div className="flex items-center gap-3">
-            <ExportButton exports={[{label:t('finance.invoicesExcel','Invoices (Excel)'),url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:t('finance.paymentsExcel','Payments (Excel)'),url:"/export/payments/",filename:"payments.xlsx",type:"excel"}]}/>
-            <span className="text-sm text-gray-400 hidden sm:inline">{user?.name || user?.email}</span>
-          </div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t('finance.dashboard', 'Finance Dashboard')}
+        actions={<><ExportButton exports={[{label:t('finance.invoicesExcel','Invoices (Excel)'),url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:t('finance.paymentsExcel','Payments (Excel)'),url:"/export/payments/",filename:"payments.xlsx",type:"excel"}]}/><span className="text-sm text-gray-400 hidden sm:inline">{user?.name || user?.email}</span></>}
+      />
 
       <main className="px-6 py-8">
         {error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); Promise.all([api.get("/invoices/").catch(() => ({results: []})), api.get("/finance/reports/").catch(() => null)]).then(([invData, rptData]) => { setInvoices((invData as unknown as {results: Invoice[]}).results || []); setReports(rptData as unknown as ReportsData); setError(null); }).catch(err => { setError(t('common.error', 'Failed to load data. Please try again.')); }).finally(() => setLoading(false)); }} />}

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -10,6 +9,8 @@ import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { useToast } from "@/components/toast";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Notification {
   id: string;
@@ -49,7 +50,6 @@ const TYPE_ICON_COLORS: Record<string, string> = {
 
 export default function StudentNotificationsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function StudentNotificationsPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadNotifications = useCallback(() => {
     if (!isAuthenticated) return;
@@ -133,21 +133,23 @@ export default function StudentNotificationsPage() {
   };
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-white">{t('student.notifications', 'Notifications')}</h1>
-          {unreadCount > 0 && (
-            <span className="bg-gold-500 text-navy-900 text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} {t('common.unread', 'unread')}</span>
-          )}
-        </div>
-        {unreadCount > 0 && (
-          <button onClick={markAllRead} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
-            {t('student.markAllRead', 'Mark all read')}
-          </button>
-        )}
-      </div>
-    </nav>
+    <PageHeader
+        title={t('student.notifications', 'Notifications')}
+        backHref="/student/dashboard"
+        maxWidth="max-w-4xl"
+        actions={
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <span className="bg-gold-500 text-navy-900 text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} {t('common.unread', 'unread')}</span>
+            )}
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
+                {t('student.markAllRead', 'Mark all read')}
+              </button>
+            )}
+          </div>
+        }
+      />
     <main className="max-w-4xl mx-auto px-6 py-8">
       {error && <ErrorCard message={error} onRetry={loadNotifications} />}
       {loading ? <LoadingSkeleton type="detail" rows={5} /> : notifications.length === 0 ? (

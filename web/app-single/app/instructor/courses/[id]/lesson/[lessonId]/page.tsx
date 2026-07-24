@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
@@ -33,9 +34,7 @@ export default function InstructorLessonViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) { router.push("/login"); return; }
-  }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   const getYouTubeEmbedUrl = (url: string): string | null => {
     const patterns = [
@@ -120,26 +119,17 @@ export default function InstructorLessonViewPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white truncate max-w-md">
-                {lesson?.title || t("instructor.lesson", "Lesson")}
-              </h1>
-              <button onClick={() => router.push("/instructor/courses")} className="text-xs text-gray-500 hover:text-gold-500">
-                ← {t("instructor.backToCourses", "Back to Courses")}
-              </button>
-            </div>
-          </div>
-          {lesson && (
-            <span className="text-xs text-gray-500 bg-navy-700 px-3 py-1 rounded-full">
-              {lesson.subject_code} — Lesson {lesson.lesson_no}
-            </span>
-          )}
-        </div>
-      </nav>
+      <PageHeader
+        title={lesson?.title || t("instructor.lesson", "Lesson")}
+        backHref="/instructor/courses"
+        backLabel={"← " + t("instructor.backToCourses", "Back to Courses")}
+        maxWidth="max-w-4xl"
+        actions={lesson && (
+          <span className="text-xs text-gray-500 bg-navy-700 px-3 py-1 rounded-full">
+            {lesson.subject_code} — Lesson {lesson.lesson_no}
+          </span>
+        )}
+      />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={() => window.location.reload()} />}

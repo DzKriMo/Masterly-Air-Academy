@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -11,12 +11,13 @@ import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 
 export default function ContractsPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+  useAuthGuard(isAuthenticated, isLoading);
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +28,6 @@ export default function ContractsPage() {
   const [editForm, setEditForm] = useState({ type: "", status: "", start_date: "", end_date: "" });
   const { t } = useTranslation();
   const { showToast } = useToast();
-
-  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
   useEffect(() => { if (!isAuthenticated) return;
     api.get("/contracts/")
       .then(data => { setContracts((data as unknown as {results: any[]}).results || []); setError(null); })
@@ -72,7 +71,7 @@ export default function ContractsPage() {
   ];
 
   return (<div className="flex-1 min-w-0">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center"><h1 className="text-lg font-bold text-white">{t('finance.contracts', 'Contracts')}</h1></div></nav>
+    <PageHeader title={t('finance.contracts', 'Contracts')} />
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); api.get("/contracts/").then(data => { setContracts((data as unknown as {results: any[]}).results || []); setError(null); }).catch(err => { setError(t('common.error', 'Failed to load data. Please try again.')); }).finally(() => setLoading(false)); }} />}{loading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0?<EmptyState message={t('finance.noContracts', 'No contracts found.')}/>:<>
       <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('finance.searchContracts', 'Search contracts...')}/>
       <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(c) => { setSelected(c as any); setEditing(false); setEditForm({ type: c.type || "", status: c.status || "", start_date: c.start_date || "", end_date: c.end_date || "" }); }}/>

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -11,13 +11,15 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 
 const PIE_COLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6", "#f59e0b", "#14b8a6", "#ec4899"];
 
 type TabId = "students" | "financial" | "exams";
 
 export default function AdminReportsPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  useAuthGuard(isAuthenticated, isLoading);
   const router = useRouter();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabId>("students");
@@ -42,12 +44,9 @@ export default function AdminReportsPage() {
     enabled: isAuthenticated,
   });
 
-  // ── Auth guard ────────────────────────────────────────────
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
+  // ── Auth guard ──
 
-  if (authLoading || !isAuthenticated) return null;
+  if (isLoading || !isAuthenticated) return null;
 
   const sData = studentsReport.data;
   const fData = financialReport.data;
@@ -60,22 +59,7 @@ export default function AdminReportsPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {/* ── Nav ─────────────────────────────────────────────── */}
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.reports", "Reports")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader title={t("admin.reports", "Reports")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <div className="flex items-center gap-3">
             <ExportButton
               exports={
@@ -96,8 +80,7 @@ export default function AdminReportsPage() {
               {t("common.signOut", "Sign Out")}
             </button>
           </div>
-        </div>
-      </nav>
+        } />
 
       {/* ── Main Content ────────────────────────────────────── */}
       <main className="max-w-7xl mx-auto px-6 py-8">

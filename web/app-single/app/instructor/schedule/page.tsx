@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -22,7 +23,7 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
-  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   const fetchSchedule = () => {
     if (!isAuthenticated) return;
@@ -50,18 +51,14 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110}/>
-            <div>
-              <h1 className="text-lg font-bold text-white">{t("schedule", "Schedule")}</h1>
-              <button onClick={()=>router.push("/instructor/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t("instructor.backToDashboard", "Back to Dashboard")}</button>
-            </div>
-          </div>
+      <PageHeader
+        title={t("schedule", "Schedule")}
+        backHref="/instructor/dashboard"
+        backLabel={t("instructor.backToDashboard", "Back to Dashboard")}
+        actions={
           <button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t("common.signOut", "Logout")}</button>
-        </div>
-      </nav>
+        }
+      />
       <main className="max-w-7xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={fetchSchedule} />}
 

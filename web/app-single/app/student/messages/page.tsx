@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -14,6 +13,8 @@ import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Msg {
   id: string;
@@ -76,7 +77,7 @@ export default function StudentMessagesPage() {
     }
   };
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   // Load recipients (admin and instructor roles - filter client-side)
   const loadRecipients = useCallback(() => {
@@ -226,22 +227,17 @@ export default function StudentMessagesPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">{t('student.messages')}</h1>
-              <button onClick={() => router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={openCompose} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors">
-              {t('student.compose', 'Compose')}
-            </button>
-          </div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t('student.messages')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-4xl"
+        actions={
+          <button onClick={openCompose} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors">
+            {t('student.compose', 'Compose')}
+          </button>
+        }
+      />
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={loadMessages} />}
 

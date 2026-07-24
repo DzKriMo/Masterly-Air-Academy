@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -12,6 +11,8 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Document {
   id: string;
@@ -25,8 +26,7 @@ interface Document {
 }
 
 export default function StudentDocumentsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function StudentDocumentsPage() {
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadDocs = useCallback(() => {
     if (!isAuthenticated) return;
@@ -107,11 +107,7 @@ export default function StudentDocumentsPage() {
   ];
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">{t('student.documents', 'Documents')}</h1>
-      </div>
-    </nav>
+    <PageHeader title={t('student.documents', 'Documents')} backHref="/student/dashboard" maxWidth="max-w-5xl" />
     <main className="max-w-5xl mx-auto px-6 py-8">
       {error && <ErrorCard message={error} onRetry={loadDocs} />}
       {loading ? <LoadingSkeleton type="table" rows={4} /> : docs.length === 0 ? (

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { ErrorCard } from "@/components/error-card";
@@ -22,7 +23,7 @@ export default function FlightPrepPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (!authLoading && !isAuthenticated) { router.push("/login"); } }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   useEffect(() => {
     if (!isAuthenticated || !flightId) return;
@@ -58,13 +59,12 @@ export default function FlightPrepPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          <div><h1 className="text-lg font-bold text-white">{t("instructor.prep", "Pre-Flight Preparation")}</h1>
-            <button onClick={() => router.push("/instructor/flights")} className="text-xs text-gray-500 hover:text-gold-500">{t("instructor.backToDashboard", "Back to Flights")}</button></div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t("instructor.prep", "Pre-Flight Preparation")}
+        backHref="/instructor/flights"
+        backLabel={t("instructor.backToDashboard", "Back to Flights")}
+        maxWidth="max-w-3xl"
+      />
       <main className="max-w-3xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} />}
 

@@ -1,8 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DataTable, Column } from "@/components/data-table";
@@ -14,6 +14,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
+import { PageHeader } from "@/components/page-header";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -112,15 +113,13 @@ function computeStats(users: AppUser[]) {
 
 export default function AdminUsersPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
   // ── Auth redirect ───────────────────────────────────────
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Query ───────────────────────────────────────────────
   const {
@@ -509,7 +508,7 @@ export default function AdminUsersPage() {
 
   // ── Render ──────────────────────────────────────────────
 
-  if (authLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-navy-900 flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-gold-500 border-t-transparent rounded-full" />
@@ -522,28 +521,7 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {/* ─── Navbar ──────────────────────────────────── */}
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="MAA"
-              width={110}
-              height={110}
-              className="shrink-0"
-            />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.users", "Users")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500 transition-colors"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
+      <PageHeader title={t("admin.users", "Users")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <button
             onClick={() => {
               setCreateForm({
@@ -557,8 +535,7 @@ export default function AdminUsersPage() {
           >
             + {t("common.create", "Create User")}
           </button>
-        </div>
-      </nav>
+        } />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* ─── Stats Bar ─────────────────────────────── */}

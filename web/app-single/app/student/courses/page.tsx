@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -13,11 +12,13 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Course { id: string; title: string; subject_code: string; scheduled_date: string; start_time: string; end_time: string; status: string; room_name: string | null; enrollment_count: number; }
 
 export default function StudentCoursesPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ export default function StudentCoursesPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { router.push("/student/login"); } }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadCourses = useCallback(() => {
     if (!isAuthenticated) return;
@@ -78,13 +79,12 @@ export default function StudentCoursesPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          <div><h1 className="text-lg font-bold text-white">{t('student.myCourses')}</h1>
-            <button onClick={() => router.push("/student/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">{t('student.backToDashboard')}</button></div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t('student.myCourses')}
+        backHref="/student/dashboard"
+        backLabel={t('student.backToDashboard')}
+        maxWidth="max-w-5xl"
+      />
       <main className="max-w-5xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={loadCourses} />}
         {loading ? <LoadingSkeleton type="table" rows={5} /> : courses.length === 0 ? <EmptyState message={t('student.noCourses', 'You are not enrolled in any courses yet.')} /> : (

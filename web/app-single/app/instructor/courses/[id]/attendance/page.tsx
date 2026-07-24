@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -40,9 +41,7 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) { router.push("/login"); return; }
-  }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading);
 
   const fetchStudents = () => {
     if (!isAuthenticated || !courseId) return;
@@ -111,17 +110,12 @@ export default function AttendancePage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">{t("instructor.attendance", "Take Attendance")}</h1>
-              <button onClick={() => router.push("/instructor/courses")} className="text-xs text-gray-500 hover:text-gold-500">{t("instructor.backToDashboard", "Back to Courses")}</button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PageHeader
+        title={t("instructor.attendance", "Take Attendance")}
+        backHref="/instructor/courses"
+        backLabel={t("instructor.backToDashboard", "Back to Courses")}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={fetchStudents} />}

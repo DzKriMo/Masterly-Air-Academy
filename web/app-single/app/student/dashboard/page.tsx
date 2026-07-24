@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
+import { PageHeader } from "@/components/page-header";
 
 export default function StudentDashboard() {
   const { user, isAuthenticated } = useAuth();
@@ -84,11 +85,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t('student.dashboard')}</h1>
-        </div>
-      </nav>
+      <PageHeader title={t('student.dashboard')} />
       <main className="px-6 py-8">
         <div className="flex flex-wrap items-center gap-3 mb-2">
           <h2 className="text-2xl font-bold text-white">{t("dashboard_welcome")}, {user?.name?.split(" ")[0] || "Student"}</h2>

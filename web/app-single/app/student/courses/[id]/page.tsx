@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 interface Course {
   id: string;
@@ -75,9 +76,7 @@ export default function StudentCourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<string>("");
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) { router.push("/student/login"); return; }
-  }, [authLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, authLoading, "/student/login");
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated || !courseId) return;
@@ -121,11 +120,7 @@ export default function StudentCourseDetailPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-navy-900">
-        <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-          </div>
-        </nav>
+        <PageHeader title="" />
         <main className="max-w-7xl mx-auto px-6 py-8">
           <ErrorCard message={error} onRetry={loadData} />
         </main>
@@ -135,22 +130,16 @@ export default function StudentCourseDetailPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">{course?.title || t("student.courseDetail", "Course Details")}</h1>
-              <button onClick={() => router.push("/student/courses")} className="text-xs text-gray-500 hover:text-gold-500">
-                {t("student.backToCourses", "Back to Courses")}
-              </button>
-            </div>
-          </div>
+      <PageHeader
+        title={course?.title || t("student.courseDetail", "Course Details")}
+        backHref="/student/courses"
+        backLabel={t("student.backToCourses", "Back to Courses")}
+        actions={
           <span className={`px-3 py-1 text-xs font-medium rounded ${statusClass(course?.status || "")}`}>
             {course?.status}
           </span>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Course Info */}

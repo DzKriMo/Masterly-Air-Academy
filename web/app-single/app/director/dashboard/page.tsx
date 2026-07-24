@@ -1,14 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { ExportButton } from "@/components/export-button";
+import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 
 const DCOLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6"];
@@ -16,6 +17,7 @@ const DCOLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6"];
 export default function DirectorDashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
+  useAuthGuard(isAuthenticated, isLoading);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
   const { data, isLoading: loading } = useQuery({
@@ -39,8 +41,7 @@ export default function DirectorDashboard() {
     queryFn: () => api.get<any>("/reports/fleet/"),
     enabled: isAuthenticated,
   });
-  useEffect(() => { if (!isLoading && !isAuthenticated) router.push("/login"); }, [isLoading, isAuthenticated, router]);
-  if (isLoading || !isAuthenticated) return null;
+  if (!isAuthenticated) return null;
 
   const [st, inv, co, ac, fl, au, fi, sim, rm] = data || [{}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}];
   const iList=inv.results||[]; const fList=fl.results||[]; const aList=ac.results||[]; const fiList=fi.results||[]; const simList=sim.results||[]; const rmList=rm.results||[];
@@ -57,7 +58,10 @@ export default function DirectorDashboard() {
   const upcomingMaint=aList.filter((a:any)=>a.next_maintenance&&new Date(a.next_maintenance)<=new Date(Date.now()+7*24*60*60*1000)).length;
 
   return (<div className="min-h-screen bg-navy-900">
-    <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30"><div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110}/><div><h1 className="text-lg font-bold text-white">{t('director.dashboard', 'Director Dashboard')}</h1><p className="text-xs text-gold-500">{t('director.executiveOverview', 'Executive Overview')}</p></div></div><div className="flex items-center gap-3"><ExportButton exports={[{label:"Students (Excel)",url:"/export/students/",filename:"students.xlsx",type:"excel"},{label:"Invoices (Excel)",url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:"Flights (Excel)",url:"/export/flights/",filename:"flights.xlsx",type:"excel"}]}/><button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></div></div></nav>
+    <PageHeader
+      title={t('director.dashboard', 'Director Dashboard')}
+      actions={<><ExportButton exports={[{label:"Students (Excel)",url:"/export/students/",filename:"students.xlsx",type:"excel"},{label:"Invoices (Excel)",url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:"Flights (Excel)",url:"/export/flights/",filename:"flights.xlsx",type:"excel"}]}/><button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></>}
+    />
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={()=>setError(null)}/>}{loading?<LoadingSkeleton type="card" rows={4}/>:<>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.students', 'Students')} value={kpis.students} c="text-blue-400"/><KpiCard label={t('director.courses', 'Courses')} value={kpis.courses} c="text-green-400"/><KpiCard label={t('director.aircraft', 'Aircraft')} value={kpis.aircraft} c="text-purple-400"/><KpiCard label={t('director.fleetHours', 'Flight Hours')} value={`${kpis.hours}h`} c="text-gold-400"/></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><KpiCard label={t('director.revenue', 'Revenue')} value={`${kpis.revenue.toLocaleString()} DZD`} c="text-green-400"/><KpiCard label={t('finance.outstanding', 'Outstanding')} value={`${kpis.outstanding.toLocaleString()} DZD`} c="text-red-400"/><KpiCard label={t('director.completed', 'Completed')} value={kpis.completed} c="text-cyan-400"/><KpiCard label={t('director.audits', 'Audits')} value={kpis.audits} c="text-yellow-400"/></div>

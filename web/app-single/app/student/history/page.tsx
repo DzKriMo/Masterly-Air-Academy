@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -9,6 +8,8 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
 /* ── Types ────────────────────────────────────────── */
 interface HistoryEvent {
@@ -69,7 +70,6 @@ const EVENT_META: Record<string, { label: string; icon: string; color: string; b
 /* ── Component ────────────────────────────────────── */
 export default function StudentHistoryPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
   const { t } = useTranslation();
   const [events, setEvents] = useState<HistoryEvent[]>([]);
   const [studentInfo, setStudentInfo] = useState<{ name: string; program: string } | null>(null);
@@ -78,11 +78,7 @@ export default function StudentHistoryPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/student/login");
-    }
-  }, [isLoading, isAuthenticated, router]);
+  useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
   const loadData = () => {
     if (!isAuthenticated) return;
@@ -236,13 +232,7 @@ export default function StudentHistoryPage() {
   /* ── Render ────────────────────────────────────── */
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">
-            {t("student.history", "Academic History")}
-          </h1>
-        </div>
-      </nav>
+      <PageHeader title={t("student.history", "Academic History")} backHref="/student/dashboard" maxWidth="max-w-5xl" />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={loadData} />}

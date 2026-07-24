@@ -9,6 +9,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
+import { PageHeader } from "@/components/page-header";
 
 const ICOLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444"];
 
@@ -41,15 +42,13 @@ export default function CGIDashboard() {
 
   return (
     <div className="flex-1 min-w-0">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">{t('instructor.dashboard')}</h1>
-          <ExportButton exports={[
+      <PageHeader
+        title={t('instructor.dashboard')}
+        actions={<ExportButton exports={[
             { label: `${t('instructor.totalCourses')} PDF`, url: "/courses/export/pdf/", filename: "courses.pdf", type: "pdf" },
             { label: `${t('instructor.totalCourses')} Excel`, url: "/courses/export/excel/", filename: "courses.xlsx", type: "excel" },
-          ]} />
-        </div>
-      </nav>
+          ]} />}
+      />
       <main className="px-6 py-8">
         <h2 className="text-2xl font-bold text-white mb-2">{t("dashboard_welcome")}, {user?.name?.split(" ")[0]||"Instructor"}</h2>
         <p className="text-gray-400 mb-8">{t('instructor.dashboardSubtitle')}</p>
