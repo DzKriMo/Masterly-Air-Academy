@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { useUnreadCounts } from "@/lib/use-unread-counts";
 import { LayoutDashboard, Users, ShieldCheck, ClipboardCheck, FileText, CreditCard, File, ScrollText, GraduationCap, Shield, BookOpen, DoorOpen, Plane, Award, Settings, ClipboardList, BarChart3, Megaphone, Menu, X, Monitor, Bell } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -15,19 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchUnread = () => {
-      api.get("/notifications/unread-count/")
-        .then((d: any) => setUnreadNotifCount(d.count ?? 0))
-        .catch(() => {});
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  const unread = useUnreadCounts({ includeMessages: false, enabled: isAuthenticated });
 
   if (isLoading) return null;
   if (!isAuthenticated) { router.push("/login"); return null; }
@@ -43,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/roles", label: t("admin.roles", "Roles"), Icon: ShieldCheck },
     { href: "/admin/applications", label: t("admin.applications", "Applications"), Icon: ClipboardCheck },
     { href: "/admin/communication", label: t("admin.communication", "Communication"), Icon: Megaphone },
-    { href: "/admin/notifications", label: t("admin.notifications", "Notifications"), Icon: Bell, badge: unreadNotifCount },
+    { href: "/admin/notifications", label: t("admin.notifications", "Notifications"), Icon: Bell, badge: unread.notifications },
     { href: "/admin/invoices", label: t("admin.invoices", "Invoices"), Icon: FileText },
     { href: "/admin/payments", label: t("admin.payments", "Payments"), Icon: CreditCard },
     { href: "/admin/documents", label: t("admin.documents", "Documents"), Icon: File },

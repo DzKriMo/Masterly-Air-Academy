@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -12,6 +11,9 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { PageHeader } from "@/components/page-header";
+import { StatsCard } from "@/components/stats-card";
+import { fmtLabel, formatDate, PROGRAMS, STATUS_COLORS, TYPE_COLORS, CERT_TYPES as TYPES, CERT_STATUSES as STATUSES } from "@/lib/format-utils";
 
 interface Certificate {
   id: string;
@@ -41,39 +43,6 @@ interface CertFormData {
   issue_date: string;
   expiry_date: string;
   status: string;
-}
-
-const TYPES = ["course_completion", "license", "rating", "endorsement", "medical"];
-const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
-const STATUSES = ["issued", "pending", "revoked", "expired"];
-
-const STATUS_COLORS: Record<string, string> = {
-  issued: "bg-green-500/10 text-green-400",
-  pending: "bg-amber-500/10 text-amber-400",
-  revoked: "bg-red-500/10 text-red-400",
-  expired: "bg-gray-500/10 text-gray-400",
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  course_completion: "bg-blue-500/10 text-blue-400",
-  license: "bg-gold-500/10 text-gold-400",
-  rating: "bg-purple-500/10 text-purple-400",
-  endorsement: "bg-cyan-500/10 text-cyan-400",
-  medical: "bg-green-500/10 text-green-400",
-};
-
-const fmtLabel = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
 }
 
 const emptyForm: CertFormData = {
@@ -213,27 +182,17 @@ export default function AdminCertificatesPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.certificates", "Certificates")}
-              </h1>
-              <button onClick={() => router.push("/admin/dashboard")} className="text-xs text-gray-500 hover:text-gold-500">
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={() => { setForm(emptyForm); setMutationError(null); setCreateOpen(true); }}
-            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-          >
+      <PageHeader
+        title={t("admin.certificates", "Certificates")}
+        backHref="/admin/dashboard"
+        backLabel={t("common.back", "Back to Dashboard")}
+        actions={
+          <button onClick={() => { setForm(emptyForm); setMutationError(null); setCreateOpen(true); }}
+            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">
             + Issue Certificate
           </button>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
@@ -242,18 +201,9 @@ export default function AdminCertificatesPage() {
 
         {!isLoading && certificates && certificates.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Total Certificates</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Issued</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">{stats.issued}</p>
-            </div>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
-              <p className="text-2xl font-bold text-amber-400 mt-1">{stats.pending}</p>
-            </div>
+            <StatsCard label="Total Certificates" value={stats.total} />
+            <StatsCard label="Issued" value={stats.issued} valueClassName="text-green-400" />
+            <StatsCard label="Pending" value={stats.pending} valueClassName="text-amber-400" />
           </div>
         )}
 

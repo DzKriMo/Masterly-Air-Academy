@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -12,6 +11,9 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
+import { PageHeader } from "@/components/page-header";
+import { PROGRAMS, STATUS_COLORS, SUBJECT_STATUSES as STATUSES } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -46,17 +48,6 @@ interface SubjectFormData {
   total_hours: string;
   status: string;
 }
-
-// ── Constants ─────────────────────────────────────────────
-
-const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
-const STATUSES = ["active", "inactive", "draft"];
-
-const STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500/10 text-green-400",
-  inactive: "bg-gray-500/10 text-gray-400",
-  draft: "bg-amber-500/10 text-amber-400",
-};
 
 // ── Component ─────────────────────────────────────────────
 
@@ -233,30 +224,17 @@ export default function AdminSubjectsPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <nav className="sticky top-0 bg-navy-800/95 backdrop-blur border-b border-navy-700 z-30">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="MAA" width={110} height={110} />
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                {t("admin.subjects", "Subjects")}
-              </h1>
-              <button
-                onClick={() => router.push("/admin/dashboard")}
-                className="text-xs text-gray-500 hover:text-gold-500"
-              >
-                {t("common.back", "Back to Dashboard")}
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={() => { resetForm(); setMutationError(null); setCreateOpen(true); }}
-            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-          >
+      <PageHeader
+        title={t("admin.subjects", "Subjects")}
+        backHref="/admin/dashboard"
+        backLabel={t("common.back", "Back to Dashboard")}
+        actions={
+          <button onClick={() => { resetForm(); setMutationError(null); setCreateOpen(true); }}
+            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">
             + {t("common.create", "Create Subject")}
           </button>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Error */}
@@ -582,13 +560,4 @@ function SubjectFormFields({
   );
 }
 
-// ── Detail Field Sub-component ───────────────────────────
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}

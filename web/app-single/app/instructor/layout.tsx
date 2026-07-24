@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
-import { LayoutDashboard, CalendarDays, PlaneTakeoff, BookOpen, FileText, Users, MessageSquare, ClipboardCheck, Target, Menu, Bell } from "lucide-react";
+import { useUnreadCounts } from "@/lib/use-unread-counts";
+import { LayoutDashboard, CalendarDays, PlaneTakeoff, BookOpen, FileText, Users, MessageSquare, ClipboardCheck, Target, ClipboardList, Menu, Bell } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function InstructorLayout({ children }: { children: React.ReactNode }) {
@@ -14,23 +14,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchUnread = () => {
-      api.get("/notifications/unread-count/")
-        .then((d: any) => setUnreadNotifCount(d.count ?? 0))
-        .catch(() => {});
-      api.get("/messages/unread-count/")
-        .then((d: any) => setUnreadMsgCount(d.count ?? 0))
-        .catch(() => {});
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  const unread = useUnreadCounts({ includeMessages: true, enabled: isAuthenticated });
 
   const isCGI = user?.role === 'chief_ground_instructor';
   const isCFI = user?.role === 'chief_flight_instructor';
@@ -43,7 +27,8 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     { href: "/instructor/courses", label: t("instructor.myCourses"), Icon: BookOpen },
     { href: "/instructor/modules", label: t("instructor.moduleContent"), Icon: FileText },
     { href: "/instructor/students", label: t("instructor.myStudents"), Icon: Users },
-    { href: "/instructor/messages", label: t("instructor.messages"), Icon: MessageSquare, badge: unreadMsgCount },
+    { href: "/instructor/exams", label: t("instructor.exams", "Exams"), Icon: ClipboardList },
+    { href: "/instructor/messages", label: t("instructor.messages"), Icon: MessageSquare, badge: unread.messages },
     { href: "/instructor/flights/progress-check", label: t("instructor.progressChecks"), Icon: ClipboardCheck },
     { href: "/instructor/flights/skill-test", label: t("instructor.skillTests"), Icon: Target },
   ];

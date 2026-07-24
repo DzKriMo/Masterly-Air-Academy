@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { useUnreadCounts } from "@/lib/use-unread-counts";
 import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, File, CreditCard, BarChart, Bell, Clock, Menu, X, Heart } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -14,23 +14,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchUnread = () => {
-      api.get("/notifications/unread-count/")
-        .then((d: any) => setUnreadNotifCount(d.count ?? 0))
-        .catch(() => {});
-      api.get("/messages/unread-count/")
-        .then((d: any) => setUnreadMsgCount(d.count ?? 0))
-        .catch(() => {});
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  const unread = useUnreadCounts({ includeMessages: true, enabled: isAuthenticated });
 
   const NAV = [
     { href: "/student/dashboard", label: t("student.dashboard"), Icon: LayoutDashboard },
@@ -43,9 +27,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/results", label: t("student.results", "Results"), Icon: BarChart },
     { href: "/student/history", label: t("student.history", "History"), Icon: Clock },
     { href: "/student/medical", label: t("student.medical", "Medical"), Icon: Heart },
-    { href: "/student/notifications", label: t("student.notifications", "Notifications"), Icon: Bell, badge: unreadNotifCount },
+    { href: "/student/notifications", label: t("student.notifications", "Notifications"), Icon: Bell, badge: unread.notifications },
     { href: "/student/certificates", label: t("student.certificates"), Icon: Award },
-    { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare, badge: unreadMsgCount },
+    { href: "/student/messages", label: t("student.messages"), Icon: MessageSquare, badge: unread.messages },
     { href: "/student/profile", label: t("student.profile"), Icon: User },
   ];
 

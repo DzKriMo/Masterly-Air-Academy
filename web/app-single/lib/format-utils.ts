@@ -1,0 +1,73 @@
+export const fmtLabel = (s: string) =>
+  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
+
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+export function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+export function toDatetimeLocal(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return d.toISOString().slice(0, 16);
+  } catch {
+    return "";
+  }
+}
+
+export const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
+
+export const EXAM_TYPES = ["quiz", "progress_test", "module_exam", "mock_exam", "final_exam"];
+
+export const EXAM_STATUSES = ["draft", "active", "inactive"];
+
+export const CERT_TYPES = ["course_completion", "license", "rating", "endorsement", "medical"];
+
+export const CERT_STATUSES = ["issued", "pending", "revoked", "expired"];
+
+export const SUBJECT_STATUSES = ["active", "inactive", "draft"];
+
+export const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-500/10 text-green-400",
+  inactive: "bg-gray-500/10 text-gray-400",
+  draft: "bg-amber-500/10 text-amber-400",
+  issued: "bg-green-500/10 text-green-400",
+  pending: "bg-amber-500/10 text-amber-400",
+  revoked: "bg-red-500/10 text-red-400",
+  expired: "bg-gray-500/10 text-gray-400",
+};
+
+export const TYPE_COLORS: Record<string, string> = {
+  quiz: "bg-blue-500/10 text-blue-400",
+  progress_test: "bg-purple-500/10 text-purple-400",
+  module_exam: "bg-cyan-500/10 text-cyan-400",
+  mock_exam: "bg-amber-500/10 text-amber-400",
+  final_exam: "bg-red-500/10 text-red-400",
+  theory: "bg-blue-500/10 text-blue-400",
+  practical: "bg-purple-500/10 text-purple-400",
+  mock: "bg-cyan-500/10 text-cyan-400",
+  final: "bg-red-500/10 text-red-400",
+  course_completion: "bg-blue-500/10 text-blue-400",
+  license: "bg-gold-500/10 text-gold-400",
+  rating: "bg-purple-500/10 text-purple-400",
+  endorsement: "bg-cyan-500/10 text-cyan-400",
+  medical: "bg-green-500/10 text-green-400",
+};
