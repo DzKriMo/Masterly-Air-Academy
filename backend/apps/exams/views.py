@@ -101,6 +101,14 @@ class ExamViewSet(viewsets.ModelViewSet):
         except ExamAttempt.DoesNotExist:
             return Response({'error': 'Attempt not found'}, status=404)
 
+        from apps.students.models import Student
+        try:
+            student = Student.objects.get(user=request.user)
+            if attempt.student_id != student.id:
+                return Response({'error': 'This attempt does not belong to you'}, status=403)
+        except Student.DoesNotExist:
+            return Response({'error': 'Student profile not found'}, status=400)
+
         if attempt.completed_at:
             return Response({'error': 'This attempt is already completed'}, status=400)
 
@@ -377,7 +385,8 @@ class PracticalEvaluationViewSet(viewsets.ModelViewSet):
 class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = QuizAttempt.objects.select_related('quiz', 'student').all()
     serializer_class = QuizAttemptSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -388,4 +397,6 @@ class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
                 return qs.filter(student=student)
             except Student.DoesNotExist:
                 return qs.none()
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(student__main_instructor__user=self.request.user)
         return qs

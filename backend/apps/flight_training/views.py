@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
+
 from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
     FlightProgram, FlightLessonTemplate,
@@ -20,6 +21,11 @@ from .serializers import (
 )
 from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
+
+
+def _user_has_permission(user, permission):
+    all_perms = user.get_all_permissions()
+    return permission in all_perms or any(p.endswith(f'.{permission}') for p in all_perms)
 
 
 class FlightProgramViewSet(viewsets.ModelViewSet):
@@ -105,6 +111,8 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def evaluate(self, request, pk=None):
+        if not _user_has_permission(request.user, 'flight_training.evaluate'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         lesson = self.get_object()
         serializer = FlightEvaluationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -150,6 +158,8 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def authorize_solo(self, request, pk=None):
+        if not _user_has_permission(request.user, 'flight_training.evaluate'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         lesson = self.get_object()
 
         # Validate student has valid medical certificate
@@ -268,7 +278,8 @@ class InstructorAvailabilityViewSet(viewsets.ModelViewSet):
 
 
 class FlightLogViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
 
     def list(self, request):
         from apps.students.models import Student
@@ -281,7 +292,6 @@ class FlightLogViewSet(viewsets.ViewSet):
                 return Response({'error': 'Student profile not found'}, status=404)
 
         if not student_id:
-            # Non-student users: return empty log
             return Response({'total_flight_hours': 0, 'total_lessons': 0, 'lessons': []})
 
         log = FlightLogService.get_student_log(student_id)

@@ -19,10 +19,18 @@ class StudentViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         if self.request.user.role == 'student':
             return qs.filter(user=self.request.user)
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(main_instructor__user=self.request.user)
         return qs
+
+    def _user_has_permission(self, user, permission):
+        all_perms = user.get_all_permissions()
+        return permission in all_perms or any(p.endswith(f'.{permission}') for p in all_perms)
 
     @action(detail=True, methods=['post'])
     def suspend(self, request, pk=None):
+        if not self._user_has_permission(request.user, 'students.manage'):
+            return Response({'error': 'Permission denied'}, status=403)
         student = self.get_object()
         student.status = 'suspended'
         student.save()
@@ -30,6 +38,8 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reactivate(self, request, pk=None):
+        if not self._user_has_permission(request.user, 'students.manage'):
+            return Response({'error': 'Permission denied'}, status=403)
         student = self.get_object()
         student.status = 'active'
         student.save()
@@ -37,6 +47,8 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def archive(self, request, pk=None):
+        if not self._user_has_permission(request.user, 'students.manage'):
+            return Response({'error': 'Permission denied'}, status=403)
         student = self.get_object()
         student.status = 'archived'
         student.save()

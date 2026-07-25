@@ -210,6 +210,18 @@ class DocumentViewSet(viewsets.ModelViewSet):
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=400)
+
+        student_id = request.data.get('student_id')
+        if request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=request.user)
+                if student_id and str(student.id) != student_id:
+                    return Response({'error': 'Cannot upload documents for other students'}, status=403)
+                student_id = str(student.id)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=400)
+
         from django.core.files.storage import default_storage
         path = default_storage.save(f'documents/{file.name}', file)
         doc = Document.objects.create(
@@ -220,7 +232,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             mime_type=file.content_type,
             file_size=file.size,
             uploaded_by=request.user,
-            student_id=request.data.get('student_id') or None,
+            student_id=student_id or None,
         )
         return Response(DocumentSerializer(doc).data, status=201)
 
