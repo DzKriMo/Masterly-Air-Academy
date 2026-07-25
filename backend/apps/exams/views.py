@@ -157,6 +157,11 @@ class ExamViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='attempts/(?P<attempt_id>[^/.]+)/grade')
     def grade_attempt(self, request, pk=None, attempt_id=None):
+        all_perms = request.user.get_all_permissions()
+        has_grade_perm = 'exams.grade' in all_perms or any(p.endswith('.exams.grade') for p in all_perms)
+        if not has_grade_perm and request.user.role not in ('system_admin',):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
         exam = self.get_object()
         try:
             attempt = ExamAttempt.objects.get(id=attempt_id, exam=exam)
@@ -288,6 +293,10 @@ class ProgressCheckViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def validate(self, request, pk=None):
+        all_perms = request.user.get_all_permissions()
+        has_evaluate_perm = 'flight_training.evaluate' in all_perms or any(p.endswith('.flight_training.evaluate') for p in all_perms)
+        if not has_evaluate_perm and request.user.role not in ('system_admin',):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         progress_check = self.get_object()
         progress_check.status = 'completed'
         progress_check.completed_date = timezone.now()
@@ -325,6 +334,10 @@ class SkillTestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def authorize(self, request, pk=None):
+        all_perms = request.user.get_all_permissions()
+        has_evaluate_perm = 'flight_training.evaluate' in all_perms or any(p.endswith('.flight_training.evaluate') for p in all_perms)
+        if not has_evaluate_perm and request.user.role not in ('system_admin',):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         skill_test = self.get_object()
         skill_test.status = 'authorized'
         skill_test.authorized_by = request.data.get('authorized_by', None)
@@ -343,6 +356,10 @@ class SkillTestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
+        all_perms = request.user.get_all_permissions()
+        has_evaluate_perm = 'flight_training.evaluate' in all_perms or any(p.endswith('.flight_training.evaluate') for p in all_perms)
+        if not has_evaluate_perm and request.user.role not in ('system_admin',):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         skill_test = self.get_object()
         skill_test.status = 'completed'
         skill_test.completed_date = timezone.now()

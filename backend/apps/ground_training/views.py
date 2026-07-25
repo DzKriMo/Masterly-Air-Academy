@@ -265,6 +265,8 @@ class AttendanceRecordViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         if self.request.user.role == 'student':
             return qs.filter(student__user=self.request.user)
+        if self.request.user.role == 'ground_instructor':
+            return qs.filter(course__instructor__user=self.request.user)
         return qs
 
 

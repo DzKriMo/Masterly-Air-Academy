@@ -71,6 +71,8 @@ class MedicalCertificateViewSet(viewsets.ModelViewSet):
                 return qs.filter(student=student)
             except Student.DoesNotExist:
                 return qs.none()
+        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+            return qs.filter(student__main_instructor__user=self.request.user)
         return qs
 
 
