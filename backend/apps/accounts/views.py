@@ -24,6 +24,7 @@ class CurrentUserView(views.APIView):
             'status': user.status,
             'is_active': user.is_active,
             'last_login_at': user.last_login_at,
+            'last_login_ip': user.last_login_ip,
             'created_at': user.date_joined,
             'permissions': user.permissions_list,
             'roles': user.role_list,

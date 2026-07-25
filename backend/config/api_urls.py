@@ -633,6 +633,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
 
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            s = self.get_serializer(data=request.data)
+            s.is_valid()
+            if getattr(s, 'user', None):
+                s.user.last_login_at = timezone.now()
+                s.user.last_login_ip = request.META.get('REMOTE_ADDR', '')
+                s.user.save(update_fields=['last_login_at', 'last_login_ip'])
+        return response
+
 
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all().prefetch_related('permissions')
