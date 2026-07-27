@@ -305,19 +305,20 @@ class Command(BaseCommand):
             GroundEvaluation.objects.get_or_create(
                 student=s, course=course1,
                 defaults={
-                    'score': random.choice([75, 82, 88, 91, 95]),
-                    'status': 'completed',
-                    'feedback': 'Good understanding of basic navigation concepts.',
+                    'grade': random.choice([75, 82, 88, 91, 95]),
+                    'appreciation': 'Good understanding of basic navigation concepts.',
                     'flagged': False,
+                    'created_by': admin_user,
                 },
             )
         # Ahmed also has a MET evaluation
         GroundEvaluation.objects.get_or_create(
             student=students[0], course=course2,
             defaults={
-                'score': 90, 'status': 'completed',
-                'feedback': 'Excellent understanding of weather principles.',
+                'grade': 90,
+                'appreciation': 'Excellent understanding of weather principles.',
                 'flagged': False,
+                'created_by': admin_user,
             },
         )
 
