@@ -308,7 +308,7 @@ class Command(BaseCommand):
                     'grade': random.choice([75, 82, 88, 91, 95]),
                     'appreciation': 'Good understanding of basic navigation concepts.',
                     'flagged': False,
-                    'created_by': admin_user,
+                    'created_by': admin,
                 },
             )
         # Ahmed also has a MET evaluation
@@ -318,7 +318,7 @@ class Command(BaseCommand):
                 'grade': 90,
                 'appreciation': 'Excellent understanding of weather principles.',
                 'flagged': False,
-                'created_by': admin_user,
+                'created_by': admin,
             },
         )
 
