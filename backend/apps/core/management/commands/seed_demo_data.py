@@ -249,7 +249,6 @@ class Command(BaseCommand):
                 defaults={
                     'title': f'Introduction to {module.title}',
                     'content': f'# {module.title}\n\nThis is the introductory lesson for {module.title}. Students will learn the fundamental concepts and principles.',
-                    'duration_minutes': 45,
                 },
             )
             ModuleLesson.objects.get_or_create(
@@ -257,7 +256,6 @@ class Command(BaseCommand):
                 defaults={
                     'title': f'Advanced {module.title}',
                     'content': f'# Advanced {module.title}\n\nBuilding on the introduction, this lesson covers advanced topics in {module.title}.',
-                    'duration_minutes': 45,
                 },
             )
 
