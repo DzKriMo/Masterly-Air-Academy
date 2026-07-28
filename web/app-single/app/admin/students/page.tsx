@@ -82,6 +82,27 @@ export default function AdminStudentsPage() {
   const [confirmAction, setConfirmAction] = useState<{ student: Student; action: "suspend" | "reactivate" | "archive" } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const downloadDossier = useCallback(async (student: Student) => {
+    try {
+      const token = api.getAccessToken();
+      const res = await fetch(`/api/students/${student.id}/dossier/`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      if (!res.ok) throw new Error('Failed to generate dossier');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dossier-${student.student_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast("error", "Failed to generate student dossier");
+    }
+  }, [showToast]);
+
   const handleLifecycleAction = useCallback(async () => {
     if (!confirmAction) return;
     setActionLoading(true);
@@ -202,6 +223,12 @@ export default function AdminStudentsPage() {
         sortable: false,
         render: (s) => (
           <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => downloadDossier(s)}
+              className="px-2 py-1 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-colors"
+            >
+              Dossier
+            </button>
             {s.status === "active" && (
               <button
                 onClick={() => setConfirmAction({ student: s, action: "suspend" })}
@@ -230,7 +257,7 @@ export default function AdminStudentsPage() {
         ),
       },
     ],
-    [t]
+    [t, downloadDossier]
   );
 
   // ── Stats bar ──

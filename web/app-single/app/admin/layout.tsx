@@ -178,15 +178,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const filteredSections = useMemo(() => {
-    if (!search.trim()) return SECTIONS;
+    let sections = SECTIONS;
+    if (user && user.role === "training_admin") {
+      const ADMIN_KEEP = new Set([
+        "/admin/students", "/admin/instructors", "/admin/applications",
+        "/admin/certificates", "/admin/medical-certificates",
+      ]);
+      const SYSTEM_KEEP = new Set(["/admin/reports", "/admin/documents"]);
+      const HIDE_SECTIONS = new Set(["quality-safety", "finance"]);
+      sections = sections
+        .filter(s => !HIDE_SECTIONS.has(s.id))
+        .map(s => {
+          if (s.id === "administration") return { ...s, items: s.items.filter(i => ADMIN_KEEP.has(i.href)) };
+          if (s.id === "system") return { ...s, items: s.items.filter(i => SYSTEM_KEEP.has(i.href)) };
+          return s;
+        });
+    }
+    if (!search.trim()) return sections;
     const q = search.toLowerCase();
-    return SECTIONS
+    return sections
       .map(s => ({
         ...s,
         items: s.items.filter(i => i.label.toLowerCase().includes(q)),
       }))
       .filter(s => s.items.length > 0);
-  }, [SECTIONS, search]);
+  }, [SECTIONS, search, user]);
 
   const isActive = (href: string) => pathname.startsWith(href);
 
@@ -203,7 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLoading) return null;
   if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !["system_admin", "admin_responsible", "admin_agent", "admissions_responsible"].includes(user.role)) {
+  if (user && !["system_admin", "admin_responsible", "admin_agent", "admissions_responsible", "training_admin"].includes(user.role)) {
     router.push("/login"); return null;
   }
 

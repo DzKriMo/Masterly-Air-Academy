@@ -211,6 +211,22 @@ ROLE_DEFINITIONS = {
             'audit_logs': ['view'],
         },
     },
+    'training_admin': {
+        'label': 'Training Administrator',
+        'domains': {
+            'dashboard': ['view'],
+            'students': ['manage'], 'candidates': ['manage'],
+            'ground_training': ['manage'],
+            'flight_training': ['manage'],
+            'exams': ['manage'],
+            'attendance': ['manage'],
+            'documents': ['view', 'create', 'update'],
+            'applications': ['manage'],
+            'fleet': ['view'],
+            'schedule': ['manage'],
+            'academic_years': ['view'],
+        },
+    },
     'scheduler': {
         'label': 'Scheduler',
         'domains': {

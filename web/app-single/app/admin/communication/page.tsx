@@ -42,7 +42,7 @@ const ROLES = [
   "chief_flight_instructor", "flight_instructor",
   "system_admin", "admin_responsible", "admin_agent",
   "finance_responsible", "accounting_agent",
-  "admissions_responsible",
+  "admissions_responsible", "training_admin",
   "quality_manager", "compliance_monitoring_manager", "safety_manager",
   "scheduler",
   "student", "candidate", "graduate",
