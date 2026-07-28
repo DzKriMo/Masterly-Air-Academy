@@ -465,7 +465,7 @@ class Command(BaseCommand):
                     question_text=qt,
                     defaults={
                         'subject': subj,
-                        'question_type': 'multiple_choice',
+                        'question_type': 'mcq',
                         'options': opts,
                         'correct_answer': ans,
                         'difficulty': 'easy' if idx < 3 else 'medium',
@@ -478,7 +478,7 @@ class Command(BaseCommand):
             code='NAV-PPL-01',
             defaults={
                 'title': 'Navigation Theory Exam',
-                'subject': nav, 'program': 'PPL', 'type': 'theory',
+                'subject': nav, 'program': 'PPL', 'type': 'module_exam',
                 'duration': 30, 'question_count': 6, 'passing_grade': 70,
                 'max_attempts': 3, 'status': 'published',
             },
@@ -501,7 +501,7 @@ class Command(BaseCommand):
                 defaults={
                     'type': 'theory', 'program': 'PPL',
                     'title': 'NAV-PPL-01 - Passed',
-                    'issued_date': now - timedelta(days=20),
+                    'issue_date': now - timedelta(days=20),
                     'certificate_number': 'CERT-2026-001',
                     'status': 'issued',
                 },
@@ -536,9 +536,8 @@ class Command(BaseCommand):
             ModuleExercise.objects.get_or_create(
                 module=module, title=f'{module.title} - Exercise 1',
                 defaults={
-                    'description': 'Complete the following questions based on the lesson material.',
-                    'exercise_type': 'homework',
-                    'max_score': 100,
+                    'instructions': 'Complete the following questions based on the lesson material.',
+                    'due_date': today + timedelta(days=7),
                 },
             )
 
@@ -546,7 +545,7 @@ class Command(BaseCommand):
         from apps.exams.models import ProgressCheck, SkillTest, PracticalEvaluation
         ProgressCheck.objects.get_or_create(
             student=students[0], examiner=fi,
-            scheduled_date=today - timedelta(days=5),
+            scheduled_date=now - timedelta(days=5),
             defaults={
                 'status': 'completed', 'result': 'satisfactory',
                 'completed_date': now - timedelta(days=5),
@@ -558,7 +557,7 @@ class Command(BaseCommand):
         # ── Skill Test for Ahmed (authorized) ────────────
         SkillTest.objects.get_or_create(
             student=students[0], examiner=fi,
-            scheduled_date=today + timedelta(days=15),
+            scheduled_date=now + timedelta(days=15),
             defaults={
                 'status': 'authorized', 'authorized_by': fi,
             },
@@ -568,22 +567,21 @@ class Command(BaseCommand):
         PracticalEvaluation.objects.get_or_create(
             student=students[0], instructor=fi,
             defaults={
-                'status': 'completed', 'result': 'passed',
-                'grade': 88, 'completed_date': now - timedelta(days=10),
-                'feedback': 'Competent pilot with good decision-making skills.',
+                'result': 'passed',
+                'grade': 88, 'date': now - timedelta(days=10),
+                'observations': 'Competent pilot with good decision-making skills.',
             },
         )
 
         # ── Medical Certificate for Ahmed ────────────────
         from apps.students.models import MedicalCertificate
         MedicalCertificate.objects.get_or_create(
-            student=students[0], type='class1',
+            student=students[0],
             defaults={
-                'issued_date': today - timedelta(days=60),
+                'issue_date': today - timedelta(days=60),
                 'expiry_date': today + timedelta(days=300),
                 'status': 'valid',
-                'issued_by': 'Dr. Mohamed Alami',
-                'notes': 'No restrictions.',
+                'issuer': 'Dr. Mohamed Alami',
             },
         )
 
@@ -595,16 +593,16 @@ class Command(BaseCommand):
                 'type': 'contract', 'category': 'enrollment',
                 'file_url': '/media/documents/sample_contract.pdf',
                 'uploaded_by': admin,
-                'status': 'active',
-            },
-        )
+                    'status': 'approved',
+                },
+            )
         Document.objects.get_or_create(
             name='PPL Syllabus.pdf', student=students[0],
             defaults={
                 'type': 'syllabus', 'category': 'training',
                 'file_url': '/media/documents/ppl_syllabus.pdf',
                 'uploaded_by': admin,
-                'status': 'active',
+                'status': 'approved',
             },
         )
 
@@ -679,10 +677,6 @@ class Command(BaseCommand):
                 'status': 'signed',
                 'start_date': today - timedelta(days=90),
                 'end_date': today + timedelta(days=275),
-                'total_amount': 45000,
-                'terms': 'Standard PPL training contract. Payment in installments.',
-                'signed_by_student': True,
-                'signed_by_school': True,
                 'signed_at': now - timedelta(days=90),
             },
         )
@@ -827,8 +821,7 @@ class Command(BaseCommand):
             simulator=sim, student=students[0], instructor=fi,
             scheduled_date=today + timedelta(days=8),
             defaults={
-                'start_time': now + timedelta(days=8, hours=14),
-                'end_time': now + timedelta(days=8, hours=15, minutes=30),
+                'duration': 1.5,
                 'status': 'scheduled',
             },
         )
@@ -838,8 +831,9 @@ class Command(BaseCommand):
         QualityDocument.objects.get_or_create(
             title='Safety Management System Manual',
             defaults={
+                'number': 'QD-SMS-001',
                 'type': 'manual',
-                'status': 'published',
+                'status': 'approved',
                 'file_url': '/media/quality/sms_manual.pdf',
                 'version': '1.0',
             },
@@ -860,7 +854,7 @@ class Command(BaseCommand):
         for key, value, stype in defaults:
             SystemSetting.objects.get_or_create(
                 key=key,
-                defaults={'value': value, 'type': stype, 'category': 'general', 'description': ''},
+                defaults={'value': value, 'category': 'general', 'description': ''},
             )
 
         # ── Summary ──────────────────────────────────────
