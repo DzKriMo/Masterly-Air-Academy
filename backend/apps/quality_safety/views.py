@@ -220,6 +220,13 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)
 
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def report(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(reported_by=request.user, status='reported')
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'])
     def investigate(self, request, pk=None):
         event = self.get_object()
