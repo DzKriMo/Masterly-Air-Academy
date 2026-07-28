@@ -854,7 +854,7 @@ class Command(BaseCommand):
         for key, value, stype in defaults:
             SystemSetting.objects.get_or_create(
                 key=key,
-                defaults={'value': value, 'category': 'general', 'description': ''},
+                defaults={'value': value, 'category': 'general'},
             )
 
         # ── Summary ──────────────────────────────────────
