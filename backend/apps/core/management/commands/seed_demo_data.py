@@ -400,15 +400,13 @@ class Command(BaseCommand):
         FlightPreparation.objects.get_or_create(
             flight_lesson=ahmed_flight_completed,
             defaults={
-                'pre_flight_completed': True,
-                'weather_checked': True,
-                'notam_checked': True,
-                'weight_balance_computed': True,
-                'fuel_required': 80,
-                'fuel_loaded': 85,
-                'notes': 'All checks completed. Aircraft serviceable.',
-                'signed_by_student': True,
-                'signed_by_instructor': True,
+                'weather_check': True,
+                'notam_check': True,
+                'performance_check': True,
+                'document_check': True,
+                'medical_check': True,
+                'lesson_objectives': 'Complete solo pattern work',
+                'briefing_notes': 'All checks completed. Aircraft serviceable.',
             },
         )
 
