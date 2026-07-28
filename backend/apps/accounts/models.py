@@ -20,6 +20,7 @@ class UserRole(models.TextChoices):
     COMPLIANCE_MONITORING_MANAGER = 'compliance_monitoring_manager', 'Compliance Monitoring Manager'
     SAFETY_MANAGER = 'safety_manager', 'Safety Manager'
     SCHEDULER = 'scheduler', 'Scheduler'
+    TRAINING_ADMIN = 'training_admin', 'Training Administrator'
     STUDENT = 'student', 'Student'
     CANDIDATE = 'candidate', 'Candidate'
     GRADUATE = 'graduate', 'Graduate'
