@@ -167,12 +167,18 @@ export default function CoursesPage() {
     { key: "enrollment_count", header: t("instructor.students", "Students") },
     { key: "actions", header: "", sortable: false, render: (c) => (
       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={() => router.push(`/instructor/courses/${c.id}/attendance`)}
-          className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors"
-        >
-          {t("instructor.attendance", "Attendance")}
-        </button>
+          <button
+            onClick={() => router.push(`/instructor/courses/${c.id}/attendance`)}
+            className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors"
+          >
+            {t("instructor.attendance", "Attendance")}
+          </button>
+          <button
+            onClick={() => router.push(`/instructor/courses/${c.id}/evaluation`)}
+            className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-lg text-xs hover:bg-purple-500/20 transition-colors"
+          >
+            {t("instructor.evaluate", "Evaluate")}
+          </button>
         {c.status === "scheduled" && (
           <>
             <button
