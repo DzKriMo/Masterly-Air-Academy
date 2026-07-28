@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://185.185.80.188.nip.io/sitemap.xml
