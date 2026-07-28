@@ -156,42 +156,91 @@ export default function LandingPage() {
   );
 }
 
+const NATIONALITIES = [
+  "Algerian", "American", "Argentinean", "Australian", "Austrian", "Bahraini", "Bangladeshi", "Belgian",
+  "Brazilian", "British", "Bulgarian", "Canadian", "Chinese", "Colombian", "Croatian", "Cypriot",
+  "Czech", "Danish", "Dutch", "Egyptian", "Emirian", "Estonian", "Finnish", "French",
+  "German", "Greek", "Hungarian", "Icelandic", "Indian", "Indonesian", "Iranian", "Iraqi",
+  "Irish", "Israeli", "Italian", "Japanese", "Jordanian", "Kazakhstani", "Kenyan", "Kuwaiti",
+  "Latvian", "Lebanese", "Libyan", "Lithuanian", "Luxembourger", "Macedonian", "Malaysian", "Maltese",
+  "Mexican", "Moldovan", "Monacan", "Montenegrin", "Moroccan", "Nigerian", "Norwegian", "Omani",
+  "Pakistani", "Palestinian", "Polish", "Portuguese", "Qatari", "Romanian", "Russian", "Saudi",
+  "Senegalese", "Serbian", "Singaporean", "Slovakian", "Slovenian", "South African", "South Korean", "Spanish",
+  "Sri Lankan", "Sudanese", "Swedish", "Swiss", "Syrian", "Taiwanese", "Tunisian", "Turkish",
+  "Ukrainian", "Uruguayan", "Venezuelan", "Vietnamese", "Other",
+];
+
 function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
   const [activeTab, setActiveTab] = useState<"contact" | "application">("contact");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [program, setProgram] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [subject, setSubject] = useState("");
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [gender, setGender] = useState("");
+  const [dob, setDob] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [appPhone, setAppPhone] = useState("");
+  const [appEmail, setAppEmail] = useState("");
+  const [english, setEnglish] = useState("");
+  const [education, setEducation] = useState("");
+  const [source, setSource] = useState("");
+  const [program, setProgram] = useState("");
+  const [appNotes, setAppNotes] = useState("");
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !message) { setError("Name, email, and message are required."); return; }
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
+    setSubmitting(true); setError(""); setSuccess("");
     try {
       const res = await fetch("/api/contact/submit/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, subject, message, type: activeTab, program }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, subject, message, type: "contact" }),
       });
       const data = await res.json();
       if (res.ok) {
         setSuccess(data.message || data.data?.message || "Your message has been received. We will get back to you shortly.");
-        setName(""); setEmail(""); setPhone(""); setSubject(""); setMessage(""); setProgram("");
+        setName(""); setEmail(""); setPhone(""); setSubject(""); setMessage("");
       } else {
         setError(data.error || (data.data && (data.data as any).error) || "Something went wrong.");
       }
-    } catch {
-      setError("Connection error. Please try again.");
-    } finally {
-      setSubmitting(false);
+    } catch { setError("Connection error. Please try again."); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleAppSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName || !lastName || !gender || !dob || !nationality || !appPhone || !appEmail || !english || !education || !source || !program) {
+      setError("Please fill in all required fields."); return;
     }
+    setSubmitting(true); setError(""); setSuccess("");
+    try {
+      const res = await fetch("/api/contact/submit/", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "application", first_name: firstName, last_name: lastName,
+          gender, date_of_birth: dob, nationality, phone: appPhone, email: appEmail,
+          english_proficiency: english, education_level: education, source, program, notes: appNotes,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(data.message || data.data?.message || "Your application has been received. We will contact you shortly.");
+        setFirstName(""); setLastName(""); setGender(""); setDob(""); setNationality("");
+        setAppPhone(""); setAppEmail(""); setEnglish(""); setEducation(""); setSource(""); setProgram(""); setAppNotes("");
+      } else {
+        setError(data.error || (data.data && (data.data as any).error) || "Something went wrong.");
+      }
+    } catch { setError("Connection error. Please try again."); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -204,26 +253,120 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
           {t("contact_apply", "Apply Now")}
         </button>
       </div>
-      <form onSubmit={handleSubmit} className="bg-navy-800 border border-navy-700 rounded-2xl p-8 space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_name", "Full Name")} *</label>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_name_placeholder", "Your full name")} />
+
+      {activeTab === "contact" ? (
+        <form onSubmit={handleContactSubmit} className="bg-navy-800 border border-navy-700 rounded-2xl p-8 space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_name", "Full Name")} *</label>
+              <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_name_placeholder", "Your full name")} />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_email", "Email")} *</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="your@email.com" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_phone", "Phone")}</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="+213 ..." />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_subject_label", "Subject")}</label>
+              <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_subject_placeholder", "Subject")} />
+            </div>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_email", "Email")} *</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="your@email.com" />
+            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_message", "Message")} *</label>
+            <textarea required rows={5} value={message} onChange={e => setMessage(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none resize-y" placeholder={t("contact_message_placeholder", "Your message...")} />
           </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_phone", "Phone")}</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="+213 ..." />
+          <button type="submit" disabled={submitting} className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors disabled:opacity-50 text-lg">
+            {submitting ? t("contact_sending", "Sending...") : t("contact_send", "Send Message")}
+          </button>
+          {success && <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm text-center">{success}</div>}
+          {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">{error}</div>}
+        </form>
+      ) : (
+        <form onSubmit={handleAppSubmit} className="bg-navy-800 border border-navy-700 rounded-2xl p-8 space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_first_name", "First Name")} *</label>
+              <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="John" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_last_name", "Last Name")} *</label>
+              <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="Doe" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">{activeTab === "application" ? t("contact_program", "Program of Interest") : t("contact_subject_label", "Subject")}</label>
-            {activeTab === "application" ? (
-              <select value={program} onChange={e => setProgram(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_gender", "Gender")} *</label>
+              <select required value={gender} onChange={e => setGender(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("app_select", "Select")}</option>
+                <option value="male">{t("app_male", "Male")}</option>
+                <option value="female">{t("app_female", "Female")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_dob", "Date of Birth")} *</label>
+              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_nationality", "Nationality")} *</label>
+              <select required value={nationality} onChange={e => setNationality(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("app_select", "Select")}</option>
+                {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_phone", "Phone")} *</label>
+              <input type="tel" required value={appPhone} onChange={e => setAppPhone(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="+213 ..." />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_email", "Email")} *</label>
+              <input type="email" required value={appEmail} onChange={e => setAppEmail(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder="your@email.com" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_english", "Can you read, write and converse fluently in English?")} *</label>
+              <select required value={english} onChange={e => setEnglish(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("app_select", "Select")}</option>
+                <option value="yes">{t("app_yes", "Yes")}</option>
+                <option value="no">{t("app_no", "No")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_education", "Education Level")} *</label>
+              <select required value={education} onChange={e => setEducation(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("app_select", "Select")}</option>
+                <option value="high_school">{t("edu_high_school", "High School / Baccalaureate")}</option>
+                <option value="associate">{t("edu_associate", "Associate Degree / License")}</option>
+                <option value="bachelor">{t("edu_bachelor", "Bachelor's Degree")}</option>
+                <option value="master">{t("edu_master", "Master's Degree")}</option>
+                <option value="doctorate">{t("edu_doctorate", "Doctorate")}</option>
+                <option value="other">{t("edu_other", "Other")}</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("app_source", "How did you hear about us?")} *</label>
+              <select required value={source} onChange={e => setSource(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
+                <option value="">{t("app_select", "Select")}</option>
+                <option value="internet">{t("src_internet", "Internet")}</option>
+                <option value="social">{t("src_social", "Social Media")}</option>
+                <option value="friend">{t("src_friend", "Friend / Family")}</option>
+                <option value="visit">{t("src_visit", "Visited our facilities")}</option>
+                <option value="press">{t("src_press", "Press / Media")}</option>
+                <option value="other">{t("src_other", "Other")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{t("contact_program", "Program of Interest")} *</label>
+              <select required value={program} onChange={e => setProgram(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
                 <option value="">{t("contact_select_program", "Select a program")}</option>
                 <option value="PPL">PPL — Private Pilot License</option>
                 <option value="CPL">CPL — Commercial Pilot License</option>
@@ -231,21 +374,19 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
                 <option value="MEP">MEP — Multi-Engine Piston</option>
                 <option value="MCC">MCC — Multi-Crew Cooperation</option>
               </select>
-            ) : (
-              <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" placeholder={t("contact_subject_placeholder", "Subject")} />
-            )}
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-400 mb-1.5">{t("contact_message", "Message")} *</label>
-          <textarea required rows={5} value={message} onChange={e => setMessage(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none resize-y" placeholder={activeTab === "application" ? t("contact_application_placeholder", "Tell us about yourself, your aviation experience, and why you want to join Masterly Air Academy...") : t("contact_message_placeholder", "Your message...")} />
-        </div>
-        <button type="submit" disabled={submitting} className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors disabled:opacity-50 text-lg">
-          {submitting ? t("contact_sending", "Sending...") : activeTab === "application" ? t("contact_submit_application", "Submit Application") : t("contact_send", "Send Message")}
-        </button>
-        {success && <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm text-center">{success}</div>}
-        {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">{error}</div>}
-      </form>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">{t("contact_message", "Additional Notes")}</label>
+            <textarea rows={4} value={appNotes} onChange={e => setAppNotes(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none resize-y" placeholder={t("app_notes_placeholder", "Previous aviation experience, medical conditions, or any additional information...")} />
+          </div>
+          <button type="submit" disabled={submitting} className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors disabled:opacity-50 text-lg">
+            {submitting ? t("contact_sending", "Sending...") : t("contact_submit_application", "Submit Application")}
+          </button>
+          {success && <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm text-center">{success}</div>}
+          {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">{error}</div>}
+        </form>
+      )}
     </div>
   );
 }
