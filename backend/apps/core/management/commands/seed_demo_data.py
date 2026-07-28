@@ -486,7 +486,7 @@ class Command(BaseCommand):
 
         # Ahmed passed the exam
         qs_list = list(QuestionBank.objects.filter(subject=nav)[:6])
-        attempt, created = ExamAttempt.objects.get_or_create(
+        ExamAttempt.objects.update_or_create(
             exam=exam, student=students[0], attempt=1,
             defaults={
                 'score': 85, 'is_passed': True,
@@ -495,17 +495,16 @@ class Command(BaseCommand):
                 'answers': {str(i): {'selected': q.correct_answer, 'correct': True} for i, q in enumerate(qs_list)},
             },
         )
-        if created:
-            Certificate.objects.get_or_create(
-                student=students[0],
-                defaults={
-                    'type': 'theory', 'program': 'PPL',
-                    'title': 'NAV-PPL-01 - Passed',
-                    'issue_date': now - timedelta(days=20),
-                    'certificate_number': 'CERT-2026-001',
-                    'status': 'issued',
-                },
-            )
+        Certificate.objects.update_or_create(
+            student=students[0],
+            defaults={
+                'type': 'theory', 'program': 'PPL',
+                'title': 'NAV-PPL-01 - Passed',
+                'issue_date': now - timedelta(days=20),
+                'certificate_number': 'CERT-2026-001',
+                'status': 'issued',
+            },
+        )
 
         # Fatima attempted but hasn't passed yet
         ExamAttempt.objects.get_or_create(
