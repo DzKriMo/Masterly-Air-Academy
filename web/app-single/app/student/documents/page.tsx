@@ -11,6 +11,8 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
@@ -34,6 +36,7 @@ export default function StudentDocumentsPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -127,8 +130,43 @@ export default function StudentDocumentsPage() {
             columns={columns}
             data={filteredDocs as any}
             keyField="id"
+            onRowClick={(item) => setSelectedDoc(item as Document)}
             emptyMessage={t('student.noDocsFilter', 'No documents match your filters.')}
           />
+
+          <ModalForm
+            open={!!selectedDoc}
+            onClose={() => setSelectedDoc(null)}
+            title={selectedDoc?.name || t("document.details", "Document Details")}
+            footer={
+              <div className="flex gap-3">
+                <button onClick={() => setSelectedDoc(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                  {t("close", "Close")}
+                </button>
+                {selectedDoc && (
+                  <button onClick={() => { downloadFile(selectedDoc.id, selectedDoc.name); }} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 rounded-lg text-sm font-bold transition-colors">
+                    {t("common.download", "Download")}
+                  </button>
+                )}
+              </div>
+            }
+          >
+            {selectedDoc && (
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("common.details", "Details")}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <DetailField label={t("common.name", "Name")} value={selectedDoc.name} />
+                    <DetailField label={t("common.type", "Type")} value={selectedDoc.type.toUpperCase()} />
+                    <DetailField label={t("common.category", "Category")} value={selectedDoc.category} />
+                    <DetailField label={t("common.status")} value={selectedDoc.status} />
+                    <DetailField label={t("common.version", "Version")} value={`v${selectedDoc.version}`} />
+                    <DetailField label={t("common.uploadedDate", "Uploaded")} value={new Date(selectedDoc.uploaded_at).toLocaleDateString()} />
+                  </div>
+                </section>
+              </div>
+            )}
+          </ModalForm>
         </>
       )}
     </main></div>);

@@ -11,6 +11,8 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { ExportButton } from "@/components/export-button";
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -27,6 +29,7 @@ export default function StudentCertificatesPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
+  const [selectedCert, setSelectedCert] = useState<Cert | null>(null);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -137,8 +140,48 @@ export default function StudentCertificatesPage() {
             columns={columns}
             data={filteredCerts as any}
             keyField="id"
+            onRowClick={(item) => setSelectedCert(item as Cert)}
             emptyMessage={t('student.noCertsFilter', 'No certificates match your filters.')}
           />
+
+          <ModalForm
+            open={!!selectedCert}
+            onClose={() => setSelectedCert(null)}
+            title={selectedCert?.title || t("certificate.details", "Certificate Details")}
+            footer={
+              <button onClick={() => setSelectedCert(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                {t("close", "Close")}
+              </button>
+            }
+          >
+            {selectedCert && (
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("common.details", "Details")}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <DetailField label={t("common.number", "Number")} value={selectedCert.certificate_number} />
+                    <DetailField label={t("common.title", "Title")} value={selectedCert.title || selectedCert.type} />
+                    <DetailField label={t("common.type")} value={selectedCert.type} />
+                    <DetailField label={t("common.program", "Program")} value={selectedCert.program || "-"} />
+                    <DetailField label={t("common.issued", "Issued")} value={new Date(selectedCert.issue_date).toLocaleDateString()} />
+                    <DetailField label={t("common.expires", "Expires")} value={selectedCert.expiry_date ? new Date(selectedCert.expiry_date).toLocaleDateString() : "-"} />
+                    <DetailField label={t("common.status")} value={selectedCert.status} />
+                  </div>
+                </section>
+                {selectedCert.status === "issued" && (
+                  <section>
+                    <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("certificate.verification", "Verification")}</h3>
+                    <div className="flex items-center gap-3">
+                      <QRCodeSVG value={`/verify-certificate?number=${selectedCert.certificate_number}`} size={48} bgColor="transparent" fgColor="#c4943c" />
+                      <a href={`/verify-certificate?number=${selectedCert.certificate_number}`} className="text-sm text-gold-500 hover:text-gold-400 underline">
+                        {t("certificate.verify", "Verify")}
+                      </a>
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+          </ModalForm>
         </>
       )}
     </main></div>);

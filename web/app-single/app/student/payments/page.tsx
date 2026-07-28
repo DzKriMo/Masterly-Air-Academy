@@ -11,6 +11,8 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
@@ -41,6 +43,7 @@ export default function StudentPaymentsPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [invSearch, setInvSearch] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -167,8 +170,44 @@ export default function StudentPaymentsPage() {
                 columns={invoiceColumns}
                 data={filteredInvoices as any}
                 keyField="id"
+                onRowClick={(item) => setSelectedInvoice(item as Invoice)}
                 emptyMessage={t('student.noInvoicesFilter', 'No invoices match your filters.')}
               />
+
+              <ModalForm
+                open={!!selectedInvoice}
+                onClose={() => setSelectedInvoice(null)}
+                title={`${t("invoice.details", "Invoice")} ${selectedInvoice?.invoice_number || ""}`}
+                footer={
+                  <div className="flex gap-3">
+                    <button onClick={() => setSelectedInvoice(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                      {t("close", "Close")}
+                    </button>
+                    {selectedInvoice && (
+                      <button onClick={() => { downloadInvoicePdf(selectedInvoice.id); }} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 rounded-lg text-sm font-bold transition-colors">
+                        {t("invoice.downloadPdf", "Download PDF")}
+                      </button>
+                    )}
+                  </div>
+                }
+              >
+                {selectedInvoice && (
+                  <div className="space-y-6">
+                    <section>
+                      <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("common.details", "Details")}</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <DetailField label={t("invoice.number", "Invoice#")} value={selectedInvoice.invoice_number} />
+                        <DetailField label={t("common.amount", "Amount")} value={`$${parseFloat(selectedInvoice.amount).toFixed(2)}`} />
+                        <DetailField label={t("common.status")} value={selectedInvoice.status} />
+                        <DetailField label={t("common.dueDate", "Due Date")} value={new Date(selectedInvoice.due_date).toLocaleDateString()} />
+                        <div className="col-span-2">
+                          <DetailField label={t("common.description", "Description")} value={selectedInvoice.description || "-"} />
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </ModalForm>
             </>
           )}
 

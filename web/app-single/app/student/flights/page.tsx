@@ -12,12 +12,14 @@ import { DataTable } from "@/components/data-table";
 import type { Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import type { FilterOption } from "@/components/filter-bar";
+import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
-interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; }
+interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: number; competencies_acquired?: number; observations?: string; }
 
 export default function StudentFlightsPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,6 +30,7 @@ export default function StudentFlightsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+  const [selectedFlight, setSelectedFlight] = useState<FlightEntry | null>(null);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -161,8 +164,43 @@ export default function StudentFlightsPage() {
               columns={columns}
               data={filteredLessons as any}
               keyField="date"
+              onRowClick={(item) => setSelectedFlight(item as FlightEntry)}
               emptyMessage={t('student.noCompletedFlights')}
             />
+
+            <ModalForm
+              open={!!selectedFlight}
+              onClose={() => setSelectedFlight(null)}
+              title={t("student.flightDetail", "Flight Details")}
+              footer={
+                <button onClick={() => setSelectedFlight(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                  {t("close", "Close")}
+                </button>
+              }
+            >
+              {selectedFlight && (
+                <div className="space-y-6">
+                  <section>
+                    <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("common.details", "Details")}</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <DetailField label={t("common.date")} value={selectedFlight.date} />
+                      <DetailField label={t("aircraft")} value={selectedFlight.aircraft} />
+                      <DetailField label={t("duration")} value={`${selectedFlight.duration}h`} />
+                      <DetailField label={t("common.grade")} value={selectedFlight.grade != null ? `${selectedFlight.grade}${selectedFlight.result ? ` (${selectedFlight.result})` : ""}` : "-"} />
+                      {selectedFlight.instructor_name && <DetailField label={t("common.instructor")} value={selectedFlight.instructor_name} />}
+                      {selectedFlight.exercises_completed != null && <DetailField label={t("exercisesCompleted", "Exercises Completed")} value={String(selectedFlight.exercises_completed)} />}
+                      {selectedFlight.competencies_acquired != null && <DetailField label={t("competenciesAcquired", "Competencies Acquired")} value={String(selectedFlight.competencies_acquired)} />}
+                    </div>
+                  </section>
+                  {selectedFlight.observations && (
+                    <section>
+                      <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("observations", "Observations")}</h3>
+                      <p className="text-sm text-white leading-relaxed">{selectedFlight.observations}</p>
+                    </section>
+                  )}
+                </div>
+              )}
+            </ModalForm>
           </>
         )}
       </main>
