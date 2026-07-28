@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
@@ -10,6 +11,7 @@ const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "
 
 export default function LandingPage() {
   const { t, locale } = useTranslation();
+  const [navOpen, setNavOpen] = useState(false);
 
   const whyItems = [
     { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: t("ato_certified"), desc: t("ato_certified_desc"), color: "gold" },
@@ -21,19 +23,31 @@ export default function LandingPage() {
     <div className="min-h-screen bg-navy-900 text-white" dir={locale === "ar" ? "rtl" : "ltr"}>
       <nav className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur border-b border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-24">
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="MAA" width={110} height={110} />
               <span className="text-white font-bold text-lg tracking-tight">{t("app_name")}</span>
             </div>
-            <div className="flex items-center gap-4 md:gap-8 text-sm text-gray-400 overflow-x-auto scrollbar-none whitespace-nowrap -mr-6 pr-6 md:mr-0 md:pr-0">
-              <a href="#programs" className="hover:text-white transition-colors shrink-0">{t("programs")}</a>
-              <a href="#about" className="hover:text-white transition-colors shrink-0">{t("about")}</a>
-              <a href="#why-us" className="hover:text-white transition-colors shrink-0">{t("why_us")}</a>
-              <a href="#contact" className="hover:text-white transition-colors shrink-0">{t("nav_contact")}</a>
-              <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors shrink-0">{t("nav_student")}</Link>
+            <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
+              <a href="#programs" className="hover:text-white transition-colors">{t("programs")}</a>
+              <a href="#about" className="hover:text-white transition-colors">{t("about")}</a>
+              <a href="#why-us" className="hover:text-white transition-colors">{t("why_us")}</a>
+              <a href="#contact" className="hover:text-white transition-colors">{t("nav_contact")}</a>
+              <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
             </div>
+            <button onClick={() => setNavOpen(!navOpen)} className="md:hidden flex items-center justify-center w-[50px] h-[50px] text-gray-400 active:text-white rounded-lg transition-colors">
+              {navOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
+          {navOpen && (
+            <div className="md:hidden pb-5 space-y-1">
+              <a href="#programs" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("programs")}</a>
+              <a href="#about" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("about")}</a>
+              <a href="#why-us" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("why_us")}</a>
+              <a href="#contact" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_contact")}</a>
+              <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -42,7 +56,7 @@ export default function LandingPage() {
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gold-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.03] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-24 md:pt-24 md:pb-32">
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-24 pb-24 md:pt-28 md:pb-32">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             <div className="flex-1 text-center lg:text-left">
               <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">{t("tagline")}</p>
