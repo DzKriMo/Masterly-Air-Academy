@@ -60,7 +60,7 @@ export default function InstructorExerciseViewPage() {
     <div className="min-h-screen bg-navy-900">
       <PageHeader
         title={exercise?.title || t("instructor.exercise", "Exercise")}
-        backHref="/instructor/courses"
+        backHref={`/instructor/courses/${courseId}`}
         backLabel={t("instructor.backToCourses", "Back to Courses")}
         maxWidth="max-w-4xl"
         actions={exercise?.due_date && (

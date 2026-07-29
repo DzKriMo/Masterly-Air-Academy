@@ -100,16 +100,14 @@ export default function StudentCourseDetailPage() {
     if (!isAuthenticated || !courseId) return;
     setLoading(true);
     try {
-      const [coursesRes, materialsRes, attendanceRes, evaluationRes] = await Promise.all([
-        api.get<any>(`/courses/?id=${courseId}`),
+      const [courseRes, materialsRes, attendanceRes, evaluationRes] = await Promise.all([
+        api.get<any>(`/courses/${courseId}/`),
         api.get<any>(`/courses/${courseId}/materials/`),
         api.get<any>(`/attendance/?course=${courseId}`),
         api.get<any>(`/ground-evaluations/?course=${courseId}`).catch(() => ({ results: [] })),
       ]);
 
-      const coursesList = (coursesRes as unknown as any).results || [];
-      const found = coursesList.find((c: any) => c.id === courseId);
-      if (found) setCourse(found);
+      if (courseRes) setCourse(courseRes);
 
       const materialsData = materialsRes as unknown as any;
       setModules(materialsData?.modules || []);

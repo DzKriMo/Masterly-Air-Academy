@@ -106,9 +106,10 @@ export default function TakeExamPage() {
         doSubmit();
       }
     };
-    document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+    const handler = () => { if (document.hidden) onHide(); };
+    document.addEventListener("visibilitychange", handler);
     return () => {
-      document.removeEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+      document.removeEventListener("visibilitychange", handler);
     };
   }, []);
 

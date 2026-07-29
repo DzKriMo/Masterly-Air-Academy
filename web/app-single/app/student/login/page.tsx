@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -132,9 +133,9 @@ export default function StudentLoginPage() {
 
         <p className="text-center text-sm text-gray-600 mt-8">
           {t("staffMember", "Staff member?")}{" "}
-          <a href="/login" className="text-gold-500 hover:underline">
+          <Link href="/login" className="text-gold-500 hover:underline">
             {t("staffLoginLink", "Go to Staff Login")}
-          </a>
+          </Link>
         </p>
       </div>
     </div>

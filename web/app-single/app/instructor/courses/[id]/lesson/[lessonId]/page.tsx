@@ -121,7 +121,7 @@ export default function InstructorLessonViewPage() {
     <div className="min-h-screen bg-navy-900">
       <PageHeader
         title={lesson?.title || t("instructor.lesson", "Lesson")}
-        backHref="/instructor/courses"
+        backHref={`/instructor/courses/${courseId}`}
         backLabel={"← " + t("instructor.backToCourses", "Back to Courses")}
         maxWidth="max-w-4xl"
         actions={lesson && (

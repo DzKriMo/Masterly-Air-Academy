@@ -64,9 +64,10 @@ export default function StudentCoursesPage() {
       <span className="text-gray-400">{item.scheduled_date} | {item.start_time?.slice(0,5)} - {item.end_time?.slice(0,5)} | {item.room_name || t('common.tbd', 'TBD')}</span>
     )},
     { key: "enrollment_count", header: t('common.enrolled', 'Enrolled') },
-    { key: "status", header: t('common.status'), render: (item) => (
-      <span className={`text-xs px-2 py-0.5 rounded font-medium ${item.status === "scheduled" ? "bg-blue-500/10 text-blue-400" : "bg-green-500/10 text-green-400"}`}>{item.status}</span>
-    )},
+    { key: "status", header: t('common.status'), render: (item) => {
+      const colors: Record<string, string> = { scheduled: "bg-blue-500/10 text-blue-400", active: "bg-yellow-500/10 text-yellow-400", completed: "bg-green-500/10 text-green-400" };
+      return <span className={`text-xs px-2 py-0.5 rounded font-medium ${colors[item.status] || "bg-gray-500/10 text-gray-400"}`}>{item.status}</span>;
+    }},
     { key: "actions", header: "", sortable: false, render: (item) => (
       <button
         onClick={(e) => { e.stopPropagation(); router.push(`/student/courses/${item.id}`); }}

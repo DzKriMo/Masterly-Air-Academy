@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
@@ -33,8 +33,9 @@ export default function ExerciseViewPage() {
 
   useAuthGuard(isAuthenticated, authLoading, "/student/login");
 
-  useEffect(() => {
+  const loadExercise = useCallback(() => {
     if (!isAuthenticated || !exerciseId) return;
+    setLoading(true);
     api.get<any>(`/module-exercises/${exerciseId}/`)
       .then(data => {
         const d = data as unknown as any;
@@ -54,13 +55,15 @@ export default function ExerciseViewPage() {
       .finally(() => setLoading(false));
   }, [isAuthenticated, exerciseId]);
 
+  useEffect(() => { loadExercise(); }, [loadExercise]);
+
   if (loading) return <div className="min-h-screen bg-navy-900 p-8"><LoadingSkeleton type="detail" rows={6} /></div>;
 
   return (
     <div className="min-h-screen bg-navy-900">
       <PageHeader
         title={exercise?.title || t("student.exercise", "Exercise")}
-        backHref="/student/courses"
+        backHref={`/student/courses/${courseId}`}
         backLabel={t("student.backToCourses", "Back to Courses")}
         maxWidth="max-w-4xl"
         actions={exercise?.due_date && (
@@ -71,7 +74,7 @@ export default function ExerciseViewPage() {
       />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {error && <ErrorCard message={error} onRetry={() => window.location.reload()} />}
+        {error && <ErrorCard message={error} onRetry={loadExercise} />}
 
         {exercise && (
           <article className="bg-navy-800 border border-navy-700 rounded-2xl p-8 md:p-10">
