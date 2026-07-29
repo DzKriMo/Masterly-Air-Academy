@@ -68,11 +68,11 @@ class Command(BaseCommand):
         # ── Students ──────────────────────────────────────
         from apps.students.models import Student
         students_data = [
-            {'first_name': 'Ahmed', 'last_name': 'Benali', 'program': 'PPL', 'student_number': 'STU-001', 'email': 'ahmed@student.maa.dz'},
-            {'first_name': 'Fatima', 'last_name': 'Mansouri', 'program': 'CPL', 'student_number': 'STU-002', 'email': 'fatima@student.maa.dz'},
-            {'first_name': 'Youssef', 'last_name': 'Tazi', 'program': 'IR', 'student_number': 'STU-003', 'email': 'youssef@student.maa.dz'},
-            {'first_name': 'Amina', 'last_name': 'Alaoui', 'program': 'PPL', 'student_number': 'STU-004', 'email': 'amina@student.maa.dz'},
-            {'first_name': 'Omar', 'last_name': 'Chafik', 'program': 'CPL', 'student_number': 'STU-005', 'email': 'omar@student.maa.dz'},
+            {'first_name': 'Mohamed', 'last_name': 'Amine', 'program': 'PPL', 'student_number': 'STU-001', 'email': 'm.amine@student.maa.dz'},
+            {'first_name': 'Sarah', 'last_name': 'Boumaza', 'program': 'CPL', 'student_number': 'STU-002', 'email': 's.boumaza@student.maa.dz'},
+            {'first_name': 'Yacine', 'last_name': 'Mokhtar', 'program': 'IR', 'student_number': 'STU-003', 'email': 'y.mokhtar@student.maa.dz'},
+            {'first_name': 'Ines', 'last_name': 'Khelifi', 'program': 'PPL', 'student_number': 'STU-004', 'email': 'i.khelifi@student.maa.dz'},
+            {'first_name': 'Rayan', 'last_name': 'Taleb', 'program': 'CPL', 'student_number': 'STU-005', 'email': 'r.taleb@student.maa.dz'},
         ]
         students = []
         for d in students_data:
@@ -98,8 +98,8 @@ class Command(BaseCommand):
                     'first_name': d['first_name'],
                     'last_name': d['last_name'],
                     'date_of_birth': date(2000, 5, 15),
-                    'nationality': 'Moroccan',
-                    'phone': '+212600000000',
+                    'nationality': 'Algerian',
+                    'phone': '+213600000000',
                     'enrollment_date': today - timedelta(days=90),
                     'program': d['program'],
                     'academic_year': ay,
@@ -115,7 +115,7 @@ class Command(BaseCommand):
             defaults={
                 'username': 'gi_instructor', 'role': 'ground_instructor',
                 'status': 'active', 'is_active': True,
-                'first_name': 'Karim', 'last_name': 'Bensaid',
+                'first_name': 'Sofiane', 'last_name': 'Benaissa',
             },
         )
         gi_user.set_password('instructor123')
@@ -126,7 +126,7 @@ class Command(BaseCommand):
         gi, _ = GroundInstructor.objects.get_or_create(
             user=gi_user,
             defaults={
-                'first_name': 'Karim', 'last_name': 'Bensaid',
+                'first_name': 'Sofiane', 'last_name': 'Benaissa',
                 'qualifications': ['Navigation', 'Meteorology'],
                 'authorized_subjects': ['NAV-101', 'MET-201'],
                 'hire_date': date(2020, 1, 15),
@@ -138,7 +138,7 @@ class Command(BaseCommand):
             defaults={
                 'username': 'fi_instructor', 'role': 'flight_instructor',
                 'status': 'active', 'is_active': True,
-                'first_name': 'Hassan', 'last_name': 'Ouazzani',
+                'first_name': 'Rachid', 'last_name': 'Meziane',
             },
         )
         fi_user.set_password('instructor123')
@@ -149,7 +149,7 @@ class Command(BaseCommand):
         fi, _ = FlightInstructor.objects.get_or_create(
             user=fi_user,
             defaults={
-                'first_name': 'Hassan', 'last_name': 'Ouazzani',
+                'first_name': 'Rachid', 'last_name': 'Meziane',
                 'license_number': 'ATPL-12345',
                 'qualifications': ['PPL', 'CPL', 'IR'],
                 'authorized_aircraft_types': ['C172', 'PA28'],
@@ -159,16 +159,56 @@ class Command(BaseCommand):
             },
         )
 
-        # Assign main_instructor (Hassan to Ahmed, Fatima, Youssef; None for others)
+        # ── Chief Instructors ──────────────────────────────
+        cfi_user, _ = User.objects.get_or_create(
+            email='cfi@masterly-air-academy.dz',
+            defaults={
+                'username': 'cfi_instructor', 'role': 'chief_flight_instructor',
+                'status': 'active', 'is_active': True,
+                'first_name': 'Nadir', 'last_name': 'Toumi',
+            },
+        )
+        cfi_user.set_password('instructor123')
+        cfi_user.save()
+        cfig = Group.objects.filter(name='chief_flight_instructor').first()
+        if cfig: cfi_user.groups.add(cfig)
+
+        cfi, _ = FlightInstructor.objects.get_or_create(
+            user=cfi_user,
+            defaults={
+                'first_name': 'Nadir', 'last_name': 'Toumi',
+                'license_number': 'ATPL-99999',
+                'qualifications': ['PPL', 'CPL', 'IR', 'FI', 'TRI'],
+                'authorized_aircraft_types': ['C172', 'PA28', 'DA40'],
+                'total_flight_hours': 8500,
+                'instruction_hours': 4000,
+                'hire_date': date(2010, 6, 1),
+            },
+        )
+
+        cgi_user, _ = User.objects.get_or_create(
+            email='cgi@masterly-air-academy.dz',
+            defaults={
+                'username': 'cgi_instructor', 'role': 'chief_ground_instructor',
+                'status': 'active', 'is_active': True,
+                'first_name': 'Mounir', 'last_name': 'Haddad',
+            },
+        )
+        cgi_user.set_password('instructor123')
+        cgi_user.save()
+        cgig = Group.objects.filter(name='chief_ground_instructor').first()
+        if cgig: cgi_user.groups.add(cgig)
+
+        # Assign main_instructor (Rachid to Mohamed, Sarah, Yacine; None for others)
         for s in students[:3]:
             Student.objects.filter(id=s.id).update(main_instructor=fi)
 
         # ── Aircraft ──────────────────────────────────────
         from apps.flight_training.models import Aircraft
         aircraft_data = [
-            {'registration': 'CN-TAA', 'manufacturer': 'Cessna', 'model': 'C172S', 'airframe_hours': 4520},
-            {'registration': 'CN-TAB', 'manufacturer': 'Piper', 'model': 'PA28-181', 'airframe_hours': 3800},
-            {'registration': 'CN-TAC', 'manufacturer': 'Diamond', 'model': 'DA40', 'airframe_hours': 2100},
+            {'registration': '7T-VAA', 'manufacturer': 'Cessna', 'model': 'C172S', 'airframe_hours': 4520},
+            {'registration': '7T-VAB', 'manufacturer': 'Piper', 'model': 'PA28-181', 'airframe_hours': 3800},
+            {'registration': '7T-VAC', 'manufacturer': 'Diamond', 'model': 'DA40', 'airframe_hours': 2100},
         ]
         aircraft_list = []
         for ad in aircraft_data:
@@ -580,7 +620,7 @@ class Command(BaseCommand):
                 'issue_date': today - timedelta(days=60),
                 'expiry_date': today + timedelta(days=300),
                 'status': 'valid',
-                'issuer': 'Dr. Mohamed Alami',
+                'issuer': 'Dr. Karim Zitouni',
             },
         )
 
@@ -709,7 +749,7 @@ class Command(BaseCommand):
             (students[0].user, 'info', 'Welcome to Masterly Air Academy',
              'Your student account has been created. Explore your dashboard to get started.'),
             (students[0].user, 'reminder', 'Flight Lesson Tomorrow',
-             'You have a flight lesson scheduled tomorrow at 14:00 with Hassan Ouazzani.'),
+             'You have a flight lesson scheduled tomorrow at 14:00 with Rachid Meziane.'),
             (students[0].user, 'success', 'Exam Passed',
              'Congratulations! You passed the Navigation Theory Exam with 85%.'),
             (students[0].user, 'warning', 'Invoice Overdue',
@@ -842,8 +882,8 @@ class Command(BaseCommand):
         from apps.core.models import SystemSetting
         defaults = [
             ('school_name', 'Masterly Air Academy', 'text'),
-            ('school_address', 'Mohamed V Avenue, Casablanca, Morocco', 'text'),
-            ('school_phone', '+212 5XX-XXXXXX', 'text'),
+            ('school_address', 'Cité des Frères Abbès, Hydra, Algiers, Algeria', 'text'),
+            ('school_phone', '+213 23X-XXXXXX', 'text'),
             ('currency', 'DZD', 'text'),
             ('locale', 'en', 'text'),
             ('flight_hour_rate', '15000', 'number'),
@@ -882,6 +922,8 @@ class Command(BaseCommand):
         self.stdout.write(f'    Finance:   finance@masterly-air-academy.dz / finance123')
         self.stdout.write(f'    Quality:   quality@masterly-air-academy.dz / quality123')
         self.stdout.write(f'    Scheduler: scheduler@masterly-air-academy.dz / scheduler123')
+        self.stdout.write(f'    CFI:       cfi@masterly-air-academy.dz / instructor123')
+        self.stdout.write(f'    CGI:       cgi@masterly-air-academy.dz / instructor123')
         self.stdout.write(f'    FI:        fi@masterly-air-academy.dz / instructor123')
         self.stdout.write(f'    GI:        gi@masterly-air-academy.dz / instructor123')
-        self.stdout.write(f'    Students:  ahmed@student.maa.dz / student123 (and others)')
+        self.stdout.write(f'    Students:  m.amine@student.maa.dz / student123 (and others)')
