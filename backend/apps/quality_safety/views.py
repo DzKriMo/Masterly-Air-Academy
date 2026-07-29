@@ -268,11 +268,31 @@ class QualityDashboardView(APIView):
     def get(self, request):
         from django.db.models import Count, Q
         from datetime import timedelta
+        from datetime import datetime
 
         now = timezone.now()
         first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # Audit completion rate
+        # ── Date-range filtering ──
+        date_from = request.query_params.get('from')
+        date_to = request.query_params.get('to')
+        try:
+            dt_from = datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=now.tzinfo) if date_from else None
+        except Exception:
+            dt_from = None
+        try:
+            dt_to = datetime.strptime(date_to, '%Y-%m-%d').replace(tzinfo=now.tzinfo) if date_to else None
+        except Exception:
+            dt_to = None
+
+        def date_filter(qs, field='created_at'):
+            if dt_from:
+                qs = qs.filter(**{f'{field}__gte': dt_from})
+            if dt_to:
+                qs = qs.filter(**{f'{field}__lte': dt_to + timedelta(days=1)})
+            return qs
+
+        # ── Baseline KPIs (always computed) ──
         total_audits = Audit.objects.count()
         completed_audits = Audit.objects.filter(status='completed').count()
         audit_completion_rate = (
@@ -280,21 +300,17 @@ class QualityDashboardView(APIView):
             if total_audits > 0 else 0.0
         )
 
-        # Open NCR count
         open_ncr_count = NonConformity.objects.filter(status='open').count()
 
-        # Overdue CAPA count
         overdue_capa_count = CAPA.objects.filter(
             status__in=['open', 'in_progress'],
             due_date__lt=now,
         ).count()
 
-        # Safety events this month
         safety_events_this_month = SafetyEvent.objects.filter(
             created_at__gte=first_of_month,
         ).count()
 
-        # Risk distribution — count assessments by risk_level buckets
         risk_distribution = {
             'low': RiskAssessment.objects.filter(risk_level__lte=3).count(),
             'medium': RiskAssessment.objects.filter(risk_level__gte=4, risk_level__lte=6).count(),
@@ -302,8 +318,80 @@ class QualityDashboardView(APIView):
             'critical': RiskAssessment.objects.filter(risk_level__gte=13).count(),
         }
 
-        # Upcoming deadlines (next 30 days)
         upcoming_deadlines = DeadlineMonitorService.get_upcoming_deadlines(days_ahead=30)
+
+        # ── Safety Events by Month (last 12 or custom range) ──
+        safety_qs = date_filter(SafetyEvent.objects.all())
+        safety_by_month = []
+        if dt_from and dt_to:
+            months_set = set()
+            cur = dt_from.replace(day=1)
+            while cur <= dt_to:
+                months_set.add((cur.year, cur.month))
+                if cur.month == 12:
+                    cur = cur.replace(year=cur.year + 1, month=1)
+                else:
+                    cur = cur.replace(month=cur.month + 1)
+            for y, m in sorted(months_set):
+                cnt = safety_qs.filter(created_at__year=y, created_at__month=m).count()
+                safety_by_month.append({'year': y, 'month': m, 'count': cnt})
+        else:
+            for i in range(11, -1, -1):
+                d = (now.replace(day=1) - timedelta(days=30 * i))
+                cnt = SafetyEvent.objects.filter(
+                    created_at__year=d.year, created_at__month=d.month
+                ).count()
+                safety_by_month.append({'year': d.year, 'month': d.month, 'count': cnt})
+
+        # ── Safety Events by Type (within date range) ──
+        safety_by_type = list(
+            safety_qs.values('type').annotate(count=Count('id')).order_by('-count')
+        )
+
+        # ── Safety Events by Status (funnel) ──
+        safety_by_status = list(
+            safety_qs.values('status').annotate(count=Count('id')).order_by('status')
+        )
+
+        # ─── Audit compliance stats ──
+        audit_qs = date_filter(Audit.objects.all())
+        audits_by_type = list(
+            audit_qs.values('type').annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(status='completed')),
+            ).order_by('type')
+        )
+        overdue_audits = audit_qs.filter(
+            status__in=['planned', 'in_progress'],
+            scheduled_date__lt=now,
+        ).count()
+
+        # ── NCR stats ──
+        ncr_qs = date_filter(NonConformity.objects.all())
+        ncr_severity_dist = list(
+            ncr_qs.values('severity').annotate(count=Count('id')).order_by('severity')
+        )
+
+        # ── CAPA effectiveness ──
+        capa_qs = date_filter(CAPA.objects.all())
+        total_capas = capa_qs.count()
+        closed_capas = capa_qs.filter(status='closed')
+        closed_on_time = 0
+        total_closure_days = 0
+        for c in closed_capas:
+            if c.validation_date and c.created_at:
+                closure_days = (c.validation_date - c.created_at).days
+                total_closure_days += closure_days
+                if c.due_date and c.validation_date <= c.due_date:
+                    closed_on_time += 1
+            else:
+                total_closure_days += 0
+        capa_effectiveness_rate = round(
+            (closed_on_time / closed_capas.count() * 100) if closed_capas.count() > 0 else 0, 1
+        )
+        avg_closure_days = round(
+            total_closure_days / closed_capas.count(), 1
+        ) if closed_capas.count() > 0 else 0
 
         return Response({
             'audit_completion_rate': audit_completion_rate,
@@ -312,4 +400,14 @@ class QualityDashboardView(APIView):
             'safety_events_this_month': safety_events_this_month,
             'risk_distribution': risk_distribution,
             'upcoming_deadlines': upcoming_deadlines,
+            'safety_by_month': safety_by_month,
+            'safety_by_type': safety_by_type,
+            'safety_by_status': safety_by_status,
+            'audits_by_type': audits_by_type,
+            'overdue_audits': overdue_audits,
+            'ncr_severity_dist': ncr_severity_dist,
+            'capa_effectiveness_rate': capa_effectiveness_rate,
+            'avg_closure_days': avg_closure_days,
+            'closed_capa_count': closed_capas.count(),
+            'total_capa_count': total_capas,
         })

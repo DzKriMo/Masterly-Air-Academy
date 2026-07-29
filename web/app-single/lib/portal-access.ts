@@ -22,7 +22,7 @@ const PORTAL_MAP: Record<string, { label: string; defaultPath: string; usesDjang
   admin_agent:                { label: 'Administration', defaultPath: '/admin', usesDjangoAdmin: true },
   director_general:           { label: 'Director', defaultPath: '/director/dashboard', usesDjangoAdmin: false },
   head_of_training:           { label: 'Dashboard', defaultPath: '/dashboard', usesDjangoAdmin: false },
-  scheduler:                  { label: 'Dashboard', defaultPath: '/dashboard', usesDjangoAdmin: false },
+  scheduler:                  { label: 'Scheduler', defaultPath: '/scheduler/dashboard', usesDjangoAdmin: false },
   admissions_responsible:     { label: 'Administration', defaultPath: '/admin', usesDjangoAdmin: true },
   training_admin:             { label: 'Training Admin', defaultPath: '/admin', usesDjangoAdmin: true },
   chief_ground_instructor:    { label: 'Instructor', defaultPath: '/instructor/dashboard', usesDjangoAdmin: false },

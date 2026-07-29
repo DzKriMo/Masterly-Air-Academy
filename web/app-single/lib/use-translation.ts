@@ -322,6 +322,19 @@ const translations: Record<string, Record<string, string>> = {
     "quality.completeAudit": "Complete Audit",
     "quality.reportEvent": "Report Event",
     "quality.deadlineMonitor": "Deadline Monitor",
+    "quality.safetyTrends": "Safety Trends",
+    "quality.eventsByMonth": "Events by Month",
+    "quality.auditCompliance": "Audit Compliance",
+    "quality.capaEffectiveness": "CAPA Effectiveness",
+    "quality.closedOnTimeRate": "Closed on Time Rate",
+    "quality.avgClosureDays": "Avg Closure Days",
+    "quality.overdueAudits": "Overdue Audits",
+    "quality.filterFrom": "From",
+    "quality.filterTo": "To",
+    "quality.filterApply": "Apply",
+    "quality.filterReset": "Reset",
+    "quality.closed": "Closed",
+    "quality.overview": "Overview",
 
     // ── finance ──
     "finance.dashboard": "Finance Dashboard",
@@ -352,6 +365,24 @@ const translations: Record<string, Record<string, string>> = {
     "director.passRates": "Pass Rates",
     "director.instructorUtilization": "Instructor Utilization",
 
+    // ── scheduler ──
+    "scheduler.dashboard": "Scheduler Dashboard",
+    "scheduler.calendar": "Schedule Calendar",
+    "scheduler.bookings": "Resource Bookings",
+    "scheduler.availability": "Instructor Availability",
+    "scheduler.aircraft": "Fleet Status",
+    "scheduler.newBooking": "New Booking",
+    "scheduler.resourceType": "Resource Type",
+    "scheduler.activityType": "Activity Type",
+    "scheduler.confirmed": "Confirmed",
+    "scheduler.pending": "Pending",
+    "scheduler.cancelled": "Cancelled",
+    "scheduler.totalBookings": "Total Bookings",
+    "scheduler.activeAircraft": "Active Aircraft",
+    "scheduler.availableInstructors": "Available Instructors",
+    "scheduler.todaysEvents": "Today's Events",
+    "scheduler.maintenanceDue": "Maintenance Due",
+
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Student Portal",
     "layout.administrationPortal": "Administration",
@@ -359,6 +390,7 @@ const translations: Record<string, Record<string, string>> = {
     "layout.directorPortal": "Director Portal",
     "layout.financePortal": "Finance Portal",
     "layout.qualityPortal": "Quality & Safety",
+    "layout.schedulerPortal": "Scheduler Portal",
 
     // ── Login ──
     "login.emailLabel": "Email",
@@ -854,6 +886,19 @@ const translations: Record<string, Record<string, string>> = {
     "quality.completeAudit": "Terminer un audit",
     "quality.reportEvent": "Signaler un evenement",
     "quality.deadlineMonitor": "Surveillance des echeances",
+    "quality.safetyTrends": "Tendances de securite",
+    "quality.eventsByMonth": "Evenements par mois",
+    "quality.auditCompliance": "Conformite des audits",
+    "quality.capaEffectiveness": "Efficacite des CAPA",
+    "quality.closedOnTimeRate": "Taux de cloture a temps",
+    "quality.avgClosureDays": "Delai moyen de cloture",
+    "quality.overdueAudits": "Audits en retard",
+    "quality.filterFrom": "Du",
+    "quality.filterTo": "Au",
+    "quality.filterApply": "Appliquer",
+    "quality.filterReset": "Reinitialiser",
+    "quality.closed": "Ferme",
+    "quality.overview": "Apercu",
 
     // ── finance ──
     "finance.dashboard": "Tableau de bord financier",
@@ -884,6 +929,24 @@ const translations: Record<string, Record<string, string>> = {
     "director.passRates": "Taux de reussite",
     "director.instructorUtilization": "Utilisation des instructeurs",
 
+    // ── scheduler ──
+    "scheduler.dashboard": "Tableau de bord planificateur",
+    "scheduler.calendar": "Calendrier",
+    "scheduler.bookings": "Reservations",
+    "scheduler.availability": "Disponibilite des instructeurs",
+    "scheduler.aircraft": "Etat de la flotte",
+    "scheduler.newBooking": "Nouvelle reservation",
+    "scheduler.resourceType": "Type de ressource",
+    "scheduler.activityType": "Type d'activite",
+    "scheduler.confirmed": "Confirme",
+    "scheduler.pending": "En attente",
+    "scheduler.cancelled": "Annule",
+    "scheduler.totalBookings": "Total des reservations",
+    "scheduler.activeAircraft": "Aeronefs actifs",
+    "scheduler.availableInstructors": "Instructeurs disponibles",
+    "scheduler.todaysEvents": "Evenements du jour",
+    "scheduler.maintenanceDue": "Maintenance a prevoir",
+
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Portail Etudiant",
     "layout.administrationPortal": "Administration",
@@ -891,6 +954,7 @@ const translations: Record<string, Record<string, string>> = {
     "layout.directorPortal": "Portail Directeur",
     "layout.financePortal": "Portail Finance",
     "layout.qualityPortal": "Qualite et Securite",
+    "layout.schedulerPortal": "Portail Planificateur",
 
     // ── Login ──
     "login.emailLabel": "Email",
@@ -1361,6 +1425,19 @@ const translations: Record<string, Record<string, string>> = {
     "quality.completeAudit": "إكمال التدقيق",
     "quality.reportEvent": "الإبلاغ عن حدث",
     "quality.deadlineMonitor": "مراقبة المواعيد النهائية",
+    "quality.safetyTrends": "اتجاهات السلامة",
+    "quality.eventsByMonth": "الأحداث حسب الشهر",
+    "quality.auditCompliance": "الامتثال للتدقيق",
+    "quality.capaEffectiveness": "فعالية الإجراءات التصحيحية",
+    "quality.closedOnTimeRate": "معدل الإغلاق في الوقت المحدد",
+    "quality.avgClosureDays": "متوسط أيام الإغلاق",
+    "quality.overdueAudits": "التدقيقات المتأخرة",
+    "quality.filterFrom": "من",
+    "quality.filterTo": "إلى",
+    "quality.filterApply": "تطبيق",
+    "quality.filterReset": "إعادة تعيين",
+    "quality.closed": "مغلق",
+    "quality.overview": "نظرة عامة",
 
     // ── finance ──
     "finance.dashboard": "لوحة قيادة المالية",
@@ -1391,6 +1468,24 @@ const translations: Record<string, Record<string, string>> = {
     "director.passRates": "معدلات النجاح",
     "director.instructorUtilization": "استخدام المدربين",
 
+    // ── scheduler ──
+    "scheduler.dashboard": "لوحة قيادة المخطط",
+    "scheduler.calendar": "التقويم",
+    "scheduler.bookings": "الحجوزات",
+    "scheduler.availability": "توفر المدربين",
+    "scheduler.aircraft": "حالة الأسطول",
+    "scheduler.newBooking": "حجز جديد",
+    "scheduler.resourceType": "نوع المورد",
+    "scheduler.activityType": "نوع النشاط",
+    "scheduler.confirmed": "مؤكد",
+    "scheduler.pending": "معلق",
+    "scheduler.cancelled": "ملغي",
+    "scheduler.totalBookings": "إجمالي الحجوزات",
+    "scheduler.activeAircraft": "الطائرات النشطة",
+    "scheduler.availableInstructors": "المدربون المتاحون",
+    "scheduler.todaysEvents": "أحداث اليوم",
+    "scheduler.maintenanceDue": "الصيانة المستحقة",
+
     // ── Layout Portal Titles ──
     "layout.studentPortal": "بوابة الطالب",
     "layout.administrationPortal": "الإدارة",
@@ -1398,6 +1493,7 @@ const translations: Record<string, Record<string, string>> = {
     "layout.directorPortal": "بوابة المدير",
     "layout.financePortal": "بوابة المالية",
     "layout.qualityPortal": "الجودة والسلامة",
+    "layout.schedulerPortal": "بوابة المخطط",
 
     // ── Login ──
     "login.emailLabel": "البريد الإلكتروني",
