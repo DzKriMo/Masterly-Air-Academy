@@ -336,13 +336,13 @@ export default function LandingPage() {
         </div>
         <div className="flex flex-wrap justify-center items-center gap-12 md:gap-16">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+            <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
               <Image src="/images/1.webp" alt="Ministry of Interior and Transport" width={100} height={100} className="object-contain" />
             </div>
             <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_interior", "Ministry of Interior & Transport")}</p>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+            <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
               <Image src="/images/2.jfif" alt="Ministry of Defence" width={100} height={100} className="object-contain" />
             </div>
             <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_defence", "Ministry of Defence")}</p>
