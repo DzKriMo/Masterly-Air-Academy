@@ -236,16 +236,16 @@ export default function LandingPage() {
                 {EXTENDED.map((prog, i) => (
                   <div key={`${prog.key}-${i}`} className="shrink-0" style={{ width: `calc(${100 / CARDS_PER_VIEW}% - 8px)` }}>
                     <button onClick={(e) => { if (dragMeta.current.moved) e.preventDefault(); else setSelectedProgram(prog); }}
-                      className="w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5">
-                      <div className="relative h-44 bg-navy-800 overflow-hidden">
+                      className="h-full w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5 flex flex-col">
+                      <div className="relative h-44 bg-navy-800 overflow-hidden shrink-0">
                         <Image src={prog.image} alt={t(prog.titleKey)} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
                         <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent" />
                         <span className="absolute top-3 left-3 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{prog.key}</span>
                       </div>
-                      <div className="p-5">
+                      <div className="flex-1 p-5 flex flex-col">
                         <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gold-500 transition-colors">{t(prog.titleKey)}</h3>
-                        <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">{t(prog.descKey)}</p>
-                        <div className="border-t border-navy-700 pt-4 mt-4 space-y-1.5">
+                        <p className="text-sm text-gray-400 leading-relaxed line-clamp-2 flex-1">{t(prog.descKey)}</p>
+                        <div className="border-t border-navy-700 pt-4 mt-4 space-y-1.5 shrink-0">
                           <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_duration")}</span><span className="text-gray-300">{t(prog.durationKey)}</span></div>
                           <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_prerequisites")}</span><span className="text-gray-300">{t(prog.prereqKey)}</span></div>
                         </div>
