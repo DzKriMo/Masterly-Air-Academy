@@ -96,7 +96,7 @@ export default function BookingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">{t("scheduler.resourceType")}</label>
-                <select value={form.resource_type} onChange={e => setForm({ ...form, resource_type: "", resource_id: "" })} required
+                <select value={form.resource_type} onChange={e => setForm({ ...form, resource_type: e.target.value, resource_id: "" })} required
                   className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
                   <option value="">Select...</option>
                   <option value="aircraft">Aircraft</option>
