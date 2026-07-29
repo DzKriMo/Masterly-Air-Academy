@@ -44,12 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: { index: true, follow: true },
     metadataBase: new URL(BASE_URL),
     alternates: {
-      canonical: BASE_URL,
+      canonical: `${BASE_URL}/${locale}`,
       languages: {
-        en: BASE_URL,
-        fr: BASE_URL,
-        ar: BASE_URL,
-        "x-default": BASE_URL,
+        en: `${BASE_URL}/en`,
+        fr: `${BASE_URL}/fr`,
+        ar: `${BASE_URL}/ar`,
+        "x-default": `${BASE_URL}/en`,
       },
     },
     openGraph: {
