@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HasRolePermission
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise, Room,
-    Course, CourseEnrollment, AttendanceRecord, GroundEvaluation,
+    Course, CourseEnrollment, AttendanceRecord, GroundEvaluation, TimeEntry,
 )
 from .serializers import (
     SubjectSerializer, SubjectListSerializer,
@@ -17,6 +17,7 @@ from .serializers import (
     AttendanceRecordSerializer, BulkAttendanceSerializer,
     StudentProgressSerializer, GroundEvaluationSerializer,
     BulkEvaluationSerializer,
+    TimeEntrySerializer,
 )
 
 
@@ -352,3 +353,21 @@ class GroundEvaluationViewSet(viewsets.ModelViewSet):
         if self.request.user.role == 'ground_instructor':
             return qs.filter(course__instructor__user=self.request.user)
         return qs
+
+
+class TimeEntryViewSet(viewsets.ModelViewSet):
+    queryset = TimeEntry.objects.select_related('instructor').all()
+    serializer_class = TimeEntrySerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'ground_training.view'
+    filterset_fields = ['date', 'status']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role in ('ground_instructor', 'flight_instructor', 'chief_ground_instructor', 'chief_flight_instructor'):
+            return qs.filter(instructor=user)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(instructor=self.request.user)

@@ -204,3 +204,32 @@ class GroundEvaluation(models.Model):
 
     def __str__(self):
         return f'Eval: {self.student.full_name} - {self.course.title}'
+
+
+class TimeEntry(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    instructor = models.ForeignKey(
+        'accounts.User', on_delete=models.CASCADE,
+        related_name='time_entries',
+        limit_choices_to={'role__in': ['ground_instructor', 'chief_ground_instructor', 'flight_instructor', 'chief_flight_instructor']},
+    )
+    date = models.DateField()
+    clock_in = models.TimeField(null=True, blank=True)
+    clock_out = models.TimeField(null=True, blank=True)
+    break_minutes = models.IntegerField(default=0, help_text='Break time in minutes')
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'time_entries'
+        ordering = ['-date', '-clock_in']
+
+    def __str__(self):
+        return f'{self.instructor.name or self.instructor.email} - {self.date}'

@@ -16,6 +16,7 @@ from apps.ground_training.views import (
     CourseViewSet, CourseEnrollmentViewSet, AttendanceRecordViewSet,
     StudentProgressViewSet, ModuleLessonViewSet, ModuleDocumentViewSet,
     ModuleExerciseViewSet, GroundEvaluationViewSet,
+    TimeEntryViewSet,
 )
 from apps.flight_training.views import (
     AircraftViewSet, FlightLessonViewSet, FlightPreparationViewSet,
@@ -728,6 +729,7 @@ router.register(r'module-lessons', ModuleLessonViewSet)
 router.register(r'module-documents', ModuleDocumentViewSet)
 router.register(r'module-exercises', ModuleExerciseViewSet)
 router.register(r'ground-evaluations', GroundEvaluationViewSet)
+router.register(r'time-entries', TimeEntryViewSet)
 router.register(r'quiz-attempts', QuizAttemptViewSet)
 router.register(r'flight-instructors', FlightInstructorViewSet)
 router.register(r'ground-instructors', GroundInstructorViewSet, basename='ground-instructor')

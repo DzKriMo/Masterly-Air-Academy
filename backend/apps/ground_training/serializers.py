@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise,
     Room, Course, CourseEnrollment, AttendanceRecord,
-    GroundEvaluation,
+    GroundEvaluation, TimeEntry,
 )
 
 
@@ -239,3 +239,28 @@ class BulkEvaluationSerializer(serializers.Serializer):
                 except ValueError:
                     raise serializers.ValidationError(f'Invalid score value: {score}')
         return value
+
+
+class TimeEntrySerializer(serializers.ModelSerializer):
+    instructor_name = serializers.SerializerMethodField()
+    total_hours = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TimeEntry
+        fields = '__all__'
+        read_only_fields = ['instructor']
+
+    def get_instructor_name(self, obj):
+        return obj.instructor.name or obj.instructor.email
+
+    def get_total_hours(self, obj):
+        if obj.clock_in and obj.clock_out:
+            from datetime import datetime, timedelta
+            ci = datetime.combine(obj.date, obj.clock_in)
+            co = datetime.combine(obj.date, obj.clock_out)
+            if co < ci:
+                co += timedelta(days=1)
+            total = (co - ci).total_seconds() / 3600
+            total -= obj.break_minutes / 60
+            return round(max(total, 0), 2)
+        return None
