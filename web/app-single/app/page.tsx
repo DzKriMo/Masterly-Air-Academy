@@ -604,7 +604,7 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1.5">{t("app_dob", "Date of Birth")} *</label>
-              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" />
+              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" style={{ minWidth: 0, maxWidth: "100%" }} />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1.5">{t("app_nationality", "Nationality")} *</label>
