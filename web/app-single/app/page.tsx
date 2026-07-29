@@ -594,7 +594,7 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm text-gray-400 mb-1.5">{t("app_gender", "Gender")} *</label>
               <select required value={gender} onChange={e => setGender(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
                 <option value="">{t("app_select", "Select")}</option>
@@ -602,11 +602,11 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
                 <option value="female">{t("app_female", "Female")}</option>
               </select>
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm text-gray-400 mb-1.5">{t("app_dob", "Date of Birth")} *</label>
-              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" style={{ minWidth: 0, maxWidth: "100%" }} />
+              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm text-gray-400 mb-1.5">{t("app_nationality", "Nationality")} *</label>
               <select required value={nationality} onChange={e => setNationality(e.target.value)} className="w-full px-4 py-3 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
                 <option value="">{t("app_select", "Select")}</option>
