@@ -211,6 +211,7 @@ class CourseViewSet(viewsets.ModelViewSet):
                 'module_title': m.title,
                 'lessons': list(m.lessons.values('id', 'lesson_no', 'title', 'content')),
                 'documents': list(m.documents.values('name', 'file_url', 'type')),
+                'exercises': list(m.exercises.values('id', 'title', 'instructions', 'due_date')),
             })
         return Response({'course_id': str(course.id), 'modules': materials})
 

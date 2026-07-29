@@ -38,11 +38,19 @@ interface Doc {
   type: string;
 }
 
+interface Exercise {
+  id: string;
+  title: string;
+  instructions: string | null;
+  due_date: string | null;
+}
+
 interface ModuleData {
   module_id: string;
   module_title: string;
   lessons: Lesson[];
   documents: Doc[];
+  exercises: Exercise[];
 }
 
 interface AttendanceRecord {
@@ -262,6 +270,32 @@ export default function StudentCourseDetailPage() {
                                     {t("student.download", "Download")}
                                   </a>
                                 )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Exercises */}
+                      {mod.exercises.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                            {t("student.exercises", "Exercises")}
+                          </h4>
+                          <div className="space-y-1">
+                            {mod.exercises.map((ex) => (
+                              <div key={ex.id} className="flex items-center justify-between bg-navy-900 rounded-lg px-4 py-2 border border-navy-700">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <svg className="w-4 h-4 text-gold-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                  </svg>
+                                  <span className="text-sm text-white truncate">{ex.title}</span>
+                                  {ex.due_date && <span className="text-xs text-gray-500 shrink-0">due {ex.due_date}</span>}
+                                </div>
+                                <a href={`/student/courses/${courseId}/exercise/${ex.id}`}
+                                  className="text-xs text-gold-500 hover:text-gold-400 border border-gold-500/30 px-3 py-1.5 rounded-lg transition-colors font-medium shrink-0 ml-2">
+                                  {t("student.openExercise", "Open Exercise")} →
+                                </a>
                               </div>
                             ))}
                           </div>
