@@ -19,6 +19,10 @@ export default function BookingsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ resource_type: "", resource_id: "", start_time: "", end_time: "", notes: "" });
 
+  const [aircraft, setAircraft] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [simulators, setSimulators] = useState<any[]>([]);
+
   const STATUS_COLORS: Record<string, string> = {
     confirmed: "text-green-400 bg-green-500/10",
     pending: "text-yellow-400 bg-yellow-500/10",
@@ -30,8 +34,16 @@ export default function BookingsPage() {
   const fetchBookings = () => {
     if (!isAuthenticated) return;
     setLoading(true);
-    api.get<any>("/resource-bookings/").then(d => {
-      setBookings((d as any)?.results || []);
+    Promise.all([
+      api.get<any>("/resource-bookings/"),
+      api.get<any>("/aircraft/").catch(() => ({ results: [] })),
+      api.get<any>("/rooms/").catch(() => ({ results: [] })),
+      api.get<any>("/simulators/").catch(() => ({ results: [] })),
+    ]).then(([bookRes, acRes, roomRes, simRes]) => {
+      setBookings((bookRes as any)?.results || []);
+      setAircraft(((acRes as any)?.results || []).filter((a: any) => a.status !== "retired"));
+      setRooms((roomRes as any)?.results || []);
+      setSimulators((simRes as any)?.results || []);
       setError(null);
     }).catch(() => setError(t("common.error", "Failed to load bookings"))).finally(() => setLoading(false));
   };
@@ -59,6 +71,13 @@ export default function BookingsPage() {
     }
   };
 
+  const resourceOptions = (() => {
+    if (form.resource_type === "aircraft") return aircraft.map((a: any) => ({ value: a.id, label: `${a.registration} (${a.manufacturer} ${a.model})` }));
+    if (form.resource_type === "classroom") return rooms.map((r: any) => ({ value: r.id, label: r.name }));
+    if (form.resource_type === "simulator") return simulators.map((s: any) => ({ value: s.id, label: s.name }));
+    return [];
+  })();
+
   return (
     <div className="min-h-screen bg-navy-900">
       <div className="max-w-7xl mx-auto px-6 py-6">
@@ -77,7 +96,7 @@ export default function BookingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">{t("scheduler.resourceType")}</label>
-                <select value={form.resource_type} onChange={e => setForm({ ...form, resource_type: e.target.value })} required
+                <select value={form.resource_type} onChange={e => setForm({ ...form, resource_type: "", resource_id: "" })} required
                   className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
                   <option value="">Select...</option>
                   <option value="aircraft">Aircraft</option>
@@ -87,8 +106,14 @@ export default function BookingsPage() {
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">{t("scheduler.activityType")}</label>
-                <input value={form.resource_id} onChange={e => setForm({ ...form, resource_id: e.target.value })} required
-                  placeholder="Resource ID" className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                <select value={form.resource_id} onChange={e => setForm({ ...form, resource_id: e.target.value })} required
+                  disabled={!form.resource_type}
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm disabled:opacity-50">
+                  <option value="">{form.resource_type ? `Select ${form.resource_type}...` : "Select resource type first"}</option>
+                  {resourceOptions.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Start</label>
