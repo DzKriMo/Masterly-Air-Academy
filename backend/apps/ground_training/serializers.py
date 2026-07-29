@@ -215,3 +215,25 @@ class GroundEvaluationSerializer(serializers.ModelSerializer):
 
     def get_student_name(self, obj):
         return obj.student.full_name
+
+
+class BulkEvaluationSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField(required=False)
+    records = serializers.ListField(
+        child=serializers.DictField(child=serializers.CharField(allow_blank=True), allow_empty=False),
+    )
+
+    def validate_records(self, value):
+        for record in value:
+            if 'student' not in record:
+                raise serializers.ValidationError('Each record must have a student field.')
+            # score is optional but if present must be 0-100
+            score = record.get('score')
+            if score:
+                try:
+                    s = int(score)
+                    if s < 0 or s > 100:
+                        raise serializers.ValidationError(f'Score must be between 0 and 100, got {s}')
+                except ValueError:
+                    raise serializers.ValidationError(f'Invalid score value: {score}')
+        return value

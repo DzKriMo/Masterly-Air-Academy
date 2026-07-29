@@ -16,6 +16,7 @@ from .serializers import (
     CourseEnrollmentSerializer,
     AttendanceRecordSerializer, BulkAttendanceSerializer,
     StudentProgressSerializer, GroundEvaluationSerializer,
+    BulkEvaluationSerializer,
 )
 
 
@@ -212,6 +213,32 @@ class CourseViewSet(viewsets.ModelViewSet):
                 'documents': list(m.documents.values('name', 'file_url', 'type')),
             })
         return Response({'course_id': str(course.id), 'modules': materials})
+
+    @action(detail=True, methods=['post'])
+    def evaluate(self, request, pk=None):
+        course = self.get_object()
+        serializer = BulkEvaluationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        created = []
+        for record in serializer.validated_data['records']:
+            score_str = record.get('score')
+            score = int(score_str) if score_str else None
+            ev, _ = GroundEvaluation.objects.update_or_create(
+                course=course,
+                student_id=record['student'],
+                defaults={
+                    'grade': score,
+                    'appreciation': record.get('feedback', ''),
+                    'created_by': request.user,
+                },
+            )
+            created.append(ev)
+
+        return Response(
+            GroundEvaluationSerializer(created, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CourseEnrollmentViewSet(viewsets.ModelViewSet):

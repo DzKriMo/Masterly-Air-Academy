@@ -20,8 +20,6 @@ interface EvaluationRow {
   score: number; grade: string; feedback: string;
 }
 
-const GRADES = ["A", "B", "C", "D", "F"];
-
 export default function EvaluationPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -73,13 +71,14 @@ export default function EvaluationPage() {
     try {
       await api.post(`/courses/${courseId}/evaluate/`, {
         course_id: courseId, records: evaluations.map(e => ({
-          student: e.student_id, score: e.score, grade: e.grade, feedback: e.feedback,
+          student: e.student_id, score: String(e.score || 0), feedback: e.feedback || "",
         })),
       });
       showToast("success", t("instructor.evaluationSaved", "Evaluations saved successfully"));
     } catch (err: any) {
       console.error("Failed to save evaluations:", err);
-      setError(t("instructor.failedToSaveEvaluation", "Failed to save evaluations."));
+      const msg = err.message || t("instructor.failedToSaveEvaluation", "Failed to save evaluations.");
+      setError(msg);
     } finally { setSaving(false); }
   };
 
