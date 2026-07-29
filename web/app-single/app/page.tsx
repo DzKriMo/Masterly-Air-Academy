@@ -3,15 +3,66 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, XCircle } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
 const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "prog_cpl_title", IR: "prog_ir_title", MEP: "prog_mep_title", MCC: "prog_mcc_title" };
 
+interface ProgramDetail {
+  key: string;
+  titleKey: string;
+  descKey: string;
+  durationKey: string;
+  prereqKey: string;
+  image: string;
+  overviewKey: string;
+  outline: string[];
+  careerKey: string;
+}
+
+const programDetails: ProgramDetail[] = [
+  {
+    key: "PPL", titleKey: "prog_ppl_title", descKey: "prog_ppl_desc", durationKey: "prog_ppl_duration", prereqKey: "prog_ppl_prereq",
+    image: "/images/ppl.png",
+    overviewKey: "prog_ppl_overview",
+    outline: ["prog_ppl_out_1", "prog_ppl_out_2", "prog_ppl_out_3", "prog_ppl_out_4", "prog_ppl_out_5"],
+    careerKey: "prog_ppl_career",
+  },
+  {
+    key: "CPL", titleKey: "prog_cpl_title", descKey: "prog_cpl_desc", durationKey: "prog_cpl_duration", prereqKey: "prog_cpl_prereq",
+    image: "/images/cpl.png",
+    overviewKey: "prog_cpl_overview",
+    outline: ["prog_cpl_out_1", "prog_cpl_out_2", "prog_cpl_out_3", "prog_cpl_out_4", "prog_cpl_out_5"],
+    careerKey: "prog_cpl_career",
+  },
+  {
+    key: "IR", titleKey: "prog_ir_title", descKey: "prog_ir_desc", durationKey: "prog_ir_duration", prereqKey: "prog_ir_prereq",
+    image: "/images/IR.png",
+    overviewKey: "prog_ir_overview",
+    outline: ["prog_ir_out_1", "prog_ir_out_2", "prog_ir_out_3", "prog_ir_out_4"],
+    careerKey: "prog_ir_career",
+  },
+  {
+    key: "MEP", titleKey: "prog_mep_title", descKey: "prog_mep_desc", durationKey: "prog_mep_duration", prereqKey: "prog_mep_prereq",
+    image: "/images/mep.png",
+    overviewKey: "prog_mep_overview",
+    outline: ["prog_mep_out_1", "prog_mep_out_2", "prog_mep_out_3", "prog_mep_out_4"],
+    careerKey: "prog_mep_career",
+  },
+  {
+    key: "MCC", titleKey: "prog_mcc_title", descKey: "prog_mcc_desc", durationKey: "prog_mcc_duration", prereqKey: "prog_mcc_prereq",
+    image: "/images/mcc.png",
+    overviewKey: "prog_mcc_overview",
+    outline: ["prog_mcc_out_1", "prog_mcc_out_2", "prog_mcc_out_3", "prog_mcc_out_4"],
+    careerKey: "prog_mcc_career",
+  },
+];
+
 export default function LandingPage() {
   const { t, locale } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
 
   const whyItems = [
     { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: t("ato_certified"), desc: t("ato_certified_desc"), color: "gold" },
@@ -21,7 +72,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-navy-900 text-white" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <nav className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur border-b border-navy-800">
+      <nav className="sticky top-0 z-40 bg-navy-900/95 backdrop-blur border-b border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-24">
             <div className="flex items-center gap-3">
@@ -32,6 +83,7 @@ export default function LandingPage() {
               <a href="#programs" className="hover:text-white transition-colors">{t("programs")}</a>
               <a href="#about" className="hover:text-white transition-colors">{t("about")}</a>
               <a href="#why-us" className="hover:text-white transition-colors">{t("why_us")}</a>
+              <a href="#accreditations" className="hover:text-white transition-colors">{t("nav_accreditations", "Accreditations")}</a>
               <a href="#contact" className="hover:text-white transition-colors">{t("nav_contact")}</a>
               <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
             </div>
@@ -44,6 +96,7 @@ export default function LandingPage() {
               <a href="#programs" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("programs")}</a>
               <a href="#about" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("about")}</a>
               <a href="#why-us" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("why_us")}</a>
+              <a href="#accreditations" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_accreditations", "Accreditations")}</a>
               <a href="#contact" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_contact")}</a>
               <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
             </div>
@@ -51,6 +104,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gold-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
@@ -72,6 +126,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Programs with Images */}
       <section id="programs" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -80,17 +135,28 @@ export default function LandingPage() {
             <p className="text-gray-400 max-w-2xl mx-auto">{t("programs_desc")}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {programKeys.map((code) => (
-              <div key={code} className="group bg-navy-900 border border-navy-700 rounded-xl p-6 hover:border-gold-500/40 transition-all">
-                <div className="flex items-center justify-between mb-4"><span className="text-xs font-bold text-gold-500 bg-gold-500/10 px-3 py-1 rounded-full tracking-wider">{code}</span></div>
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gold-500 transition-colors">{t(programTitleKeys[code])}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed mb-4">{t(`prog_${code.toLowerCase()}_desc`)}</p>
-                <div className="border-t border-navy-700 pt-4 space-y-1.5">
-                  <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_duration")}</span><span className="text-gray-300">{t(`prog_${code.toLowerCase()}_duration`)}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_prerequisites")}</span><span className="text-gray-300">{t(`prog_${code.toLowerCase()}_prereq`)}</span></div></div></div>))}
-          </div></div>
+            {programDetails.map((prog) => (
+              <button key={prog.key} onClick={() => setSelectedProgram(prog)} className="group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/40 transition-all text-left w-full">
+                <div className="relative h-44 bg-navy-800 overflow-hidden">
+                  <Image src={prog.image} alt={t(prog.titleKey)} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent" />
+                  <span className="absolute top-3 left-3 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{prog.key}</span>
+                </div>
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gold-500 transition-colors">{t(prog.titleKey)}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">{t(prog.descKey)}</p>
+                  <div className="border-t border-navy-700 pt-4 mt-4 space-y-1.5">
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_duration")}</span><span className="text-gray-300">{t(prog.durationKey)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_prerequisites")}</span><span className="text-gray-300">{t(prog.prereqKey)}</span></div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
+      {/* About */}
       <section id="about" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -106,6 +172,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Why Us */}
       <section id="why-us" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -126,6 +193,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Accreditations */}
+      <section id="accreditations" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+        <div className="text-center mb-12">
+          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("accreditations_title", "Accreditations & Approvals")}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("accreditations_heading", "Approved & Recognized By")}</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">{t("accreditations_desc", "Masterly Air Academy is officially approved and accredited by the following national authorities.")}</p>
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-12 md:gap-16">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+              <Image src="/images/1.webp" alt="Ministry of Interior and Transport" width={100} height={100} className="object-contain" />
+            </div>
+            <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_interior", "Ministry of Interior & Transport")}</p>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+              <Image src="/images/2.jfif" alt="Ministry of Defence" width={100} height={100} className="object-contain" />
+            </div>
+            <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_defence", "Ministry of Defence")}</p>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+              <Image src="/images/3.png" alt="National Civil Aviation Agency" width={100} height={100} className="object-contain" />
+            </div>
+            <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_anac", "National Civil Aviation Agency")}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
       <section id="contact" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
         <div className="text-center mb-16">
           <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("contact_title")}</p>
@@ -135,6 +232,7 @@ export default function LandingPage() {
         <ContactForm t={t} />
       </section>
 
+      {/* Portal Access */}
       <section id="access" className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20">
         <div className="text-center mb-10"><h2 className="text-xl font-bold text-white mb-2">{t("portal_access")}</h2><p className="text-sm text-gray-500">{t("portal_access_desc")}</p></div>
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
@@ -143,6 +241,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Footer */}
       <footer className="border-t border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
@@ -152,6 +251,68 @@ export default function LandingPage() {
           <p className="text-center text-xs text-gray-600 mt-6">&copy; {new Date().getFullYear()} {t("footer_copyright")}</p>
         </div>
       </footer>
+
+      {/* Program Detail Modal */}
+      {selectedProgram && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedProgram(null)}>
+          <div className="bg-navy-800 border border-navy-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="relative h-48 bg-navy-800 overflow-hidden rounded-t-2xl">
+              <Image src={selectedProgram.image} alt={t(selectedProgram.titleKey)} fill className="object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-800 via-transparent to-transparent" />
+              <button onClick={() => setSelectedProgram(null)} className="absolute top-3 right-3 w-8 h-8 bg-navy-900/80 rounded-full flex items-center justify-center backdrop-blur hover:bg-navy-700 transition-colors">
+                <XCircle className="w-5 h-5 text-gray-400" />
+              </button>
+              <span className="absolute bottom-4 left-5 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{selectedProgram.key}</span>
+            </div>
+
+            <div className="p-6 md:p-8 space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-2">{t(selectedProgram.titleKey)}</h3>
+                <p className="text-gray-400 leading-relaxed">{t(selectedProgram.descKey)}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-navy-900 rounded-xl p-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("landing_duration")}</p>
+                  <p className="text-sm text-white font-medium mt-1">{t(selectedProgram.durationKey)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("landing_prerequisites")}</p>
+                  <p className="text-sm text-white font-medium mt-1">{t(selectedProgram.prereqKey)}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gold-500 uppercase tracking-wider mb-3">{t("prog_overview", "Program Overview")}</h4>
+                <p className="text-gray-300 text-sm leading-relaxed">{t(selectedProgram.overviewKey)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gold-500 uppercase tracking-wider mb-3">{t("prog_curriculum", "Curriculum Outline")}</h4>
+                <ul className="space-y-2">
+                  {selectedProgram.outline.map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0 mt-1.5" />
+                      {t(item)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gold-500 uppercase tracking-wider mb-3">{t("prog_career", "Career Opportunities")}</h4>
+                <p className="text-gray-300 text-sm leading-relaxed">{t(selectedProgram.careerKey)}</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <a href="#contact" onClick={() => setSelectedProgram(null)} className="flex-1 text-center px-6 py-3 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors text-sm">{t("contact_us")}</a>
+                <button onClick={() => setSelectedProgram(null)} className="px-6 py-3 border border-navy-600 text-gray-400 hover:text-white rounded-lg transition-colors text-sm">{t("common.close", "Close")}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
