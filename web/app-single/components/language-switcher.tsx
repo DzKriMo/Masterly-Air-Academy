@@ -37,7 +37,9 @@ export function LanguageSwitcher() {
   const switchTo = (code: string) => {
     document.cookie = `locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
     setCurrentLocale(code);
-    const path = window.location.pathname.replace(/^\/(en|fr|ar)/, "") || "/";
+    const segments = window.location.pathname.split("/").filter(Boolean);
+    while (segments.length && /^(en|fr|ar)$/.test(segments[0])) segments.shift();
+    const path = "/" + segments.join("/");
     window.location.href = `/${code}${path}${window.location.search}`;
   };
 
