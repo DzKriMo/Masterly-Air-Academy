@@ -74,11 +74,14 @@ export const viewport: Viewport = {
   width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: "cover", themeColor: "#1e40af",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const serverLocale = cookieStore.get("locale")?.value || "en";
+
   return (
     <html lang="en" className="dark">
       <body className="bg-navy-900 text-white min-h-screen antialiased">
-        <LocaleProvider>
+        <LocaleProvider initialLocale={serverLocale}>
           <Providers>
             <div className="fixed bottom-6 right-6 z-[10000] flex items-center gap-3"><NotificationBell /><LanguageSwitcher /></div>
             <ErrorBoundary>

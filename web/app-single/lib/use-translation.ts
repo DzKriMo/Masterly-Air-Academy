@@ -1575,6 +1575,8 @@ const translations: Record<string, Record<string, string>> = {
   },
 };
 
+import { useLocale } from "@/components/locale-provider";
+
 function readLocale(): string {
   if (typeof window === "undefined") return "en";
   try { const m = document.cookie.match(/(?:^|; )locale=([^;]*)/); if (m && (m[1] === "fr" || m[1] === "ar")) return m[1]; } catch {}
@@ -1584,8 +1586,9 @@ function readLocale(): string {
 }
 
 export function useTranslation() {
-  const [locale, setLocale] = useState(readLocale);
-  const [strings, setStrings] = useState<Record<string, string>>(() => translations[readLocale()] || translations.en);
+  const ctx = useLocale();
+  const [locale, setLocale] = useState(ctx);
+  const [strings, setStrings] = useState<Record<string, string>>(() => translations[ctx] || translations.en);
 
   useEffect(() => {
     const loc = readLocale();

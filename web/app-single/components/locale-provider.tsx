@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 function getCookie(name: string): string {
   if (typeof document === "undefined") return "en";
@@ -8,11 +8,27 @@ function getCookie(name: string): string {
   return match ? decodeURIComponent(match[1]) : "en";
 }
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState("en");
+function localeFromPath(): string {
+  if (typeof window === "undefined") return "en";
+  const seg = window.location.pathname.split("/").filter(Boolean)[0];
+  if (seg === "fr" || seg === "ar") return seg;
+  return "en";
+}
+
+const LocaleCtx = createContext("en");
+
+export function useLocale() {
+  return useContext(LocaleCtx);
+}
+
+export function LocaleProvider({ children, initialLocale }: { children: React.ReactNode; initialLocale?: string }) {
+  const [locale, setLocale] = useState(initialLocale || getCookie("locale") || localeFromPath());
 
   useEffect(() => {
-    setLocale(getCookie("locale"));
+    const fromCookie = getCookie("locale");
+    const fromPath = localeFromPath();
+    const resolved = fromCookie !== "en" ? fromCookie : fromPath;
+    if (resolved !== locale) setLocale(resolved);
     const interval = setInterval(() => {
       const current = getCookie("locale");
       setLocale(prev => prev !== current ? current : prev);
@@ -25,5 +41,5 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
   }, [locale]);
 
-  return <>{children}</>;
+  return <LocaleCtx.Provider value={locale}>{children}</LocaleCtx.Provider>;
 }
