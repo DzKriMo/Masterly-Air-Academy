@@ -66,8 +66,19 @@ export default function LandingPage() {
   const [isHovering, setIsHovering] = useState(false);
   const totalSlides = programDetails.length;
   const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
-  const CARDS_PER_VIEW = 3;
+  const [cardsPerView, setCardsPerView] = useState(3);
   const SWIPE_THRESHOLD = 50;
+
+  useEffect(() => {
+    const update = () => setCardsPerView(window.innerWidth < 620 ? 1 : 3);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    setRawSlide(totalSlides);
+  }, [cardsPerView, totalSlides]);
 
   const [rawSlide, setRawSlide] = useState(totalSlides);
   const [transitionOn, setTransitionOn] = useState(true);
@@ -221,8 +232,8 @@ export default function LandingPage() {
             <div className="overflow-hidden rounded-xl select-none">
               <div className="flex gap-3" style={{
                 transform: dragMeta.current.active
-                  ? `translateX(calc(-${rawSlide * (100 / CARDS_PER_VIEW)}% + ${dragOffset}px))`
-                  : `translateX(-${rawSlide * (100 / CARDS_PER_VIEW)}%)`,
+                  ? `translateX(calc(-${rawSlide * (100 / cardsPerView)}% + ${dragOffset}px))`
+                  : `translateX(-${rawSlide * (100 / cardsPerView)}%)`,
                 transition: dragMeta.current.active ? "none" : (transitionOn ? "transform 500ms ease-out" : "none"),
               }}
                 onTransitionEnd={handleTransitionEnd}
@@ -234,7 +245,7 @@ export default function LandingPage() {
                 onTouchMove={e => dragMove(e.touches[0].clientX)}
                 onTouchEnd={dragEnd}>
                 {EXTENDED.map((prog, i) => (
-                  <div key={`${prog.key}-${i}`} className="shrink-0" style={{ width: `calc(${100 / CARDS_PER_VIEW}% - 8px)` }}>
+                  <div key={`${prog.key}-${i}`} className="shrink-0" style={{ width: `calc(${100 / cardsPerView}% - 8px)` }}>
                     <button onClick={(e) => { if (dragMeta.current.moved) e.preventDefault(); else setSelectedProgram(prog); }}
                       className="h-full w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5 flex flex-col">
                       <div className="relative h-44 bg-navy-800 overflow-hidden shrink-0">
