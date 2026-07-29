@@ -348,7 +348,7 @@ export default function LandingPage() {
             <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_defence", "Ministry of Defence")}</p>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-28 h-28 bg-navy-800 border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+            <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
               <Image src="/images/3.png" alt="National Civil Aviation Agency" width={100} height={100} className="object-contain" />
             </div>
             <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_anac", "National Civil Aviation Agency")}</p>

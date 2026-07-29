@@ -137,6 +137,9 @@ export default function StudentSchedulePage() {
       .fc-wrapper .fc .fc-header-toolbar { margin-bottom: 1em !important; }
       .fc-wrapper .fc .fc-daygrid-more-link { color: #c4943c; }
       .fc-wrapper .fc .fc-daygrid-day-events { min-height: 2em; }
+      .fc-wrapper .fc .fc-multimonth { background: #0f172a; }
+      .fc-wrapper .fc .fc-multimonth-month { background: #0f172a; border-color: #1e293b; }
+      .fc-wrapper .fc .fc-multimonth-title { color: #f8fafc; background: #1e293b; padding: 6px 8px; font-size: 0.85rem; }
     `}</style>
   </div>);
 }
