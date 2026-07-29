@@ -8,7 +8,7 @@ import { useUnreadCounts } from "@/lib/use-unread-counts";
 import {
   LayoutDashboard, CalendarDays, PlaneTakeoff, BookOpen, FileText,
   Users, MessageSquare, ClipboardCheck, Target, ClipboardList,
-  Menu, BarChart3, GitBranch,
+  Menu, BarChart3, GitBranch, DoorOpen,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -23,9 +23,9 @@ const ROLE_LABELS: Record<Role, { label: string; color: string; portal: string }
 
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
   flight_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages"],
-  ground_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/students", "/instructor/exams", "/instructor/messages"],
+  ground_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/students", "/instructor/exams", "/instructor/messages"],
   chief_flight_instructor: ["/instructor/cfi-dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/instructor-management", "/instructor/flight-programs", "/instructor/student-progress"],
-  chief_ground_instructor: ["/instructor/cgi-dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/progression-overview", "/instructor/reports", "/instructor/subject-management"],
+  chief_ground_instructor: ["/instructor/cgi-dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/progression-overview", "/instructor/reports", "/instructor/subject-management"],
 };
 
 export default function InstructorLayout({ children }: { children: React.ReactNode }) {
@@ -58,6 +58,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
       items.push({ href: "/instructor/schedule", label: t("instructor.calendar"), Icon: CalendarDays });
       items.push({ href: "/instructor/courses", label: t("instructor.myCourses"), Icon: BookOpen });
       items.push({ href: "/instructor/modules", label: t("instructor.moduleContent"), Icon: FileText });
+      items.push({ href: "/instructor/rooms", label: t("instructor.rooms", "Classrooms"), Icon: DoorOpen });
     }
 
     items.push({ href: "/instructor/students", label: t("instructor.myStudents"), Icon: Users });

@@ -78,6 +78,14 @@ export default function ModulesPage() {
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
 
+  // Module CRUD
+  const [createModuleOpen, setCreateModuleOpen] = useState(false);
+  const [editModule, setEditModule] = useState<Module | null>(null);
+  const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
+  const [moduleForm, setModuleForm] = useState({ subject: "", title: "", duration: "", order: "", status: "active" as string });
+  const [savingModule, setSavingModule] = useState(false);
+  const [deletingModule, setDeletingModule] = useState(false);
+
   useAuthGuard(isAuthenticated, authLoading);
 
   useEffect(() => {
@@ -186,6 +194,42 @@ export default function ModulesPage() {
     }
   };
 
+  const resetModuleForm = (subjectId?: string) => setModuleForm({ subject: subjectId || "", title: "", duration: "", order: "", status: "active" });
+
+  const openCreateModule = () => { resetModuleForm(selectedSubject); setCreateModuleOpen(true); };
+  const openEditModule = (m: Module) => { setEditModule(m); setModuleForm({ subject: m.subject, title: m.title, duration: String(m.duration), order: String(m.order), status: m.status }); };
+
+  const handleSaveModule = async () => {
+    setSavingModule(true);
+    try {
+      const payload = { ...moduleForm, duration: parseInt(moduleForm.duration) || 0, order: parseInt(moduleForm.order) || 0 };
+      if (editModule) {
+        await api.patch(`/modules/${editModule.id}/`, payload);
+        showToast("success", "Module updated");
+      } else {
+        await api.post("/modules/", payload);
+        showToast("success", "Module created");
+      }
+      setCreateModuleOpen(false); setEditModule(null);
+      if (selectedSubject) fetchModules(selectedSubject);
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to save module");
+    } finally { setSavingModule(false); }
+  };
+
+  const handleDeleteModule = async () => {
+    if (!deleteModuleId) return;
+    setDeletingModule(true);
+    try {
+      await api.delete(`/modules/${deleteModuleId}/`);
+      showToast("success", "Module deleted");
+      setDeleteModuleId(null);
+      if (selectedSubject) fetchModules(selectedSubject);
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to delete module");
+    } finally { setDeletingModule(false); }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-900 p-8">
@@ -210,22 +254,27 @@ export default function ModulesPage() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} />}
 
-        {subjects.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {subjects.map(s => (
-              <button key={s.id} onClick={() => fetchModules(s.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedSubject === s.id
-                    ? "bg-gold-500 text-navy-900"
-                    : "bg-navy-800 text-gray-400 border border-navy-700 hover:border-gold-500"
-                }`}>
-                {s.code} ({s.module_count} {t("instructor.modules", "modules")})
+        <div className="flex flex-wrap items-center gap-2 mb-8">
+          {subjects.length > 0 ? subjects.map(s => (
+            <button key={s.id} onClick={() => fetchModules(s.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedSubject === s.id
+                  ? "bg-gold-500 text-navy-900"
+                  : "bg-navy-800 text-gray-400 border border-navy-700 hover:border-gold-500"
+              }`}>
+              {s.code} ({s.module_count} {t("instructor.modules", "modules")})
+            </button>
+          )) : (
+            !loading && <span className="text-gray-500 text-sm">{t("instructor.noSubjects", "No subjects available.")}</span>
+          )}
+          <div className="ml-auto">
+            {selectedSubject && (
+              <button onClick={openCreateModule} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
+                + {t("instructor.addModule", "Add Module")}
               </button>
-            ))}
+            )}
           </div>
-        ) : (
-          !loading && <EmptyState message={t("instructor.noSubjects", "No subjects available.")} />
-        )}
+        </div>
 
         {selectedSubject ? (
           modules.length === 0 ? (
@@ -233,7 +282,7 @@ export default function ModulesPage() {
           ) : (
             <div className="space-y-4">
               {modules.map(m => (
-                <div key={m.id} className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
+                  <div key={m.id} className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
                   <button onClick={() => toggleExpand(m.id)}
                     className="w-full flex items-center justify-between p-5 text-left hover:bg-navy-700/50 transition-colors">
                     <div>
@@ -245,10 +294,14 @@ export default function ModulesPage() {
                       </div>
                       <p className="text-sm text-gray-400 mt-1">{m.duration}h | {m.lessons.length} {t("instructor.lessons", "lessons")} | {m.documents.length} {t("instructor.documents", "documents")}</p>
                     </div>
-                    <svg className={`w-5 h-5 text-gray-400 transition-transform ${expandedModule === m.id ? "rotate-180" : ""}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="flex items-center gap-2 shrink-0 ml-4" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => openEditModule(m)} className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">Edit</button>
+                      <button onClick={() => setDeleteModuleId(m.id)} className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">Del</button>
+                      <svg className={`w-5 h-5 text-gray-400 transition-transform ${expandedModule === m.id ? "rotate-180" : ""}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </button>
 
                   {expandedModule === m.id && (
@@ -512,6 +565,60 @@ export default function ModulesPage() {
         destructive
         loading={deletingLesson}
       />
+
+      {/* Create / Edit Module Modal */}
+      <ModalForm open={createModuleOpen || !!editModule} onClose={() => { setCreateModuleOpen(false); setEditModule(null); }}
+        title={editModule ? `Edit Module: ${editModule.title}` : t("instructor.createModule", "Create Module")}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t("instructor.subject", "Subject")}</label>
+            <select value={moduleForm.subject} onChange={e => setModuleForm({ ...moduleForm, subject: e.target.value })}
+              className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm">
+              <option value="">{t("instructor.selectSubject", "Select subject")}</option>
+              {subjects.map(s => <option key={s.id} value={s.id}>{s.code} — {s.title_en}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t("instructor.title", "Title")} *</label>
+            <input value={moduleForm.title} onChange={e => setModuleForm({ ...moduleForm, title: e.target.value })}
+              className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">{t("instructor.durationHours", "Duration (h)")} *</label>
+              <input type="number" min="0" value={moduleForm.duration} onChange={e => setModuleForm({ ...moduleForm, duration: e.target.value })}
+                className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">{t("instructor.order", "Order")} *</label>
+              <input type="number" min="1" value={moduleForm.order} onChange={e => setModuleForm({ ...moduleForm, order: e.target.value })}
+                className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">{t("instructor.status", "Status")}</label>
+            <select value={moduleForm.status} onChange={e => setModuleForm({ ...moduleForm, status: e.target.value })}
+              className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button onClick={() => { setCreateModuleOpen(false); setEditModule(null); }}
+              className="px-4 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm">{t("instructor.cancel", "Cancel")}</button>
+            <button onClick={handleSaveModule} disabled={savingModule}
+              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm disabled:opacity-50">
+              {savingModule ? t("instructor.saving", "Saving...") : editModule ? t("instructor.update", "Update") : t("instructor.create", "Create")}
+            </button>
+          </div>
+        </div>
+      </ModalForm>
+
+      {/* Delete Module Confirm */}
+      <ConfirmDialog open={!!deleteModuleId} onClose={() => setDeleteModuleId(null)} onConfirm={handleDeleteModule}
+        title={t("instructor.deleteModule", "Delete Module")}
+        message={t("instructor.deleteModuleConfirm", "Are you sure you want to delete this module and all its lessons and documents?")}
+        confirmLabel={t("instructor.delete", "Delete")} destructive loading={deletingModule} />
 
       {/* Delete Document Confirm */}
       <ConfirmDialog
