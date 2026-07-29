@@ -31,6 +31,18 @@ interface PracticalEval {
   instructor_name: string;
 }
 
+interface GroundEval {
+  id: string;
+  course: string;
+  course_title: string;
+  subject_code: string;
+  grade: number | null;
+  appreciation: string;
+  module_validated: boolean;
+  recommend_remedial: boolean;
+  created_at: string;
+}
+
 interface Competency {
   id: string;
   name: string;
@@ -39,13 +51,14 @@ interface Competency {
   description?: string;
 }
 
-type Tab = "theory" | "practical" | "competencies";
+type Tab = "theory" | "practical" | "ground" | "competencies";
 
 export default function StudentResultsPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("theory");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [evals, setEvals] = useState<PracticalEval[]>([]);
+  const [groundEvals, setGroundEvals] = useState<GroundEval[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +76,12 @@ export default function StudentResultsPage() {
       api.get("/exams/my_attempts/").catch(() => []),
       api.get("/practical-evaluations/").catch(() => ({ results: [] })),
       api.get("/competencies/").catch(() => ({ results: [] })),
-    ]).then(([attData, evalData, compData]: any) => {
+      api.get("/ground-evaluations/").catch(() => ({ results: [] })),
+    ]).then(([attData, evalData, compData, groundData]: any) => {
       setAttempts(Array.isArray(attData) ? attData : []);
       setEvals(evalData.results || []);
       setCompetencies(compData.results || []);
+      setGroundEvals((groundData.results || []).sort((a: GroundEval, b: GroundEval) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       setError(null);
     }).catch(err => {
       console.error("Failed to load results:", err);
@@ -88,6 +103,7 @@ export default function StudentResultsPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "theory", label: t('student.theory', 'Theory') },
     { key: "practical", label: t('student.practical', 'Practical') },
+    { key: "ground", label: t('student.groundCourses', 'Ground Courses') },
     { key: "competencies", label: t('student.competencies', 'Competencies') },
   ];
 
@@ -116,6 +132,27 @@ export default function StudentResultsPage() {
       <span className={`text-xs px-2 py-0.5 rounded ${item.result === "pass" ? "bg-green-500/10 text-green-400" : item.result === "fail" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>{item.result}</span>
     )},
     { key: "instructor_name", header: t('common.instructor', 'Instructor') },
+  ];
+
+  const groundColumns: Column<GroundEval>[] = [
+    { key: "course_title", header: t('common.course', 'Course'), render: (item) => <span className="text-white font-medium">{item.course_title}</span> },
+    { key: "subject_code", header: t('common.subject', 'Subject'), render: (item) => <span className="text-xs text-gold-500">{item.subject_code}</span> },
+    { key: "grade", header: t('common.score', 'Score'), render: (item) => (
+      <span className={`text-sm font-bold ${item.grade !== null && item.grade >= 75 ? "text-green-400" : item.grade !== null ? "text-red-400" : "text-gray-500"}`}>
+        {item.grade !== null ? `${item.grade}%` : "-"}
+      </span>
+    )},
+    { key: "module_validated", header: t('student.validated', 'Validated'), render: (item) => item.module_validated ? (
+      <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">{t('common.yes', 'Yes')}</span>
+    ) : (
+      <span className="text-xs text-gray-500">{t('common.no', 'No')}</span>
+    )},
+    { key: "recommend_remedial", header: t('student.remedial', 'Remedial'), render: (item) => item.recommend_remedial ? (
+      <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded">{t('common.yes', 'Yes')}</span>
+    ) : (
+      <span className="text-xs text-gray-500">{t('common.no', 'No')}</span>
+    )},
+    { key: "created_at", header: t('common.date'), render: (item) => <span className="text-gray-400">{new Date(item.created_at).toLocaleDateString()}</span> },
   ];
 
   // Build competency matrix: program -> competency name -> Competency object
@@ -186,6 +223,13 @@ export default function StudentResultsPage() {
             evals.length === 0
               ? <EmptyState message={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
               : <DataTable columns={evalColumns} data={evals as any} keyField="id" emptyMessage={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
+          )}
+
+          {/* Ground Tab */}
+          {activeTab === "ground" && (
+            groundEvals.length === 0
+              ? <EmptyState message={t('student.noGroundEvals', 'No ground course evaluations yet.')} />
+              : <DataTable columns={groundColumns} data={groundEvals as any} keyField="id" emptyMessage={t('student.noGroundEvals', 'No ground course evaluations yet.')} />
           )}
 
           {/* Competencies Tab — Matrix Grid */}

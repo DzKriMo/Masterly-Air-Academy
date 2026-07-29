@@ -52,6 +52,15 @@ interface AttendanceRecord {
   notes: string;
 }
 
+interface Evaluation {
+  id: string;
+  grade: number | null;
+  appreciation: string;
+  module_validated: boolean;
+  recommend_remedial: boolean;
+  created_at: string;
+}
+
 const attendanceStatusClass = (s: string) =>
   s === "present" ? "bg-green-500/10 text-green-400" :
   s === "late" ? "bg-yellow-500/10 text-yellow-400" :
@@ -72,6 +81,7 @@ export default function StudentCourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<ModuleData[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<string>("");
@@ -82,10 +92,11 @@ export default function StudentCourseDetailPage() {
     if (!isAuthenticated || !courseId) return;
     setLoading(true);
     try {
-      const [coursesRes, materialsRes, attendanceRes] = await Promise.all([
+      const [coursesRes, materialsRes, attendanceRes, evaluationRes] = await Promise.all([
         api.get<any>(`/courses/?id=${courseId}`),
         api.get<any>(`/courses/${courseId}/materials/`),
         api.get<any>(`/attendance/?course=${courseId}`),
+        api.get<any>(`/ground-evaluations/?course=${courseId}`).catch(() => ({ results: [] })),
       ]);
 
       const coursesList = (coursesRes as unknown as any).results || [];
@@ -97,6 +108,9 @@ export default function StudentCourseDetailPage() {
 
       const attendanceList = (attendanceRes as unknown as any).results || [];
       setAttendance(attendanceList);
+
+      const evalResults = (evaluationRes as unknown as any).results || [];
+      setEvaluation(evalResults.length > 0 ? evalResults[0] : null);
 
       setError(null);
     } catch (err: any) {
@@ -257,6 +271,49 @@ export default function StudentCourseDetailPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Evaluation */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">{t("student.myEvaluation", "My Evaluation")}</h2>
+          {evaluation ? (
+            <div className="bg-navy-800 border border-navy-700 rounded-xl p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("common.score", "Score")}</p>
+                  <p className={`text-2xl font-bold mt-1 ${evaluation.grade !== null && evaluation.grade >= 75 ? "text-green-400" : evaluation.grade !== null ? "text-red-400" : "text-gray-500"}`}>
+                    {evaluation.grade !== null ? `${evaluation.grade}%` : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("student.validated", "Validated")}</p>
+                  <p className={`text-sm font-medium mt-1 ${evaluation.module_validated ? "text-green-400" : "text-gray-500"}`}>
+                    {evaluation.module_validated ? t("common.yes", "Yes") : t("common.no", "No")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("student.remedial", "Remedial")}</p>
+                  <p className={`text-sm font-medium mt-1 ${evaluation.recommend_remedial ? "text-yellow-400" : "text-gray-500"}`}>
+                    {evaluation.recommend_remedial ? t("common.yes", "Yes") : t("common.no", "No")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">{t("student.dateEvaluated", "Date")}</p>
+                  <p className="text-sm text-white mt-1">{new Date(evaluation.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+              {evaluation.appreciation && (
+                <div className="mt-4 pt-4 border-t border-navy-700">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t("student.feedback", "Feedback")}</p>
+                  <p className="text-sm text-gray-300">{evaluation.appreciation}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-navy-800 border border-navy-700 rounded-xl p-8 text-center">
+              <p className="text-gray-500">{t("student.noEvaluation", "No evaluation yet for this course.")}</p>
             </div>
           )}
         </div>

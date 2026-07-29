@@ -208,6 +208,8 @@ class StudentProgressSerializer(serializers.Serializer):
 
 class GroundEvaluationSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    subject_code = serializers.CharField(source='course.subject.code', read_only=True)
 
     class Meta:
         model = GroundEvaluation

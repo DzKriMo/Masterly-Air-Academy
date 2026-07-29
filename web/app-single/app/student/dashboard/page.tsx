@@ -20,14 +20,18 @@ export default function StudentDashboard() {
       api.get<any>("/student/dashboard/").catch(() => ({})),
       api.get<any>("/students/flight-log/").catch(() => ({})),
       api.get<any>("/exams/my_attempts/").catch(() => []),
+      api.get<any>("/ground-evaluations/").catch(() => ({ results: [] })),
     ]),
     enabled: isAuthenticated,
   });
 
-  const [dash = {}, log = {}, attemptsRaw = []] = data || [{}, {}, []];
+  const [dash = {}, log = {}, attemptsRaw = [], groundRaw = { results: [] }] = data || [{}, {}, [], { results: [] }];
   const attempts = Array.isArray(attemptsRaw) ? attemptsRaw : [];
   const scores = attempts.filter((a: any) => a.score !== null).map((a: any) => a.score);
   const dashData = dash as any;
+  const groundList = (groundRaw as any).results || [];
+  const groundGrades = groundList.filter((g: any) => g.grade !== null).map((g: any) => Number(g.grade));
+  const groundAvg = groundGrades.length > 0 ? Math.round(groundGrades.reduce((a: number, b: number) => a + b, 0) / groundGrades.length) : null;
   const theoryPct = dashData.theory_progress ?? 0;
   const flightPct = dashData.flight_progress ?? 0;
   const flightHours = dashData.total_flight_hours ?? (log as any).total_flight_hours ?? 0;
@@ -110,6 +114,7 @@ export default function StudentDashboard() {
               <Stat title={t('student.flightHours')} value={`${flightHours}h`} />
               <Stat title={t('student.lessonsCompleted')} value={lessonsCompleted} />
               <Stat title={t('student.examAverage')} value={examAvg > 0 ? `${examAvg}%` : "-"} />
+              <Stat title={t("student.groundAvg", "Ground Avg")} value={groundAvg !== null ? `${groundAvg}%` : "-"} />
               <Stat title={t('student.unpaid')} value={unpaidInvoices} />
               <Stat title={t('student.passed', 'Passed')} value={passedCount} />
               <Stat title={t('student.failed', 'Failed')} value={failedCount} />
