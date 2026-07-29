@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
@@ -67,6 +67,45 @@ export default function LandingPage() {
   const [isHovering, setIsHovering] = useState(false);
   const [animating, setAnimating] = useState(false);
   const totalSlides = programDetails.length;
+  const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
+  const CARDS_PER_VIEW = 3;
+
+  const [rawSlide, setRawSlide] = useState(totalSlides);
+  const [transitionOn, setTransitionOn] = useState(true);
+  const snappingRef = useRef(false);
+
+  const handleTransitionEnd = useCallback(() => {
+    if (rawSlide >= totalSlides * 2) {
+      snappingRef.current = true;
+      setTransitionOn(false);
+      setRawSlide(rawSlide - totalSlides);
+    } else if (rawSlide < totalSlides) {
+      snappingRef.current = true;
+      setTransitionOn(false);
+      setRawSlide(rawSlide + totalSlides);
+    }
+  }, [rawSlide, totalSlides]);
+
+  useEffect(() => {
+    if (!transitionOn) {
+      requestAnimationFrame(() => requestAnimationFrame(() => { setTransitionOn(true); snappingRef.current = false; }));
+    }
+  }, [transitionOn]);
+
+  const goToSlide = useCallback((idx: number) => {
+    if (snappingRef.current) return;
+    setRawSlide(idx + totalSlides);
+  }, [totalSlides]);
+
+  const prevSlide = useCallback(() => {
+    if (snappingRef.current) return;
+    setRawSlide(prev => prev - 1);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    if (snappingRef.current) return;
+    setRawSlide(prev => prev + 1);
+  }, []);
 
   const goTo = useCallback((idx: number) => {
     if (animating) return;
@@ -79,7 +118,7 @@ export default function LandingPage() {
   useEffect(() => {
     if (isHovering) return;
     const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % totalSlides);
+      setRawSlide(prev => prev + 1);
     }, 5000);
     return () => clearInterval(timer);
   }, [isHovering, totalSlides]);
@@ -159,10 +198,10 @@ export default function LandingPage() {
 
           <div className="relative px-1 md:px-12" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
             <div className="overflow-hidden rounded-xl">
-              <div className="flex transition-transform duration-500 ease-out"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {programDetails.map((prog) => (
-                  <div key={prog.key} className="shrink-0 w-full px-2">
+              <div className="flex" style={{ transform: `translateX(-${rawSlide * (100 / CARDS_PER_VIEW)}%)`, transition: transitionOn ? "transform 500ms ease-out" : "none" }}
+                onTransitionEnd={handleTransitionEnd}>
+                {EXTENDED.map((prog, i) => (
+                  <div key={`${prog.key}-${i}`} className="shrink-0 px-2" style={{ width: `${100 / CARDS_PER_VIEW}%` }}>
                     <button onClick={() => setSelectedProgram(prog)}
                       className="w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5">
                       <div className="relative h-44 bg-navy-800 overflow-hidden">
@@ -185,13 +224,13 @@ export default function LandingPage() {
             </div>
 
             {/* Prev arrow */}
-            <button onClick={() => goTo(currentSlide - 1)}
+            <button onClick={prevSlide}
               className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 md:-translate-x-4 w-10 h-10 bg-navy-800/90 border border-navy-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-navy-700 transition-all backdrop-blur shadow-lg z-10">
               <ChevronLeft className="w-5 h-5" />
             </button>
 
             {/* Next arrow */}
-            <button onClick={() => goTo(currentSlide + 1)}
+            <button onClick={nextSlide}
               className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 md:translate-x-4 w-10 h-10 bg-navy-800/90 border border-navy-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-navy-700 transition-all backdrop-blur shadow-lg z-10">
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -200,8 +239,8 @@ export default function LandingPage() {
           {/* Dots */}
           <div className="flex justify-center items-center gap-2 mt-8">
             {programDetails.map((_, i) => (
-              <button key={i} onClick={() => goTo(i)}
-                className={`w-2 rounded-full transition-all duration-300 ${i === currentSlide ? "bg-gold-500 w-6" : "bg-navy-600 hover:bg-navy-500 w-2"} h-2`} />
+              <button key={i} onClick={() => goToSlide(i)}
+                className={`w-2 rounded-full transition-all duration-300 ${i === rawSlide % totalSlides ? "bg-gold-500 w-6" : "bg-navy-600 hover:bg-navy-500 w-2"} h-2`} />
             ))}
           </div>
         </div>
@@ -383,7 +422,7 @@ const NATIONALITIES = [
 ];
 
 function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
-  const [activeTab, setActiveTab] = useState<"contact" | "application">("contact");
+  const [activeTab, setActiveTab] = useState<"contact" | "application">("application");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
