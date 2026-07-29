@@ -1,4 +1,5 @@
 ﻿import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -9,33 +10,65 @@ import { ErrorBoundary } from "@/components/error-boundary";
 
 const BASE_URL = "https://185.185.80.188.nip.io";
 
-export const metadata: Metadata = {
-  title: { default: "Masterly Air Academy", template: "%s | Masterly Air Academy" },
-  description: "Approved Training Organization (ATO) in Algeria — Private Pilot License, Commercial Pilot License, Instrument Rating, and professional aviation training programs.",
-  manifest: "/manifest.json",
-  icons: { icon: "/logo.png", apple: "/logo.png" },
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Masterly Air Academy" },
-  other: { "mobile-web-app-capable": "yes" },
-  keywords: ["flight school", "pilot training", "aviation academy", "PPL", "CPL", "Algeria", "ATO", "Masterly Air Academy", "private pilot license", "commercial pilot license"],
-  robots: { index: true, follow: true },
-  metadataBase: new URL(BASE_URL),
-  alternates: { canonical: BASE_URL },
-  openGraph: {
-    title: "Masterly Air Academy",
-    description: "Approved Training Organization — Professional Aviation Training in Algeria. PPL, CPL, IR, MEP & MCC programs.",
-    type: "website",
-    url: BASE_URL,
-    siteName: "Masterly Air Academy",
-    locale: "en_US",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Masterly Air Academy" }],
+const seoByLang: Record<string, { title: string; description: string; keywords: string }> = {
+  en: {
+    title: "Masterly Air Academy | ATO Approved Flight Training in Algeria",
+    description: "Masterly Air Academy is an ATO-approved flight school in Algeria offering PPL, CPL, IR, MEP & MCC pilot training.",
+    keywords: "flight school Algeria, pilot training Algeria, aviation academy Algeria, ATO Algeria, PPL license Algeria, CPL license Algeria, private pilot license, commercial pilot license, instrument rating Algeria, multi-engine training, MCC course, Masterly Air Academy, flying school Algeria, pilot career, aviation training, flight training Algeria",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Masterly Air Academy",
-    description: "Approved Training Organization — Professional Aviation Training in Algeria",
-    images: ["/og-image.png"],
+  fr: {
+    title: "Masterly Air Academy | ATO Agree Formation au Pilotage en Algerie",
+    description: "Masterly Air Academy est un ATO agree en Algerie proposant des formations PPL, CPL, IR, MEP & MCC.",
+    keywords: "ecole de pilotage Algerie, formation pilote Algerie, ATO Algerie, licence PPL Algerie, licence CPL Algerie, licence pilote prive, licence pilote professionnel, qualification de vol aux instruments, formation multimoteur, cours MCC, Masterly Air Academy",
+  },
+  ar: {
+    title: "أكاديمية ماسترلي للطيران | تدريب طيارين معتمد في الجزائر",
+    description: "أكاديمية ماسترلي للطيران هي منظمة تدريب معتمدة (ATO) في الجزائر تقدم برامج PPL و CPL و IR و MEP و MCC.",
+    keywords: "مدرسة طيران الجزائر, تدريب طيارين الجزائر, أكاديمية طيران الجزائر, ATO الجزائر, رخصة طيار خاص الجزائر, رخصة طيار تجاري الجزائر, رخصة طيار, تدريب طيران الجزائر, دورة MCC, أكاديمية ماسترلي للطيران",
   },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value || "en";
+  const seo = seoByLang[locale] || seoByLang.en;
+
+  return {
+    title: { default: seo.title, template: `%s | Masterly Air Academy` },
+    description: seo.description,
+    manifest: "/manifest.json",
+    icons: { icon: "/logo.png", apple: "/logo.png" },
+    appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Masterly Air Academy" },
+    other: { "mobile-web-app-capable": "yes" },
+    keywords: seo.keywords.split(", "),
+    robots: { index: true, follow: true },
+    metadataBase: new URL(BASE_URL),
+    alternates: {
+      canonical: BASE_URL,
+      languages: {
+        en: BASE_URL,
+        fr: BASE_URL,
+        ar: BASE_URL,
+        "x-default": BASE_URL,
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      type: "website",
+      url: BASE_URL,
+      siteName: "Masterly Air Academy",
+      locale: locale === "ar" ? "ar_DZ" : locale === "fr" ? "fr_DZ" : "en_US",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Masterly Air Academy" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.title,
+      description: seo.description,
+      images: ["/og-image.png"],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: "cover", themeColor: "#1e40af",

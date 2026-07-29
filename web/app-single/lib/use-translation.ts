@@ -6,6 +6,9 @@ const translations: Record<string, Record<string, string>> = {
   en: {
     // ── Landing / Public ──
     app_name: "Masterly Air Academy",
+    seo_title: "Masterly Air Academy | ATO Approved Flight Training in Algeria",
+    seo_description: "Masterly Air Academy is an ATO-approved flight school in Algeria offering PPL, CPL, IR, MEP & MCC pilot training. Start your aviation career with our professional programs in English, French & Arabic.",
+    seo_keywords: "flight school Algeria, pilot training Algeria, aviation academy Algeria, ATO Algeria, PPL license Algeria, CPL license Algeria, private pilot license, commercial pilot license, instrument rating Algeria, multi-engine training, MCC course, Masterly Air Academy, flying school Algeria, pilot career, aviation training, flight training Algeria, best flight school Africa, ecole de pilotage Algerie, formation pilote Algerie, aeronautical training, airline pilot program, zero to hero pilot, professional pilot license, aviation academy fees, flight school cost Algeria",
     tagline: "Approved Training Organization",
     hero_title: "Your Aviation Career Starts Here",
     hero_desc: "Masterly Air Academy delivers world-class flight training with a modern fleet, experienced instructors, and a rigorous curriculum designed to produce safe, competent, and professional pilots.",
@@ -535,6 +538,9 @@ const translations: Record<string, Record<string, string>> = {
   fr: {
     // ── Landing / Public ──
     app_name: "Masterly Air Academy",
+    seo_title: "Masterly Air Academy | ATO Agree Formation au Pilotage en Algerie",
+    seo_description: "Masterly Air Academy est un ATO agree en Algerie proposant des formations PPL, CPL, IR, MEP & MCC. Debuttez votre carriere de pilote avec nos programmes professionnels en anglais, francais et arabe.",
+    seo_keywords: "ecole de pilotage Algerie, formation pilote Algerie, ATO Algerie, licence PPL Algerie, licence CPL Algerie, licence pilote prive, licence pilote professionnel, qualification de vol aux instruments, formation multimoteur, cours MCC, Masterly Air Academy, ecole d aviation Algerie, carriere pilote, formation aeronautique, meilleure ecole de pilotage Afrique, flight school Algeria, pilot training Algeria, ecole de pilotage, formation pilote de ligne, licence de pilote, prix formation pilote Algerie, centre de formation aeronautique, ecole aviation Algerie",
     tagline: "Organisme de Formation Agree",
     hero_title: "Votre Carriere Aeronautique Commence Ici",
     hero_desc: "Masterly Air Academy offre une formation au pilotage de classe mondiale avec une flotte moderne et des instructeurs experimentes.",
@@ -1039,6 +1045,9 @@ const translations: Record<string, Record<string, string>> = {
   ar: {
     // ── Landing / Public ──
     app_name: "أكاديمية ماسترلي للطيران",
+    seo_title: "أكاديمية ماسترلي للطيران | تدريب طيارين معتمد في الجزائر",
+    seo_description: "أكاديمية ماسترلي للطيران هي منظمة تدريب معتمدة (ATO) في الجزائر تقدم برامج PPL و CPL و IR و MEP و MCC. ابدأ مسيرتك المهنية في الطيران مع برامجنا الاحترافية باللغات الإنجليزية والفرنسية والعربية.",
+    seo_keywords: "مدرسة طيران الجزائر, تدريب طيارين الجزائر, أكاديمية طيران الجزائر, ATO الجزائر, رخصة طيار خاص الجزائر, رخصة طيار تجاري الجزائر, رخصة طيار, تدريب طيران الجزائر, دورة MCC, قيادة طائرات متعددة المحركات, أفضل مدرسة طيران أفريقيا, ecole de pilotage Algerie, flight school Algeria, أكاديمية ماسترلي للطيران, معهد طيران الجزائر, تكوين طيارين الجزائر, مدرسة الطيران, رخصة طيار مهنية, تدريب قيادة الطائرات, دراسة الطيران الجزائر",
     tagline: "منظمة تدريب معتمدة",
     hero_title: "مسيرتك المهنية في الطيران تبدأ هنا",
     hero_desc: "تقدم أكاديمية ماسترلي للطيران تدريباً بمستوى عالمي مع أسطول حديث ومدربين ذوي خبرة.",
