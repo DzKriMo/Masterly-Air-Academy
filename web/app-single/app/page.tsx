@@ -136,6 +136,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isHovering) return;
+    if (dragMeta.current.active) return;
+    if (snappingRef.current) return;
     const timer = setInterval(() => {
       setRawSlide(prev => prev + 1);
     }, 5000);
