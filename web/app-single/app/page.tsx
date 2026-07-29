@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X, XCircle } from "lucide-react";
+import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
@@ -63,6 +63,41 @@ export default function LandingPage() {
   const { t, locale } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const updateSlide = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const cardW = (el.children[0] as HTMLElement)?.offsetWidth || 1;
+    const gap = 24;
+    const idx = Math.round(el.scrollLeft / (cardW + gap));
+    setCurrentSlide(Math.min(idx, programDetails.length - 1));
+  }, []);
+
+  const goTo = useCallback((idx: number) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const card = el.children[idx] as HTMLElement;
+    if (card) { card.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" }); setCurrentSlide(idx); }
+  }, []);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateSlide, { passive: true });
+    return () => el.removeEventListener("scroll", updateSlide);
+  }, [updateSlide]);
+
+  useEffect(() => {
+    if (isHovering) return;
+    const timer = setInterval(() => {
+      const next = (currentSlide + 1) % programDetails.length;
+      goTo(next);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [currentSlide, isHovering, goTo]);
 
   const whyItems = [
     { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: t("ato_certified"), desc: t("ato_certified_desc"), color: "gold" },
@@ -126,7 +161,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Programs with Images */}
+      {/* Programs — Carousel */}
       <section id="programs" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -134,23 +169,54 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("programs_subtitle")}</h2>
             <p className="text-gray-400 max-w-2xl mx-auto">{t("programs_desc")}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {programDetails.map((prog) => (
-              <button key={prog.key} onClick={() => setSelectedProgram(prog)} className="group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/40 transition-all text-left w-full">
-                <div className="relative h-44 bg-navy-800 overflow-hidden">
-                  <Image src={prog.image} alt={t(prog.titleKey)} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent" />
-                  <span className="absolute top-3 left-3 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{prog.key}</span>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gold-500 transition-colors">{t(prog.titleKey)}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">{t(prog.descKey)}</p>
-                  <div className="border-t border-navy-700 pt-4 mt-4 space-y-1.5">
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_duration")}</span><span className="text-gray-300">{t(prog.durationKey)}</span></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_prerequisites")}</span><span className="text-gray-300">{t(prog.prereqKey)}</span></div>
+
+          <style>{`.scrollbar-hide::-webkit-scrollbar{display:none}.scrollbar-hide{scrollbar-width:none;-ms-overflow-style:none}`}</style>
+
+          <div className="relative" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
+            {/* Track */}
+            <div ref={carouselRef} className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-6 pb-4 scroll-smooth">
+              {programDetails.map((prog) => (
+                <button key={prog.key} onClick={() => setSelectedProgram(prog)}
+                  className="snap-start shrink-0 w-[85%] sm:w-[55%] lg:w-[30%] group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left w-full hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5">
+                  <div className="relative h-44 bg-navy-800 overflow-hidden">
+                    <Image src={prog.image} alt={t(prog.titleKey)} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-transparent to-transparent" />
+                    <span className="absolute top-3 left-3 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{prog.key}</span>
                   </div>
-                </div>
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gold-500 transition-colors">{t(prog.titleKey)}</h3>
+                    <p className="text-sm text-gray-400 leading-relaxed line-clamp-2">{t(prog.descKey)}</p>
+                    <div className="border-t border-navy-700 pt-4 mt-4 space-y-1.5">
+                      <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_duration")}</span><span className="text-gray-300">{t(prog.durationKey)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-gray-500">{t("landing_prerequisites")}</span><span className="text-gray-300">{t(prog.prereqKey)}</span></div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Prev arrow */}
+            {currentSlide > 0 && (
+              <button onClick={() => goTo(currentSlide - 1)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-10 h-10 bg-navy-800/90 border border-navy-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-navy-700 transition-all backdrop-blur shadow-lg">
+                <ChevronLeft className="w-5 h-5" />
               </button>
+            )}
+
+            {/* Next arrow */}
+            {currentSlide < programDetails.length - 1 && (
+              <button onClick={() => goTo(currentSlide + 1)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 bg-navy-800/90 border border-navy-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-navy-700 transition-all backdrop-blur shadow-lg">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Dots */}
+          <div className="flex justify-center items-center gap-2 mt-8">
+            {programDetails.map((_, i) => (
+              <button key={i} onClick={() => goTo(i)}
+                className={`w-2 rounded-full transition-all duration-300 ${i === currentSlide ? "bg-gold-500 w-6" : "bg-navy-600 hover:bg-navy-500 w-2"} h-2`} />
             ))}
           </div>
         </div>
