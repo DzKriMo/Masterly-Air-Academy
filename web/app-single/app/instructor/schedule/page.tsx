@@ -29,10 +29,10 @@ export default function SchedulePage() {
     if (!isAuthenticated) return;
     setLoading(true);
     Promise.all([
-      api.get<any>("/flight-lessons/"),
-      api.get<any>("/courses/"),
-      api.get<any>("/exams/"),
-      api.get<any>("/simulator-sessions/"),
+      api.get<any>("/flight-lessons/").catch(() => ({ results: [] })),
+      api.get<any>("/courses/").catch(() => ({ results: [] })),
+      api.get<any>("/exams/").catch(() => ({ results: [] })),
+      api.get<any>("/simulator-sessions/").catch(() => ({ results: [] })),
     ]).then(([flightsResp, coursesResp, examsResp, simSessionsResp]) => {
       const flights = flightsResp as unknown as any;
       const courses = coursesResp as unknown as any;

@@ -86,7 +86,6 @@ ROLE_DEFINITIONS = {
             'dashboard': ['view'],
             'students': ['view'],
             'ground_training': ['view_own', 'evaluate'],
-            'flight_training': ['view'],
             'exams': ['view', 'grade'],
             'attendance': ['view', 'create', 'update'],
             'schedule': ['view_own'],
