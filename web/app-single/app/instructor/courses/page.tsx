@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ExportButton } from "@/components/export-button";
@@ -54,6 +55,10 @@ export default function CoursesPage() {
 
   // Cancel state
   const [cancelCourseId, setCancelCourseId] = useState<string | null>(null);
+  // Detail modal state
+  const [detailCourse, setDetailCourse] = useState<Course | null>(null);
+  const [showCourseDetail, setShowCourseDetail] = useState(false);
+
   // Reschedule state
   const [rescheduleCourse, setRescheduleCourse] = useState<Course | null>(null);
   const [rescheduleForm, setRescheduleForm] = useState({ scheduled_date: "", start_time: "", end_time: "" });
@@ -367,6 +372,29 @@ export default function CoursesPage() {
           loading={cancelMutation.isPending}
         />
 
+        {/* Course Detail Modal */}
+        <ModalForm
+          open={showCourseDetail}
+          onClose={() => setShowCourseDetail(false)}
+          title={`${t("instructor.courseDetail", "Course Detail")} - ${detailCourse?.title || ""}`}
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("instructor.subject", "Subject")} value={detailCourse?.subject_code || "-"} />
+              <DetailField label={t("instructor.title", "Title")} value={detailCourse?.title || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("instructor.date", "Date")} value={detailCourse?.scheduled_date?.slice(0,10) || "-"} />
+              <DetailField label={t("instructor.time", "Time")} value={detailCourse ? `${detailCourse.start_time?.slice(0,5)} - ${detailCourse.end_time?.slice(0,5)}` : "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.status", "Status")} value={detailCourse?.status || "-"} />
+              <DetailField label={t("instructor.room", "Room")} value={detailCourse?.room_name || t("instructor.tbd", "TBD")} />
+            </div>
+            <DetailField label={t("instructor.enrolledStudents", "Enrolled Students")} value={String(detailCourse?.enrollment_count ?? "-")} />
+          </div>
+        </ModalForm>
+
         {isLoading ? (
           <LoadingSkeleton type="table" rows={8} />
         ) : filtered.length === 0 ? (
@@ -376,7 +404,7 @@ export default function CoursesPage() {
             action={courses.length === 0 ? { label: t("common.create", "Create Course"), onClick: () => setShowForm(true) } : undefined}
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(c) => { setDetailCourse(c as Course); setShowCourseDetail(true); }} />
         )}
       </main>
     </div>

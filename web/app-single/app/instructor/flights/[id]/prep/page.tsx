@@ -51,7 +51,7 @@ export default function FlightPrepPage() {
         lesson_objectives: objectives, briefing_notes: briefing,
       });
       showToast("success", t("instructor.prepSubmitted", "Preparation checklist submitted."));
-      setTimeout(() => router.push("/instructor/flights"), 1500);
+      router.push("/instructor/flights");
     } catch (err: any) {
       setError(err.message || t("common.failed", "Failed"));
     } finally { setSaving(false); }

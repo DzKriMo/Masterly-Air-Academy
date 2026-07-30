@@ -36,7 +36,7 @@ export default function CGIDashboard() {
 
   const { data: attemptsData } = useQuery({
     queryKey: ['cgi-attempts'],
-    queryFn: () => api.get<any>("/exams/my_attempts/").catch(() => []),
+    queryFn: () => api.get<any>("/exam-attempts/").then(r => (r as unknown as any).results || []).catch(() => []),
     enabled: isAuthenticated,
   });
 
@@ -55,7 +55,7 @@ export default function CGIDashboard() {
   const total = attempts.length;
   const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
   const avgScore = total > 0 ? Math.round(attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / total) : 0;
-  const atRisk = students.filter((s: any) => (s as any).status === "at_risk" || (s as any).needs_intervention).length;
+  const atRisk = 0;
 
   const statusData = Object.entries(
     courses.reduce((acc: any, c: any) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {})

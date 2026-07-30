@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ExportButton } from "@/components/export-button";
@@ -52,6 +53,10 @@ export default function FlightsPage() {
   // Cancel state
   const [cancelFlightId, setCancelFlightId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  // Detail modal state
+  const [detailFlight, setDetailFlight] = useState<Flight | null>(null);
+  const [showFlightDetail, setShowFlightDetail] = useState(false);
+
   // Reschedule state
   const [rescheduleFlight, setRescheduleFlight] = useState<Flight | null>(null);
   const [rescheduleForm, setRescheduleForm] = useState({ scheduled_date: "", start_time: "", end_time: "", aircraft: "" });
@@ -442,6 +447,47 @@ export default function FlightsPage() {
           loading={cancelling}
         />
 
+        {/* Flight Detail Modal */}
+        <ModalForm
+          open={showFlightDetail}
+          onClose={() => setShowFlightDetail(false)}
+          title={`${t('instructor.flightDetail', 'Flight Detail')} - ${detailFlight?.student_name || ""}`}
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t('common.student', 'Student')} value={detailFlight?.student_name || "-"} />
+              <DetailField label={t('common.instructor', 'Instructor')} value={detailFlight?.instructor_name || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t('instructor.aircraftLabel', 'Aircraft')} value={detailFlight?.aircraft_reg || "-"} />
+              <DetailField label={t('common.date', 'Date')} value={detailFlight?.scheduled_date?.slice(0,10) || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t('instructor.startLabel', 'Start')} value={detailFlight?.start_time?.slice(0,16) || "-"} />
+              <DetailField label={t('instructor.endLabel', 'End')} value={detailFlight?.end_time?.slice(0,16) || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t('common.status', 'Status')} value={detailFlight?.status || "-"} />
+              <DetailField label={t('common.grade', 'Grade')} value={detailFlight?.grade != null ? String(detailFlight.grade) : "-"} />
+            </div>
+            <DetailField label={t('instructor.flightDuration', 'Duration')} value={detailFlight?.flight_duration ? `${detailFlight.flight_duration}h` : "N/A"} />
+            {detailFlight?.status === "scheduled" && (
+              <div className="flex gap-2 mt-2">
+                {!detailFlight.has_preparation && (
+                  <button onClick={() => { setShowFlightDetail(false); router.push(`/instructor/flights/${detailFlight.id}/prep`); }}
+                    className="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-lg text-xs hover:bg-blue-500/20">
+                    {t('instructor.prep', 'Pre-Flight Prep')}
+                  </button>
+                )}
+                <button onClick={() => { setShowFlightDetail(false); router.push(`/instructor/flights/${detailFlight.id}/evaluate`); }}
+                  className="px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900">
+                  {t('instructor.evaluate', 'Evaluate')}
+                </button>
+              </div>
+            )}
+          </div>
+        </ModalForm>
+
         {loading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState
             message={t('instructor.noFlightsFound')}
@@ -449,7 +495,7 @@ export default function FlightsPage() {
             action={flights.length === 0 ? { label: t('instructor.scheduleFlight'), onClick: () => setShowForm(true) } : undefined}
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(f) => { setDetailFlight(f as Flight); setShowFlightDetail(true); }} />
         )}
       </main>
     </div>

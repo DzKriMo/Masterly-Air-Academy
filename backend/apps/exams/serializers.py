@@ -29,12 +29,13 @@ class ProgressCheckSerializer(serializers.ModelSerializer):
 class SkillTestSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
     examiner_name = serializers.SerializerMethodField()
+    authorized_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = SkillTest
         fields = [
             'id', 'student', 'student_name', 'examiner', 'examiner_name',
-            'authorized_by', 'scheduled_date',
+            'authorized_by', 'authorized_by_name', 'scheduled_date',
             'completed_date', 'result', 'report_url', 'observations',
             'recommendations', 'status',
         ]
@@ -44,6 +45,11 @@ class SkillTestSerializer(serializers.ModelSerializer):
 
     def get_examiner_name(self, obj):
         return f'{obj.examiner.first_name} {obj.examiner.last_name}' if hasattr(obj, 'examiner') else ''
+
+    def get_authorized_by_name(self, obj):
+        if obj.authorized_by:
+            return f'{obj.authorized_by.first_name} {obj.authorized_by.last_name}'
+        return None
 
 
 class PracticalEvaluationSerializer(serializers.ModelSerializer):

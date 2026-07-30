@@ -19,7 +19,7 @@ import { useToast } from "@/components/toast";
 interface SkillTest {
   id: string; student: string; student_name: string;
   examiner: string; examiner_name: string;
-  authorized_by: string | null;
+  authorized_by: string | null; authorized_by_name: string | null;
   scheduled_date: string; completed_date: string | null;
   result: string | null; report_url: string | null;
   observations: string | null; recommendations: string | null;
@@ -59,7 +59,7 @@ export default function SkillTestsPage() {
   const [showCompleteForm, setShowCompleteForm] = useState(false);
   const [completeTest, setCompleteTest] = useState<SkillTest | null>(null);
   const [completeForm, setCompleteForm] = useState({
-    result: "", observations: "", recommendations: "",
+    result: "", observations: "", recommendations: "", report_url: "",
   });
   const [completing, setCompleting] = useState(false);
 
@@ -115,7 +115,7 @@ export default function SkillTestsPage() {
 
   const openComplete = (test: SkillTest) => {
     setCompleteTest(test);
-    setCompleteForm({ result: "", observations: "", recommendations: "" });
+    setCompleteForm({ result: "", observations: "", recommendations: "", report_url: "" });
     setShowCompleteForm(true);
   };
 
@@ -127,6 +127,7 @@ export default function SkillTestsPage() {
       if (completeForm.result) body.result = completeForm.result;
       if (completeForm.observations) body.observations = completeForm.observations;
       if (completeForm.recommendations) body.recommendations = completeForm.recommendations;
+      if (completeForm.report_url) body.report_url = completeForm.report_url;
       await api.post(`/skill-tests/${completeTest.id}/complete/`, body);
       setShowCompleteForm(false);
       setCompleteTest(null);
@@ -285,6 +286,13 @@ export default function SkillTestsPage() {
                   onChange={e => setCompleteForm({...completeForm, recommendations: e.target.value})}
                   rows={3} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
               </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t("common.reportUrl", "Report URL")}</label>
+                <input value={completeForm.report_url}
+                  onChange={e => setCompleteForm({...completeForm, report_url: e.target.value})}
+                  placeholder={t("instructor.reportUrlPlaceholder", "Link to PDF report...")}
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+              </div>
               {completeForm.result === "passed" && (
                 <p className="text-xs text-green-400 bg-green-500/10 px-3 py-2 rounded-lg">
                   {t("instructor.certificateNote", "A certificate will be automatically generated for this student.")}
@@ -313,7 +321,7 @@ export default function SkillTestsPage() {
               <DetailField label={t("common.result", "Result")} value={detailTest?.result || "-"} />
               <DetailField label={t("common.completedDate", "Completed Date")} value={detailTest?.completed_date?.slice(0, 10) || "-"} />
             </div>
-            <DetailField label={t("instructor.authorizedBy", "Authorized By")} value={detailTest?.authorized_by ? String(detailTest.authorized_by) : "-"} />
+            <DetailField label={t("instructor.authorizedBy", "Authorized By")} value={detailTest?.authorized_by_name || "-"} />
             {detailTest?.observations && (
               <div>
                 <p className="text-xs text-gray-500 mb-0.5">{t("common.observations", "Observations")}</p>

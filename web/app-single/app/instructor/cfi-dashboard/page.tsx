@@ -58,9 +58,7 @@ export default function CFIDashboard() {
   const completed = todayFlights.filter((f: any) => f.status === "completed").length;
   const cancelled = todayFlights.filter((f: any) => f.status === "cancelled").length;
 
-  const activeStudents = students.filter((s: any) => s.status === "active" || s.status === "active").length;
-  const readyProgress = students.filter((s: any) => s.needs_progress_check).length;
-  const readySkill = students.filter((s: any) => s.needs_skill_test).length;
+  const activeStudents = students.filter((s: any) => s.status === "active").length;
 
   const activeAircraft = aircraft.filter((a: any) => a.status === "active").length;
   const inMaintenance = aircraft.filter((a: any) => a.status === "in_maintenance").length;
@@ -84,8 +82,8 @@ export default function CFIDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <Stat title={t('instructor.cfi.todaysFlights')} value={`${scheduled}/${completed}/${cancelled}`} />
               <Stat title={t('instructor.cfi.studentsInProgression')} value={activeStudents} />
-              <Stat title={t('instructor.cfi.readyForProgressCheck')} value={readyProgress || "—"} />
-              <Stat title={t('instructor.cfi.readyForSkillTest')} value={readySkill || "—"} />
+              <Stat title={t('instructor.cfi.readyForProgressCheck')} value={"—"} />
+              <Stat title={t('instructor.cfi.readyForSkillTest')} value={"—"} />
             </div>
 
             {/* Resources */}

@@ -25,6 +25,9 @@ export default function EvaluateFlightPage() {
     departure_time: "", arrival_time: "", signed_by_instructor: false,
   });
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [grade, setGrade] = useState(0);
+  const [flightDuration, setFlightDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showSoloConfirm, setShowSoloConfirm] = useState(false);
   const [soloAuthorizing, setSoloAuthorizing] = useState(false);
@@ -45,9 +48,11 @@ export default function EvaluateFlightPage() {
       if (!body.departure_time) delete body.departure_time;
       if (!body.arrival_time) delete body.arrival_time;
 
-      await api.post(`/flight-lessons/${flightId}/evaluate/`, body);
+      const resp = await api.post<any>(`/flight-lessons/${flightId}/evaluate/`, body);
+      setSubmitted(true);
+      setGrade(resp.grade || parseFloat(form.grade));
+      setFlightDuration(resp.flight_duration || parseFloat(form.flight_duration));
       showToast("success", t("instructor.evaluationSubmitted", "Evaluation submitted successfully"));
-      setTimeout(() => router.push("/instructor/flights"), 1500);
     } catch (err: any) {
       setError(err.message || t("common.failed", "Failed"));
     } finally { setSaving(false); }
@@ -117,8 +122,8 @@ export default function EvaluateFlightPage() {
           <button type="submit" disabled={saving} className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg">{saving ? t("common.loading", "Submitting...") : t("instructor.submitEvaluation", "Submit Evaluation")}</button>
         </form>
 
-        {/* Solo Authorization Section */}
-        {parseFloat(form.grade) >= 7 && parseFloat(form.flight_duration) > 0 && (
+        {/* Solo Authorization Section (only after successful evaluation) */}
+        {submitted && grade >= 7 && flightDuration > 0 && (
           <div className="mt-6 p-6 bg-navy-800 border border-gold-500/30 rounded-xl">
             <h3 className="text-lg font-bold text-gold-500 mb-2">{t("instructor.soloAuthorization", "Solo Flight Authorization")}</h3>
             <p className="text-sm text-gray-400 mb-4">{t("instructor.soloCriteriaMet", "This student meets the minimum criteria for solo flight authorization.")}</p>
