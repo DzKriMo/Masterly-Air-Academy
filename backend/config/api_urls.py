@@ -28,7 +28,7 @@ from apps.exams.views import (
     QuestionBankViewSet, ExamViewSet, QuizViewSet,
     CertificateViewSet, StudentCompetencyViewSet,
     ProgressCheckViewSet, SkillTestViewSet, PracticalEvaluationViewSet,
-    QuizAttemptViewSet,
+    ExamAttemptViewSet, QuizAttemptViewSet,
 )
 from apps.administration.views import (
     ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet, ContractViewSet,
@@ -730,6 +730,7 @@ router.register(r'module-documents', ModuleDocumentViewSet)
 router.register(r'module-exercises', ModuleExerciseViewSet)
 router.register(r'ground-evaluations', GroundEvaluationViewSet)
 router.register(r'time-entries', TimeEntryViewSet)
+router.register(r'exam-attempts', ExamAttemptViewSet)
 router.register(r'quiz-attempts', QuizAttemptViewSet)
 router.register(r'flight-instructors', FlightInstructorViewSet)
 router.register(r'ground-instructors', GroundInstructorViewSet, basename='ground-instructor')

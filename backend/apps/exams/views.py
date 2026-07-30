@@ -414,6 +414,28 @@ class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
                 return qs.filter(student=student)
             except Student.DoesNotExist:
                 return qs.none()
-        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+        if self.request.user.role == 'flight_instructor':
+            return qs.filter(student__main_instructor__user=self.request.user)
+        if self.request.user.role == 'chief_flight_instructor':
+            return qs
+        return qs
+
+
+class ExamAttemptViewSet(viewsets.ModelViewSet):
+    serializer_class = ExamAttemptSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
+    filterset_fields = ['exam', 'student', 'is_passed']
+
+    def get_queryset(self):
+        qs = ExamAttempt.objects.select_related('exam', 'student').all()
+        if self.request.user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=self.request.user)
+                return qs.filter(student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        if self.request.user.role == 'flight_instructor':
             return qs.filter(student__main_instructor__user=self.request.user)
         return qs

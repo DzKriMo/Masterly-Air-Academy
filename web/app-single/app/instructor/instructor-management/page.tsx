@@ -33,9 +33,13 @@ export default function InstructorManagementPage() {
   const load = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true); setError(null);
-    api.get("/users/?role=flight_instructor&role=chief_flight_instructor")
-      .then((d: any) => { setInstructors(d.results || []); setError(null); })
-      .catch(err => { console.error(err); setError("Failed to load instructors."); })
+    Promise.all([
+      api.get<any>("/users/?role=flight_instructor"),
+      api.get<any>("/users/?role=chief_flight_instructor"),
+    ]).then(([fiRes, cfiRes]) => {
+      setInstructors([...(fiRes.results || []), ...(cfiRes.results || [])]);
+      setError(null);
+    }).catch(err => { console.error(err); setError("Failed to load instructors."); })
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 

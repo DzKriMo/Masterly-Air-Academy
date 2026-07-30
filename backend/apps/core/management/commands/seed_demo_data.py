@@ -225,6 +225,27 @@ class Command(BaseCommand):
             )
             aircraft_list.append(ac)
 
+        # ── Flight Programs ────────────────────────────
+        from apps.flight_training.models import FlightProgram
+        program_data = [
+            {'name': 'Private Pilot License (PPL)', 'code': 'PPL', 'description': 'Basic private pilot training for single-engine aircraft.', 'duration_hours': 45, 'difficulty_level': 'beginner', 'status': 'active'},
+            {'name': 'Commercial Pilot License (CPL)', 'code': 'CPL', 'description': 'Advanced commercial pilot training program.', 'duration_hours': 200, 'difficulty_level': 'advanced', 'status': 'active'},
+            {'name': 'Instrument Rating (IR)', 'code': 'IR', 'description': 'Instrument flight rules training and certification.', 'duration_hours': 50, 'difficulty_level': 'intermediate', 'status': 'active'},
+            {'name': 'Multi-Engine Piston (MEP)', 'code': 'MEP', 'description': 'Multi-engine aircraft operation and certification.', 'duration_hours': 15, 'difficulty_level': 'intermediate', 'status': 'active'},
+            {'name': 'Multi-Crew Cooperation (MCC)', 'code': 'MCC', 'description': 'Multi-crew operation and CRM training.', 'duration_hours': 25, 'difficulty_level': 'advanced', 'status': 'active'},
+        ]
+        for pd in program_data:
+            FlightProgram.objects.get_or_create(
+                code=pd['code'],
+                defaults={
+                    'name': pd['name'],
+                    'description': pd['description'],
+                    'duration_hours': pd['duration_hours'],
+                    'difficulty_level': pd['difficulty_level'],
+                    'status': pd['status'],
+                },
+            )
+
         # ── Subjects ──────────────────────────────────────
         from apps.ground_training.models import Subject
         subjects_data = [
@@ -906,6 +927,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Modules: {Module.objects.count()}')
         self.stdout.write(f'  Module Lessons: {ModuleLesson.objects.count()}')
         self.stdout.write(f'  Courses: {Course.objects.count()}')
+        self.stdout.write(f'  Flight Programs: {FlightProgram.objects.count()}')
         self.stdout.write(f'  Flight Lessons: {FlightLesson.objects.count()}')
         self.stdout.write(f'  Exams: {Exam.objects.count()}')
         self.stdout.write(f'  Questions: {QuestionBank.objects.count()}')

@@ -19,8 +19,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         if self.request.user.role == 'student':
             return qs.filter(user=self.request.user)
-        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+        if self.request.user.role == 'flight_instructor':
             return qs.filter(main_instructor__user=self.request.user)
+        if self.request.user.role == 'chief_flight_instructor':
+            return qs
         return qs
 
     def _user_has_permission(self, user, permission):

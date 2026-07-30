@@ -73,13 +73,15 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
                 return qs.filter(student=student)
             except Student.DoesNotExist:
                 return qs.none()
-        if self.request.user.role in ('flight_instructor', 'chief_flight_instructor'):
+        if self.request.user.role == 'flight_instructor':
             try:
                 from apps.students.models import FlightInstructor
                 fi = FlightInstructor.objects.get(user=self.request.user)
                 return qs.filter(instructor=fi)
             except FlightInstructor.DoesNotExist:
                 return qs.none()
+        if self.request.user.role == 'chief_flight_instructor':
+            return qs
         return qs
 
     def get_serializer_class(self):
