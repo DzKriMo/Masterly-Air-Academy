@@ -14,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { QuestionFormFields, QuestionFormData, QUESTION_TYPES, PROGRAMS, DIFFICULTIES } from "@/components/question-form-fields";
 
 interface Question {
   id: string;
@@ -31,20 +32,6 @@ interface Question {
   program: string | null;
   created_at: string;
 }
-
-const QUESTION_TYPES = [
-  "mcq",
-  "true_false",
-  "short_answer",
-  "essay",
-  "matching",
-  "ordering",
-  "case_study",
-];
-
-const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC"];
-
-const DIFFICULTIES = ["easy", "medium", "hard"];
 
 const TYPE_COLORS: Record<string, string> = {
   mcq: "bg-blue-500/10 text-blue-400",
@@ -95,32 +82,18 @@ export default function AdminQuestionBankPage() {
   const [selected, setSelected] = useState<Question | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    subject: "",
-    module: "",
-    question_text: "",
-    question_type: "mcq",
-    options_text: "",
-    correct_answer: "",
-    explanation: "",
-    reference: "",
-    difficulty: "medium",
-    program: "",
+  const [createForm, setCreateForm] = useState<QuestionFormData>({
+    subject: "", module: "", question_text: "", question_type: "mcq",
+    options_text: "", correct_answer: "", explanation: "", reference: "",
+    difficulty: "medium", program: "",
   });
   const [createError, setCreateError] = useState("");
 
   const [editItem, setEditItem] = useState<Question | null>(null);
-  const [editForm, setEditForm] = useState({
-    subject: "",
-    module: "",
-    question_text: "",
-    question_type: "mcq",
-    options_text: "",
-    correct_answer: "",
-    explanation: "",
-    reference: "",
-    difficulty: "medium",
-    program: "",
+  const [editForm, setEditForm] = useState<QuestionFormData>({
+    subject: "", module: "", question_text: "", question_type: "mcq",
+    options_text: "", correct_answer: "", explanation: "", reference: "",
+    difficulty: "medium", program: "",
   });
   const [editError, setEditError] = useState("");
 
@@ -152,12 +125,6 @@ export default function AdminQuestionBankPage() {
     },
     enabled: isAuthenticated,
   });
-
-  const filteredModules = useMemo(() => {
-    if (!createForm.subject && !editForm.subject) return modules;
-    const subjectId = createForm.subject || editForm.subject;
-    return modules.filter((m: any) => m.subject === subjectId);
-  }, [modules, createForm.subject, editForm.subject]);
 
   const resetCreateForm = () => {
     setCreateForm({
@@ -514,147 +481,7 @@ export default function AdminQuestionBankPage() {
             </>
           }
         >
-          <div className="space-y-4">
-            {createError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>
-            )}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Question Text <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                value={createForm.question_text}
-                onChange={(e) => setCreateForm((f) => ({ ...f, question_text: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none"
-                placeholder="Enter the question text..."
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Type <span className="text-red-400">*</span>
-                </label>
-                <select
-                  value={createForm.question_type}
-                  onChange={(e) => {
-                    const qt = e.target.value;
-                    setCreateForm((f) => ({
-                      ...f,
-                      question_type: qt,
-                      options_text: qt === "true_false" ? "True\nFalse" : f.options_text,
-                    }));
-                  }}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  {QUESTION_TYPES.map((qt) => (
-                    <option key={qt} value={qt}>{fmtType(qt)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Difficulty</label>
-                <select
-                  value={createForm.difficulty}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, difficulty: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  {DIFFICULTIES.map((d) => (
-                    <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Program</label>
-                <select
-                  value={createForm.program}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, program: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">All Programs</option>
-                  {PROGRAMS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Subject</label>
-                <select
-                  value={createForm.subject}
-                  onChange={(e) => { setCreateForm((f) => ({ ...f, subject: e.target.value, module: "" })); }}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">No subject</option>
-                  {subjects.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.title_en || s.code}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {createForm.subject && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Module</label>
-                <select
-                  value={createForm.module}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, module: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">No module</option>
-                  {filteredModules.map((m: any) => (
-                    <option key={m.id} value={m.id}>{m.title}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {(createForm.question_type === "mcq" || createForm.question_type === "true_false") && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Options (one per line)
-                </label>
-                <textarea
-                  value={createForm.options_text}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, options_text: e.target.value }))}
-                  rows={4}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none font-mono text-sm"
-                  placeholder={'A. First option\nB. Second option\nC. Third option\nD. Fourth option'}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Correct Answer <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={createForm.correct_answer}
-                onChange={(e) => setCreateForm((f) => ({ ...f, correct_answer: e.target.value }))}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-                placeholder={createForm.question_type === "true_false" ? "True or False" : "The correct answer..."}
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Explanation</label>
-              <textarea
-                value={createForm.explanation}
-                onChange={(e) => setCreateForm((f) => ({ ...f, explanation: e.target.value }))}
-                rows={2}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none"
-                placeholder="Explain why this answer is correct..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Reference</label>
-              <input
-                type="text"
-                value={createForm.reference}
-                onChange={(e) => setCreateForm((f) => ({ ...f, reference: e.target.value }))}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-                placeholder="e.g. PPL Navigation Manual Ch. 3"
-              />
-            </div>
-          </div>
+          <QuestionFormFields form={createForm} onChange={setCreateForm} subjects={subjects as any} modules={modules as any} error={createError} />
         </ModalForm>
 
         {/* Edit Modal */}
@@ -682,142 +509,7 @@ export default function AdminQuestionBankPage() {
             </>
           }
         >
-          <div className="space-y-4">
-            {editError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>
-            )}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Question Text <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                value={editForm.question_text}
-                onChange={(e) => setEditForm((f) => ({ ...f, question_text: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Type <span className="text-red-400">*</span>
-                </label>
-                <select
-                  value={editForm.question_type}
-                  onChange={(e) => {
-                    const qt = e.target.value;
-                    setEditForm((f) => ({
-                      ...f,
-                      question_type: qt,
-                      options_text: qt === "true_false" ? "True\nFalse" : f.options_text,
-                    }));
-                  }}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  {QUESTION_TYPES.map((qt) => (
-                    <option key={qt} value={qt}>{fmtType(qt)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Difficulty</label>
-                <select
-                  value={editForm.difficulty}
-                  onChange={(e) => setEditForm((f) => ({ ...f, difficulty: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  {DIFFICULTIES.map((d) => (
-                    <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Program</label>
-                <select
-                  value={editForm.program}
-                  onChange={(e) => setEditForm((f) => ({ ...f, program: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">All Programs</option>
-                  {PROGRAMS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Subject</label>
-                <select
-                  value={editForm.subject}
-                  onChange={(e) => setEditForm((f) => ({ ...f, subject: e.target.value, module: "" }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">No subject</option>
-                  {subjects.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.title_en || s.code}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {editForm.subject && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Module</label>
-                <select
-                  value={editForm.module}
-                  onChange={(e) => setEditForm((f) => ({ ...f, module: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-                >
-                  <option value="">No module</option>
-                  {filteredModules.map((m: any) => (
-                    <option key={m.id} value={m.id}>{m.title}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {(editForm.question_type === "mcq" || editForm.question_type === "true_false") && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Options (one per line)
-                </label>
-                <textarea
-                  value={editForm.options_text}
-                  onChange={(e) => setEditForm((f) => ({ ...f, options_text: e.target.value }))}
-                  rows={4}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none font-mono text-sm"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Correct Answer <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={editForm.correct_answer}
-                onChange={(e) => setEditForm((f) => ({ ...f, correct_answer: e.target.value }))}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Explanation</label>
-              <textarea
-                value={editForm.explanation}
-                onChange={(e) => setEditForm((f) => ({ ...f, explanation: e.target.value }))}
-                rows={2}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Reference</label>
-              <input
-                type="text"
-                value={editForm.reference}
-                onChange={(e) => setEditForm((f) => ({ ...f, reference: e.target.value }))}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-              />
-            </div>
-          </div>
+          <QuestionFormFields form={editForm} onChange={setEditForm} subjects={subjects as any} modules={modules as any} error={editError} />
         </ModalForm>
 
         {/* Delete Confirmation */}
