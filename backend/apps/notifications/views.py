@@ -49,7 +49,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         sent = Message.objects.filter(sender=request.user).order_by('-created_at')
         return Response(MessageSerializer(sent, many=True).data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='unread-count')
     def unread_count(self, request):
         count = Message.objects.filter(receiver=request.user, is_read=False).count()
         return Response({'count': count})

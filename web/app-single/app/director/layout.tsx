@@ -32,9 +32,13 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
     { href: "/director/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) { router.push("/login"); return; }
+    if (user && !["director_general", "system_admin"].includes(user.role)) { router.push("/login"); return; }
+  }, [isLoading, isAuthenticated, user, router]);
+
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !["director_general", "system_admin"].includes(user.role)) { router.push("/login"); return null; }
 
   return (
     <div className="min-h-screen bg-navy-900 flex">

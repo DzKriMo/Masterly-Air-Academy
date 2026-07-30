@@ -38,9 +38,13 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
     { href: "/quality/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) { router.push("/login"); return; }
+    if (user && !["quality_manager", "compliance_monitoring_manager", "safety_manager", "system_admin"].includes(user.role)) { router.push("/login"); return; }
+  }, [isLoading, isAuthenticated, user, router]);
+
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !["quality_manager", "compliance_monitoring_manager", "safety_manager", "system_admin"].includes(user.role)) { router.push("/login"); return null; }
 
   return (
     <div className="min-h-screen bg-navy-900 flex">

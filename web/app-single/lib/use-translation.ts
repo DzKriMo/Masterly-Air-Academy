@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const translations: Record<string, Record<string, string>> = {
   en: {
@@ -1696,6 +1696,6 @@ export function useTranslation() {
     setLocale(code); setStrings(translations[code] || translations.en);
   };
 
-  const t = (key: string, fallback?: string) => strings[key] || fallback || key;
+  const t = useCallback((key: string, fallback?: string) => strings[key] || fallback || key, [strings]);
   return { t, locale, switchTo };
 }

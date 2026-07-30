@@ -218,11 +218,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [pathname, SECTIONS]);
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) { router.push("/login"); return; }
+    if (user && !["system_admin", "admin_responsible", "admin_agent", "admissions_responsible", "training_admin"].includes(user.role)) {
+      router.push("/login"); return;
+    }
+  }, [isLoading, isAuthenticated, user, router]);
+
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !["system_admin", "admin_responsible", "admin_agent", "admissions_responsible", "training_admin"].includes(user.role)) {
-    router.push("/login"); return null;
-  }
 
   const closeSidebar = () => setSidebarOpen(false);
 

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
@@ -25,9 +25,13 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
     { href: "/scheduler/aircraft", label: t("scheduler.aircraft"), Icon: PlaneTakeoff },
   ];
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) { router.push("/login"); return; }
+    if (user && !["scheduler", "system_admin"].includes(user.role)) { router.push("/dashboard"); return; }
+  }, [isLoading, isAuthenticated, user, router]);
+
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !["scheduler", "system_admin"].includes(user.role)) { router.push("/dashboard"); return null; }
 
   const closeSidebar = () => setSidebarOpen(false);
 

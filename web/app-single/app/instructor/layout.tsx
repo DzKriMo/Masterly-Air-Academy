@@ -94,18 +94,23 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
   }, [dashboardHref, t, unread.messages, isFI, isCFI, isGI, isCGI]);
 
   // Route guard: redirect if current path not allowed for role
-  if (!isLoading && isAuthenticated && role) {
-    const allowed = ALLOWED_PREFIXES[role] || [];
-    const isAllowed = allowed.some(prefix => pathname === prefix || pathname.startsWith(prefix + "/"));
-    if (!isAllowed && pathname.startsWith("/instructor/")) {
-      router.push(dashboardHref);
-      return null;
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && role) {
+      const allowed = ALLOWED_PREFIXES[role] || [];
+      const isAllowed = allowed.some(prefix => pathname === prefix || pathname.startsWith(prefix + "/"));
+      if (!isAllowed && pathname.startsWith("/instructor/")) {
+        router.push(dashboardHref);
+      }
     }
-  }
+  }, [isLoading, isAuthenticated, role, pathname, router, dashboardHref]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) { router.push("/login"); return; }
+    if (user && !user.role?.includes("instructor")) { router.push("/dashboard"); return; }
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) return null;
-  if (!isAuthenticated) { router.push("/login"); return null; }
-  if (user && !user.role?.includes("instructor")) { router.push("/dashboard"); return null; }
 
   const closeSidebar = () => setSidebarOpen(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);

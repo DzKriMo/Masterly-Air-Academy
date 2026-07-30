@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
@@ -34,10 +34,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/profile", label: t("student.profile"), Icon: User },
   ];
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (pathname === "/student/login") return;
+    if (!isAuthenticated) { router.push("/student/login"); return; }
+    if (user && !["student","candidate","graduate"].includes(user.role)) { router.push("/login"); return; }
+  }, [isLoading, isAuthenticated, user, router, pathname]);
+
   if (isLoading) return null;
   if (pathname === "/student/login") return <>{children}</>;
-  if (!isAuthenticated) { router.push("/student/login"); return null; }
-  if (user && !["student","candidate","graduate"].includes(user.role)) { router.push("/login"); return null; }
 
   const closeSidebar = () => setSidebarOpen(false);
 
