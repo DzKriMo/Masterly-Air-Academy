@@ -46,9 +46,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const unread = useUnreadCounts({ includeMessages: false, enabled: isAuthenticated });
+  const unread = useUnreadCounts({ includeMessages: true, enabled: isAuthenticated });
 
   const NOTIFICATION_BADGE = () => unread.notifications;
+  const MESSAGES_BADGE = () => unread.messages;
 
   const SECTIONS: NavSection[] = useMemo(() => [
     {
@@ -286,7 +287,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {section.items.map(item => {
                       const active = isActive(item.href);
                       const ItemIcon = item.Icon;
-                      const showBadge = section.badgeFn && item.href === "/admin/notifications" ? sectionBadge : 0;
+                      const showBadge = item.href === "/admin/notifications" && section.badgeFn ? sectionBadge : item.href === "/admin/messages" ? unread.messages : 0;
                       return (
                         <Link
                           key={item.href}
