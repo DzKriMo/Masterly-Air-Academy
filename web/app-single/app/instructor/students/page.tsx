@@ -41,7 +41,7 @@ export default function InstructorStudentsPage() {
     setLoading(true);
     Promise.all([
       api.get<any>("/students/"),
-      api.get<any>("/flight-lessons/"),
+      api.get<any>("/flight-lessons/").catch(() => ({ results: [] })),
     ]).then(([studentsData, flightsData]) => {
       const studentList = (studentsData as any).results || [];
       const flights = (flightsData as any).results || [];
