@@ -67,12 +67,16 @@ class ExamViewSet(viewsets.ModelViewSet):
         if existing >= exam.max_attempts:
             return Response({'error': f'Maximum {exam.max_attempts} attempts reached'}, status=400)
 
-        # Get questions (random subset, snapshot IDs in attempt)
-        all_questions = list(QuestionBank.objects.filter(subject=exam.subject))
-        count = exam.question_count or 20
-        if len(all_questions) < count:
-            return Response({'error': f'Not enough questions. Need {count}, have {len(all_questions)}.'}, status=400)
-        questions = random.sample(all_questions, count)
+        # Get questions — fixed list if ExamQuestion entries exist, else random from subject
+        fixed_questions = exam.questions.select_related('question').order_by('order')
+        if fixed_questions.exists():
+            questions = [eq.question for eq in fixed_questions]
+        else:
+            all_questions = list(QuestionBank.objects.filter(subject=exam.subject))
+            count = exam.question_count or 20
+            if len(all_questions) < count:
+                return Response({'error': f'Not enough questions. Need {count}, have {len(all_questions)}.'}, status=400)
+            questions = random.sample(all_questions, count)
 
         attempt = ExamAttempt.objects.create(
             exam=exam, student=student,
@@ -89,6 +93,17 @@ class ExamViewSet(viewsets.ModelViewSet):
             'attempt_number': attempt.attempt,
             'questions': QuestionSerializer(questions, many=True).data,
         })
+
+    @action(detail=True, methods=['get'])
+    def preview(self, request, pk=None):
+        exam = self.get_object()
+        fixed_questions = exam.questions.select_related('question').order_by('order')
+        if fixed_questions.exists():
+            questions = [eq.question for eq in fixed_questions]
+        else:
+            questions = list(QuestionBank.objects.filter(subject=exam.subject))
+        serializer = QuestionWithAnswerSerializer(questions, many=True)
+        return Response({'exam': ExamSerializer(exam).data, 'questions': serializer.data})
 
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):

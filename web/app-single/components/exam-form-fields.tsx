@@ -1,9 +1,19 @@
+"use client";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { fmtLabel, PROGRAMS, EXAM_TYPES as TYPES, EXAM_STATUSES as STATUSES } from "@/lib/format-utils";
 
 export interface Subject {
   id: string;
   code: string;
   title_en: string;
+}
+
+export interface QuestionItem {
+  id: string;
+  question_text: string;
+  question_type: string;
+  difficulty: string;
 }
 
 export interface ExamFormData {
@@ -21,16 +31,52 @@ export interface ExamFormData {
   status: string;
   open_date: string;
   close_date: string;
+  question_ids: string[];
 }
 
 interface ExamFormFieldsProps {
   form: ExamFormData;
-  set: (key: keyof ExamFormData, value: string) => void;
+  set: (key: keyof ExamFormData, value: any) => void;
   subjects: Subject[];
   showTranslations?: boolean;
 }
 
+const TYPE_BADGES: Record<string, string> = {
+  mcq: "bg-blue-500/10 text-blue-400",
+  true_false: "bg-purple-500/10 text-purple-400",
+  short_answer: "bg-amber-500/10 text-amber-400",
+  essay: "bg-red-500/10 text-red-400",
+  matching: "bg-cyan-500/10 text-cyan-400",
+  ordering: "bg-green-500/10 text-green-400",
+  case_study: "bg-pink-500/10 text-pink-400",
+};
+
 export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFormFieldsProps) {
+  const [availableQuestions, setAvailableQuestions] = useState<QuestionItem[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!form.subject) {
+      setAvailableQuestions([]);
+      return;
+    }
+    setQuestionsLoading(true);
+    api.get<any>(`/question-bank/?subject=${form.subject}&limit=500`)
+      .then((d: any) => {
+        setAvailableQuestions((d?.results || d || []));
+      })
+      .catch(() => setAvailableQuestions([]))
+      .finally(() => setQuestionsLoading(false));
+  }, [form.subject]);
+
+  const toggleQuestion = (qid: string) => {
+    const current = form.question_ids || [];
+    const next = current.includes(qid)
+      ? current.filter((id: string) => id !== qid)
+      : [...current, qid];
+    set("question_ids", next);
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -71,7 +117,7 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm text-gray-400 mb-1">Subject</label>
-          <select value={form.subject} onChange={(e) => set("subject", e.target.value)}
+          <select value={form.subject} onChange={(e) => { set("subject", e.target.value); set("question_ids", []); }}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
             <option value="">None</option>
             {subjects.map((s) => (
@@ -130,6 +176,35 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
       </div>
+
+      {form.subject && (
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">
+            Select Questions ({(form.question_ids || []).length} selected)
+            <span className="text-xs text-gray-500 ml-2">— leave empty for random from subject</span>
+          </label>
+          {questionsLoading ? (
+            <div className="text-sm text-gray-500 py-2">Loading questions...</div>
+          ) : availableQuestions.length === 0 ? (
+            <div className="text-sm text-gray-500 py-2">No questions in this subject's bank.</div>
+          ) : (
+            <div className="max-h-48 overflow-y-auto border border-navy-700 rounded-lg divide-y divide-navy-700">
+              {availableQuestions.map((q) => (
+                <label key={q.id} className="flex items-center gap-3 px-3 py-2 hover:bg-navy-800 cursor-pointer">
+                  <input type="checkbox" checked={(form.question_ids || []).includes(q.id)}
+                    onChange={() => toggleQuestion(q.id)}
+                    className="accent-gold-500" />
+                  <span className="flex-1 text-sm text-white truncate">{q.question_text}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${TYPE_BADGES[q.question_type] || "bg-gray-500/10 text-gray-400"}`}>
+                    {fmtLabel(q.question_type)}
+                  </span>
+                  <span className="text-xs text-gray-500">{q.difficulty}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

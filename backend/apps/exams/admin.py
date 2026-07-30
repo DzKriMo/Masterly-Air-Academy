@@ -1,7 +1,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from .models import (
-    QuestionBank, Quiz, QuizAttempt, Exam, ExamAttempt,
+    QuestionBank, Quiz, QuizAttempt, Exam, ExamQuestion, ExamAttempt,
     PracticalEvaluation, StudentCompetency, ProgressCheck,
     SkillTest, Certificate,
 )
@@ -87,6 +87,22 @@ class ExamAttemptAdmin(ModelAdmin):
     list_filter = ['is_passed']
     readonly_fields = ['started_at']
     autocomplete_fields = ['student', 'exam']
+
+
+@admin.register(ExamQuestion)
+class ExamQuestionAdmin(ModelAdmin):
+    list_display = ['exam_code', 'question_preview', 'order']
+    list_filter = ['exam__code']
+    search_fields = ['exam__code', 'question__question_text']
+    autocomplete_fields = ['exam', 'question']
+
+    def exam_code(self, obj):
+        return obj.exam.code
+    exam_code.short_description = 'Exam'
+
+    def question_preview(self, obj):
+        return obj.question.question_text[:80]
+    question_preview.short_description = 'Question'
 
 
 # ── Practical Evaluations ──────────────────────────────────

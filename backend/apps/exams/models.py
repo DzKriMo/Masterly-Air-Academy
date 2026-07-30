@@ -119,6 +119,22 @@ class Exam(models.Model):
         return f'{self.code} - {self.title or "Untitled"}'
 
 
+class ExamQuestion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='questions')
+    question = models.ForeignKey(QuestionBank, on_delete=models.CASCADE, related_name='exams')
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'exam_questions'
+        ordering = ['order']
+        unique_together = ['exam', 'question']
+
+    def __str__(self):
+        return f'{self.exam.code} - Q{self.order}'
+
+
 class ExamAttempt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='attempts')

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (
-    QuestionBank, Quiz, QuizAttempt, Exam, ExamAttempt,
+    QuestionBank, Quiz, QuizAttempt, Exam, ExamQuestion, ExamAttempt,
     PracticalEvaluation, StudentCompetency,
     ProgressCheck, SkillTest, Certificate,
 )
@@ -71,13 +71,41 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
 
 class ExamSerializer(serializers.ModelSerializer):
     question_count = serializers.SerializerMethodField()
+    question_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Exam
-        fields = ['id', 'code', 'title', 'title_ar', 'title_fr', 'subject', 'program', 'type', 'duration', 'question_count', 'passing_grade', 'max_attempts', 'status', 'open_date', 'close_date']
+        fields = ['id', 'code', 'title', 'title_ar', 'title_fr', 'subject', 'program', 'type', 'duration', 'question_count', 'question_ids', 'passing_grade', 'max_attempts', 'status', 'open_date', 'close_date']
 
     def get_question_count(self, obj):
+        fixed = obj.questions.count()
+        if fixed:
+            return fixed
         return obj.question_count or 0
+
+    def get_question_ids(self, obj):
+        return [str(eq.question_id) for eq in obj.questions.all()]
+
+    def _sync_questions(self, instance, question_ids):
+        instance.questions.all().delete()
+        if question_ids:
+            from .models import ExamQuestion
+            for i, qid in enumerate(question_ids):
+                ExamQuestion.objects.create(exam=instance, question_id=qid, order=i)
+
+    def create(self, validated_data):
+        question_ids = self.initial_data.get('question_ids')
+        instance = super().create(validated_data)
+        if question_ids:
+            self._sync_questions(instance, question_ids)
+        return instance
+
+    def update(self, instance, validated_data):
+        question_ids = self.initial_data.get('question_ids')
+        instance = super().update(instance, validated_data)
+        if question_ids is not None:
+            self._sync_questions(instance, question_ids)
+        return instance
 
 
 class ExamAttemptSerializer(serializers.ModelSerializer):

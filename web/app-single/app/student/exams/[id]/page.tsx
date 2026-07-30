@@ -217,16 +217,27 @@ export default function TakeExamPage() {
             <div key={q.id} className="bg-navy-800 border border-navy-700 rounded-xl p-5">
               <p className="text-white font-medium mb-3">{i + 1}. {q.question_text}</p>
               <div className="space-y-2">
-                {q.options.map((opt, j) => {
-                  const letter = String.fromCharCode(65 + j);
-                  const selected = answers[q.id] === opt;
-                  return (
-                    <button key={j} onClick={() => setAnswers({...answers, [q.id]: opt})}
-                      className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-colors ${selected ? "bg-gold-500/20 border border-gold-500 text-gold-500 font-medium" : "bg-navy-900 border border-navy-600 text-gray-300 hover:border-gray-400"}`}>
-                      <span className="font-mono mr-2 text-xs">{letter}.</span> {opt}
-                    </button>
-                  );
-                })}
+                {q.question_type === "short_answer" ? (
+                  <input type="text" value={answers[q.id] || ""} onChange={(e) => setAnswers({...answers, [q.id]: e.target.value})}
+                    placeholder="Type your answer..."
+                    className="w-full px-4 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
+                ) : q.question_type === "essay" ? (
+                  <textarea value={answers[q.id] || ""} onChange={(e) => setAnswers({...answers, [q.id]: e.target.value})}
+                    placeholder="Write your answer..."
+                    rows={4}
+                    className="w-full px-4 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none resize-y" />
+                ) : (
+                  (q.options || []).map((opt, j) => {
+                    const letter = String.fromCharCode(65 + j);
+                    const selected = answers[q.id] === opt;
+                    return (
+                      <button key={j} onClick={() => setAnswers({...answers, [q.id]: opt})}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-colors ${selected ? "bg-gold-500/20 border border-gold-500 text-gold-500 font-medium" : "bg-navy-900 border border-navy-600 text-gray-300 hover:border-gray-400"}`}>
+                        <span className="font-mono mr-2 text-xs">{letter}.</span> {opt}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           ))}

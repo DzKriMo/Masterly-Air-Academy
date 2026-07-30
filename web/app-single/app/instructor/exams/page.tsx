@@ -37,7 +37,7 @@ const emptyForm: ExamFormData = {
   code: "", title: "", title_ar: "", title_fr: "", subject: "",
   program: "PPL", type: "quiz", duration: "60", question_count: "20",
   passing_grade: "70", max_attempts: "3", status: "draft",
-  open_date: "", close_date: "",
+  open_date: "", close_date: "", question_ids: [],
 };
 
 export default function InstructorExamsPage() {
@@ -52,6 +52,9 @@ export default function InstructorExamsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<ExamFormData>(emptyForm);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{exam: any; questions: any[]} | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) { router.push("/login"); }
@@ -92,6 +95,7 @@ export default function InstructorExamsPage() {
         status: data.status,
         open_date: data.open_date ? new Date(data.open_date).toISOString() : undefined,
         close_date: data.close_date ? new Date(data.close_date).toISOString() : undefined,
+        question_ids: data.question_ids?.length ? data.question_ids : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["instructor-exams"] });
@@ -162,7 +166,7 @@ export default function InstructorExamsPage() {
     [t]
   );
 
-  const set = (key: keyof ExamFormData, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: keyof ExamFormData, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
   return (
     <div className="min-h-screen bg-navy-900">
@@ -212,10 +216,16 @@ export default function InstructorExamsPage() {
           onClose={() => setSelectedExam(null)}
           title={`Exam: ${selectedExam?.title || selectedExam?.code || ""}`}
           footer={
-            <button onClick={() => setSelectedExam(null)}
-              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
-              {t("common.close", "Close")}
-            </button>
+            <>
+              <button onClick={() => { if (selectedExam) { setPreviewLoading(true); setPreviewOpen(true); api.get<any>(`/exams/${selectedExam.id}/preview/`).then(d => setPreviewData(d as any)).catch(() => setPreviewData(null)).finally(() => setPreviewLoading(false)); } }}
+                className="px-4 py-2 text-sm bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-400 transition-colors">
+                Preview
+              </button>
+              <button onClick={() => setSelectedExam(null)}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
+                {t("common.close", "Close")}
+              </button>
+            </>
           }
         >
           {selectedExam && (
@@ -264,6 +274,58 @@ export default function InstructorExamsPage() {
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 mb-4">{mutationError}</div>
           )}
           <ExamFormFields form={form} set={set} subjects={subjects} />
+        </ModalForm>
+
+        {/* Preview Modal */}
+        <ModalForm
+          open={previewOpen}
+          onClose={() => { setPreviewOpen(false); setPreviewData(null); }}
+          title={previewData?.exam?.title || "Exam Preview"}
+          wide
+          footer={
+            <button onClick={() => { setPreviewOpen(false); setPreviewData(null); }}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">
+              Close
+            </button>
+          }
+        >
+          {previewLoading ? (
+            <LoadingSkeleton type="detail" rows={6} />
+          ) : previewData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-navy-900 rounded-lg border border-navy-700">
+                <DetailField label="Code" value={previewData.exam.code} />
+                <DetailField label="Program" value={previewData.exam.program} />
+                <DetailField label="Duration" value={`${previewData.exam.duration} min`} />
+                <DetailField label="Passing Grade" value={`${previewData.exam.passing_grade || 70}%`} />
+              </div>
+              <h3 className="text-sm font-semibold text-gold-500 uppercase tracking-wider">Questions ({previewData.questions.length})</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {previewData.questions.map((q: any, i: number) => (
+                  <div key={q.id} className="p-4 bg-navy-900 rounded-lg border border-navy-700">
+                    <p className="text-white text-sm font-medium mb-2">{i + 1}. {q.question_text}</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">{q.question_type}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400">{q.difficulty}</span>
+                    </div>
+                    {q.options?.length > 0 && (
+                      <div className="space-y-1 mb-2">
+                        {q.options.map((opt: string, j: number) => {
+                          const letter = String.fromCharCode(65 + j);
+                          const isCorrect = opt === q.correct_answer;
+                          return <div key={j} className={`text-xs px-2 py-1 rounded ${isCorrect ? "bg-green-500/10 text-green-400" : "text-gray-400"}`}>{letter}. {opt} {isCorrect && "✓"}</div>;
+                        })}
+                      </div>
+                    )}
+                    <p className="text-xs text-green-400">Answer: {q.correct_answer}</p>
+                    {q.explanation && <p className="text-xs text-gray-500 mt-1">{q.explanation}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Failed to load preview.</p>
+          )}
         </ModalForm>
       </main>
     </div>
