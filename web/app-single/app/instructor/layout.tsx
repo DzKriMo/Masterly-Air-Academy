@@ -110,10 +110,10 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     if (user && !user.role?.includes("instructor")) { router.push("/dashboard"); return; }
   }, [isLoading, isAuthenticated, user, router]);
 
-  if (isLoading) return null;
-
-  const closeSidebar = () => setSidebarOpen(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
+
+  if (isLoading) return null;
 
   return (
     <div className="min-h-screen bg-navy-900 flex">
