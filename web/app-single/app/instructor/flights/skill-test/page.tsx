@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
 
 interface SkillTest {
@@ -43,6 +44,10 @@ export default function SkillTestsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+
+  // Detail modal state
+  const [detailTest, setDetailTest] = useState<SkillTest | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   // Authorize form state
   const [showAuthorizeForm, setShowAuthorizeForm] = useState(false);
@@ -82,6 +87,11 @@ export default function SkillTestsPage() {
   };
 
   useEffect(() => { fetchData(); }, [isAuthenticated]);
+
+  const openDetail = (test: SkillTest) => {
+    setDetailTest(test);
+    setShowDetail(true);
+  };
 
   const openAuthorize = (test: SkillTest) => {
     setAuthorizeTest(test);
@@ -284,10 +294,54 @@ export default function SkillTestsPage() {
           </form>
         </ModalForm>
 
+        {/* Detail Modal */}
+        <ModalForm
+          open={showDetail}
+          onClose={() => setShowDetail(false)}
+          title={`${t("instructor.skillTest", "Skill Test")} - ${detailTest?.student_name || ""}`}
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.student", "Student")} value={detailTest?.student_name || "-"} />
+              <DetailField label={t("common.examiner", "Examiner")} value={detailTest?.examiner_name || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.scheduledDate", "Scheduled Date")} value={detailTest?.scheduled_date?.slice(0, 10) || "-"} />
+              <DetailField label={t("common.status", "Status")} value={detailTest?.status || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.result", "Result")} value={detailTest?.result || "-"} />
+              <DetailField label={t("common.completedDate", "Completed Date")} value={detailTest?.completed_date?.slice(0, 10) || "-"} />
+            </div>
+            <DetailField label={t("instructor.authorizedBy", "Authorized By")} value={detailTest?.authorized_by ? String(detailTest.authorized_by) : "-"} />
+            {detailTest?.observations && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("common.observations", "Observations")}</p>
+                <p className="text-sm text-white whitespace-pre-wrap">{detailTest.observations}</p>
+              </div>
+            )}
+            {detailTest?.recommendations && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("common.recommendations", "Recommendations")}</p>
+                <p className="text-sm text-white whitespace-pre-wrap">{detailTest.recommendations}</p>
+              </div>
+            )}
+            {detailTest?.report_url && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("common.report", "Report")}</p>
+                <a href={detailTest.report_url} target="_blank" rel="noopener noreferrer"
+                  className="text-sm text-gold-500 hover:text-gold-400 underline">
+                  {detailTest.report_url}
+                </a>
+              </div>
+            )}
+          </div>
+        </ModalForm>
+
         {loading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState message={t("instructor.noTestsFound", "No skill tests found.")} title={tests.length === 0 ? t("instructor.noTestsYet", "No skill tests yet") : t("instructor.noMatchingTests", "No matching tests")} />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={openDetail} />
         )}
       </main>
     </div>

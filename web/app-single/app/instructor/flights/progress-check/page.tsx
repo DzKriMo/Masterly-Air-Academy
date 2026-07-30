@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
 
 interface ProgressCheck {
@@ -50,6 +51,10 @@ export default function ProgressChecksPage() {
     student: "", examiner: "", scheduled_date: "",
   });
   const [scheduling, setScheduling] = useState(false);
+
+  // Detail modal state
+  const [detailCheck, setDetailCheck] = useState<ProgressCheck | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   // Validate form state
   const [showValidateForm, setShowValidateForm] = useState(false);
@@ -103,6 +108,11 @@ export default function ProgressChecksPage() {
     } catch (err: any) {
       showToast("error", err.message || t("instructor.failedToSchedule", "Failed to schedule"));
     } finally { setScheduling(false); }
+  };
+
+  const openDetail = (check: ProgressCheck) => {
+    setDetailCheck(check);
+    setShowDetail(true);
   };
 
   const openValidate = (check: ProgressCheck) => {
@@ -292,6 +302,50 @@ export default function ProgressChecksPage() {
           </form>
         </ModalForm>
 
+        {/* Detail Modal */}
+        <ModalForm
+          open={showDetail}
+          onClose={() => setShowDetail(false)}
+          title={`${t("common.progressCheck", "Progress Check")} - ${detailCheck?.student_name || ""}`}
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.student", "Student")} value={detailCheck?.student_name || "-"} />
+              <DetailField label={t("common.examiner", "Examiner")} value={detailCheck?.examiner_name || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.scheduledDate", "Scheduled Date")} value={detailCheck?.scheduled_date?.slice(0, 10) || "-"} />
+              <DetailField label={t("common.status", "Status")} value={detailCheck?.status || "-"} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label={t("common.result", "Result")} value={detailCheck?.result || "-"} />
+              <DetailField label={t("common.completedDate", "Completed Date")} value={detailCheck?.completed_date?.slice(0, 10) || "-"} />
+            </div>
+            {detailCheck?.observations && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("common.observations", "Observations")}</p>
+                <p className="text-sm text-white whitespace-pre-wrap">{detailCheck.observations}</p>
+              </div>
+            )}
+            {detailCheck?.recommendations && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("common.recommendations", "Recommendations")}</p>
+                <p className="text-sm text-white whitespace-pre-wrap">{detailCheck.recommendations}</p>
+              </div>
+            )}
+            {detailCheck?.lessons_to_repeat && detailCheck.lessons_to_repeat.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">{t("instructor.lessonsToRepeat", "Lessons to Repeat")}</p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {detailCheck.lessons_to_repeat.map((l, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 bg-gold-500/10 text-gold-500 rounded">{l}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalForm>
+
         {loading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState
             message={t("instructor.noChecksFound", "No progress checks found.")}
@@ -299,7 +353,7 @@ export default function ProgressChecksPage() {
             action={checks.length === 0 ? { label: t("instructor.scheduleCheckBtn", "Schedule Check"), onClick: () => setShowScheduleForm(true) } : undefined}
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" />
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={openDetail} />
         )}
       </main>
     </div>
