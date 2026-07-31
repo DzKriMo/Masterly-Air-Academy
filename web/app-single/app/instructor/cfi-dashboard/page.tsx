@@ -48,7 +48,7 @@ export default function CFIDashboard() {
 
   const { data: alertsData } = useQuery({
     queryKey: ['cfi-alerts'],
-    queryFn: () => api.get<any>("/notifications/?limit=5").then(r => (r as unknown as any).results || []),
+    queryFn: () => api.get<any>("/notifications/").then(r => (r as unknown as any).results || []),
     enabled: isAuthenticated,
   });
   const alerts: any[] = alertsData || [];

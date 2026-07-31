@@ -43,6 +43,8 @@ const translations: Record<string, Record<string, string>> = {
     login_title: "Staff Login", login_email: "Email", login_password: "Password",
     login_signin: "Sign In", login_signing: "Signing in...", login_admin_link: "Admin? Go to Admin Panel",
     student_login_title: "Student Portal", student_wrong_portal: "This portal is for students only. Please use Staff Login.",
+    staffMember: "Staff member?", staffLoginLink: "Go to Staff Login",
+    studentLoginQuestion: "Student?", studentLoginLink: "Go to Student Login",
 
     // ── Dashboard ──
     dashboard_welcome: "Welcome back", dashboard_overview: "Your training overview",
@@ -308,6 +310,7 @@ const translations: Record<string, Record<string, string>> = {
     "quality.safetyEvents": "Safety Events",
     "quality.documents": "Documents",
     "quality.dashboard": "Quality Dashboard",
+    "quality.messages": "Messages",
     "quality.planned": "Planned",
     "quality.inProgress": "In Progress",
     "quality.completed": "Completed",
@@ -338,6 +341,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── finance ──
     "finance.dashboard": "Finance Dashboard",
+    "finance.messages": "Messages",
     "finance.invoices": "Invoices",
     "finance.contracts": "Contracts",
     "finance.reports": "Reports",
@@ -382,6 +386,27 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "Available Instructors",
     "scheduler.todaysEvents": "Today's Events",
     "scheduler.maintenanceDue": "Maintenance Due",
+
+    // ── TV Display ──
+    "tv.daily": "Daily Schedule",
+    "tv.weekly": "Weekly Schedule",
+    "tv.monthly": "Monthly Overview",
+    "tv.today": "Today",
+    "tv.live": "LIVE",
+    "tv.noEvents": "No scheduled activities",
+    "tv.flight": "Flight",
+    "tv.course": "Ground School",
+    "tv.simulator": "Simulator",
+    "tv.student": "Student",
+    "tv.instructor": "Instructor",
+    "tv.location": "Aircraft / Room",
+    "tv.scheduled": "Scheduled",
+    "tv.inProgress": "In Progress",
+    "tv.completed": "Completed",
+    "tv.cancelled": "Cancelled",
+    "tv.postponed": "Postponed",
+    "tv.updating": "Updating...",
+    "tv.footer": "Masterly Air Academy | Schedule Display",
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Student Portal",
@@ -607,6 +632,8 @@ const translations: Record<string, Record<string, string>> = {
     login_title: "Connexion Personnel", login_email: "Email", login_password: "Mot de Passe",
     login_signin: "Se Connecter", login_signing: "Connexion...", login_admin_link: "Admin ? Panneau d'administration",
     student_login_title: "Portail Etudiant", student_wrong_portal: "Ce portail est reserve aux etudiants.",
+    staffMember: "Membre du personnel ?", staffLoginLink: "Aller a la connexion Personnel",
+    studentLoginQuestion: "Etudiant ?", studentLoginLink: "Aller a la connexion Etudiant",
 
     // ── Dashboard ──
     dashboard_welcome: "Bon retour", dashboard_overview: "Apercu de votre formation",
@@ -872,6 +899,7 @@ const translations: Record<string, Record<string, string>> = {
     "quality.safetyEvents": "Evenements de securite",
     "quality.documents": "Documents",
     "quality.dashboard": "Tableau de bord qualite",
+    "quality.messages": "Messages",
     "quality.planned": "Planifie",
     "quality.inProgress": "En cours",
     "quality.completed": "Termine",
@@ -902,6 +930,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── finance ──
     "finance.dashboard": "Tableau de bord financier",
+    "finance.messages": "Messages",
     "finance.invoices": "Factures",
     "finance.contracts": "Contrats",
     "finance.reports": "Rapports",
@@ -946,6 +975,27 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "Instructeurs disponibles",
     "scheduler.todaysEvents": "Evenements du jour",
     "scheduler.maintenanceDue": "Maintenance a prevoir",
+
+    // ── TV Display ──
+    "tv.daily": "Programme du jour",
+    "tv.weekly": "Programme hebdomadaire",
+    "tv.monthly": "Vue mensuelle",
+    "tv.today": "Aujourd'hui",
+    "tv.live": "DIRECT",
+    "tv.noEvents": "Aucune activite prevue",
+    "tv.flight": "Vol",
+    "tv.course": "Cours theorique",
+    "tv.simulator": "Simulateur",
+    "tv.student": "Eleve",
+    "tv.instructor": "Instructeur",
+    "tv.location": "Aeronef / Salle",
+    "tv.scheduled": "Programme",
+    "tv.inProgress": "En cours",
+    "tv.completed": "Termine",
+    "tv.cancelled": "Annule",
+    "tv.postponed": "Reporte",
+    "tv.updating": "Mise a jour...",
+    "tv.footer": "Masterly Air Academy | Affichage des horaires",
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "Portail Etudiant",
@@ -1146,6 +1196,8 @@ const translations: Record<string, Record<string, string>> = {
     login_title: "تسجيل دخول الموظفين", login_email: "البريد الإلكتروني", login_password: "كلمة المرور",
     login_signin: "تسجيل الدخول", login_signing: "جاري التسجيل...", login_admin_link: "مسؤول؟ لوحة الإدارة",
     student_login_title: "بوابة الطالب", student_wrong_portal: "هذه البوابة مخصصة للطلاب فقط.",
+    staffMember: "عضو في الطاقم؟", staffLoginLink: "الانتقال إلى تسجيل دخول الموظفين",
+    studentLoginQuestion: "طالب؟", studentLoginLink: "الانتقال إلى تسجيل دخول الطالب",
 
     // ── Dashboard ──
     dashboard_welcome: "مرحباً بعودتك", dashboard_overview: "نظرة عامة على تدريبك",
@@ -1411,6 +1463,7 @@ const translations: Record<string, Record<string, string>> = {
     "quality.safetyEvents": "أحداث السلامة",
     "quality.documents": "المستندات",
     "quality.dashboard": "لوحة قيادة الجودة",
+    "quality.messages": "الرسائل",
     "quality.planned": "مخطط",
     "quality.inProgress": "قيد التقدم",
     "quality.completed": "مكتمل",
@@ -1441,6 +1494,7 @@ const translations: Record<string, Record<string, string>> = {
 
     // ── finance ──
     "finance.dashboard": "لوحة قيادة المالية",
+    "finance.messages": "الرسائل",
     "finance.invoices": "الفواتير",
     "finance.contracts": "العقود",
     "finance.reports": "التقارير",
@@ -1485,6 +1539,27 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "المدربون المتاحون",
     "scheduler.todaysEvents": "أحداث اليوم",
     "scheduler.maintenanceDue": "الصيانة المستحقة",
+
+    // ── TV Display ──
+    "tv.daily": "برنامج اليوم",
+    "tv.weekly": "برنامج الأسبوع",
+    "tv.monthly": "النظرة الشهرية",
+    "tv.today": "اليوم",
+    "tv.live": "مباشر",
+    "tv.noEvents": "لا توجد أنشطة مبرمجة",
+    "tv.flight": "طيران",
+    "tv.course": "دروس نظرية",
+    "tv.simulator": "محاكي",
+    "tv.student": "طالب",
+    "tv.instructor": "مدرب",
+    "tv.location": "طائرة / قاعة",
+    "tv.scheduled": "مبرمج",
+    "tv.inProgress": "قيد التنفيذ",
+    "tv.completed": "منجز",
+    "tv.cancelled": "ملغي",
+    "tv.postponed": "مؤجل",
+    "tv.updating": "جار التحديث...",
+    "tv.footer": "أكاديمية ماسترلي للطيران | عرض الجدول",
 
     // ── Layout Portal Titles ──
     "layout.studentPortal": "بوابة الطالب",

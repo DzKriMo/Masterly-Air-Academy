@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -95,7 +95,7 @@ export default function AdminMaintenanceRecordsPage() {
     queryKey: ["admin-maintenance-records"],
     queryFn: async () => {
       const d = await api.get<any>("/maintenance-records/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -104,7 +104,7 @@ export default function AdminMaintenanceRecordsPage() {
     queryKey: ["admin-mr-aircraft"],
     queryFn: async () => {
       const d = await api.get<any>("/aircraft/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -282,7 +282,7 @@ export default function AdminMaintenanceRecordsPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load maintenance records"}
+            message={error?.message || "Failed to load maintenance records"}
             onRetry={() => refetch()}
           />
         )}
@@ -585,7 +585,7 @@ export default function AdminMaintenanceRecordsPage() {
             <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white">Delete Record</h3>
               <p className="text-sm text-gray-400">
-                Remove maintenance record for {(deleteTarget as any).aircraft_registration || "Unknown"} ({fmtStatus(deleteTarget.type)})?
+                Remove maintenance record for {deleteTarget?.aircraft_registration || "Unknown"} ({fmtStatus(deleteTarget.type)})?
               </p>
               <div className="flex justify-end gap-3 pt-2">
                 <button

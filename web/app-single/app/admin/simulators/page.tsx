@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -84,7 +84,7 @@ export default function AdminSimulatorsPage() {
     queryKey: ["admin-simulators"],
     queryFn: async () => {
       const d = await api.get<any>("/simulators/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -209,7 +209,7 @@ export default function AdminSimulatorsPage() {
   // ── Render ──
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Simulators" backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
+      <PageHeader title={t("admin.simulators", "Simulators")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={
           <button
             onClick={() => setCreateOpen(true)}
             className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
@@ -222,7 +222,7 @@ export default function AdminSimulatorsPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load simulators"}
+            message={error?.message || "Failed to load simulators"}
             onRetry={() => refetch()}
           />
         )}

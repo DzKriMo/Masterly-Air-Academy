@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 interface UnreadCounts {
   notifications: number;
   messages: number;
+  applicationsPending: number;
 }
 
 export function useUnreadCounts(options?: {
@@ -13,6 +14,7 @@ export function useUnreadCounts(options?: {
   const { includeMessages = false, enabled = true } = options || {};
   const [notifications, setNotifications] = useState(0);
   const [messages, setMessages] = useState(0);
+  const [applicationsPending, setApplicationsPending] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
@@ -26,6 +28,9 @@ export function useUnreadCounts(options?: {
           .then((d: any) => setMessages(d.count ?? 0))
           .catch(() => {});
       }
+      api.get("/applications/?status=pending")
+        .then((d: any) => setApplicationsPending(d.count ?? 0))
+        .catch(() => {});
     };
 
     fetchUnread();
@@ -33,5 +38,5 @@ export function useUnreadCounts(options?: {
     return () => clearInterval(interval);
   }, [includeMessages, enabled]);
 
-  return { notifications, messages };
+  return { notifications, messages, applicationsPending };
 }

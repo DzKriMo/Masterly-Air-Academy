@@ -30,7 +30,40 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         app.reviewed_at = timezone.now()
         app.reviewed_by = request.user
         app.notes = request.data.get('notes', app.notes)
+        app.interview_date = request.data.get('interview_date', app.interview_date)
+        app.test_date = request.data.get('test_date', app.test_date)
         app.save()
+
+        activate = request.data.get('activate_student', False)
+        if activate and app.status == 'accepted':
+            user = app.student.user
+            if user.role == 'candidate':
+                user.role = 'student'
+                user.status = 'active'
+                user.is_active = True
+            email = request.data.get('student_email', '').strip()
+            username = request.data.get('student_username', '').strip()
+            password = request.data.get('student_password', '').strip()
+            if email:
+                user.email = email
+            if username:
+                user.username = username
+            update_fields = ['role', 'status', 'is_active']
+            if email:
+                update_fields.append('email')
+            if username:
+                update_fields.append('username')
+            if password:
+                if len(password) < 8:
+                    return Response({'error': 'Password must be at least 8 characters.'}, status=400)
+                user.set_password(password)
+                update_fields.append('password')
+            user.save(update_fields=update_fields)
+
+            student = app.student
+            student.status = 'active'
+            student.save(update_fields=['status'])
+
         return Response(ApplicationSerializer(app).data)
 
 
@@ -44,8 +77,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         # Auto-mark past-due invoices as overdue before returning
         from django.db.models import Q
         overdue_candidates = Invoice.objects.filter(
-            Q(status='draft') | Q(status='sent'),
-            due_at__lt=timezone.now().date(),
+            Q(status='issued') | Q(status='partially_paid'),
+            due_at__lt=timezone.now(),
         )
         if overdue_candidates.exists():
             overdue_candidates.update(status='overdue')
@@ -109,14 +142,11 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             payments = invoice.payments.all().order_by('-paid_at')
             return Response(PaymentSerializer(payments, many=True).data)
         # POST: create a payment for this invoice
-        data = {
-            **request.data,
-            'invoice': str(invoice.id),
-            'student': str(invoice.student.id),
-        }
-        serializer = PaymentSerializer(data=data, context={'request': request})
+        if request.user.role == 'student':
+            return Response({'error': 'Permission denied'}, status=403)
+        serializer = PaymentSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        payment = serializer.save()
+        payment = serializer.save(student=invoice.student, invoice=invoice)
         # Re-fetch invoice to get fresh payments list (avoids stale queryset cache)
         invoice = Invoice.objects.prefetch_related('payments').get(id=invoice.id)
         paid = sum(float(p.amount) for p in invoice.payments.all())
@@ -148,8 +178,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        if self.request.user.role == 'student':
+            raise PermissionDenied('Students cannot record payments')
         from apps.notifications.services import NotificationService
-        payment = serializer.save()
+        student_id = self.request.data.get('student')
+        invoice_id = self.request.data.get('invoice')
+        if not student_id or not invoice_id:
+            raise ValidationError({'detail': 'student and invoice are required'})
+        payment = serializer.save(student_id=student_id, invoice_id=invoice_id)
         # Auto-update invoice status
         invoice = payment.invoice
         if invoice:
@@ -171,6 +208,22 @@ class PaymentViewSet(viewsets.ModelViewSet):
             elif paid > 0:
                 invoice.status = 'partially_paid'
                 invoice.save()
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        from django.db.models import Sum
+        qs = self.get_queryset()
+        total = qs.aggregate(s=Sum('amount'))['s'] or 0
+        now = timezone.now()
+        this_month = qs.filter(paid_at__year=now.year, paid_at__month=now.month).aggregate(s=Sum('amount'))['s'] or 0
+        by_method = {}
+        for row in qs.values('method').annotate(s=Sum('amount')):
+            by_method[row['method'] or 'other'] = round(float(row['s']), 2)
+        return Response({
+            'total_amount': round(float(total), 2),
+            'this_month': round(float(this_month), 2),
+            'by_method': by_method,
+        })
 
 
 class DocumentViewSet(viewsets.ModelViewSet):

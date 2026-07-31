@@ -47,7 +47,7 @@ export default function StudentDashboard() {
   const program = dashData.program || "";
   const passedCount = attempts.filter((a: any) => a.is_passed === true).length;
   const failedCount = attempts.filter((a: any) => a.is_passed === false).length;
-  const recentNotifications = dashData.recent_notifications || [];
+  const recentNotifications = dashData.recent_notifications ?? dashData.notifications ?? [];
   const programProgress = dashData.program_progress || {};
 
   const lessons = (log as any).lessons || [];
@@ -57,7 +57,7 @@ export default function StudentDashboard() {
   const groundTotal = groundList.length;
 
   // Dynamic milestones from program progress API
-  const dynamicMilestones = programProgress.milestones || [];
+  const dynamicMilestones = programProgress.milestones ?? [];
   const milestones = dynamicMilestones.length > 0
     ? dynamicMilestones.map((m: any) => ({
         label: m.label,

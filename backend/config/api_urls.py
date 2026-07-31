@@ -47,19 +47,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView, ExportCoursesView, generate_courses_pdf, generate_flights_pdf
+from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView, ExportCoursesView, ExportExamsView, FlightsPdfView, CoursesPdfView
 from apps.quality_safety.exports import ExportAuditsView, ExportNCRsView, ExportCAPAsView, ExportSafetyEventsView, ExportRiskAssessmentsView
 from datetime import timedelta
 from django.utils import timezone
 
 
 from apps.accounts.permissions import HasRolePermission
-from apps.ground_training.pdf import generate_attendance_pdf
-from apps.quality_safety.pdf import generate_audit_report_pdf
+from apps.ground_training.pdf import AttendancePdfView
+from apps.quality_safety.pdf import AuditReportPdfView
 from apps.exams.pdf import generate_certificate_pdf as _cert_pdf, generate_invoice_pdf as _inv_pdf
 from apps.students.models import Student, MedicalCertificate, TrainingProgram
 from apps.ground_training.models import Course, CourseEnrollment, AttendanceRecord
-from apps.flight_training.models import Aircraft, FlightLesson
+from apps.flight_training.models import Aircraft, FlightLesson, SimulatorSession
 from apps.administration.models import Invoice, Payment
 from apps.quality_safety.models import Audit, NonConformity
 from apps.exams.models import ExamAttempt, Certificate
@@ -175,6 +175,23 @@ class StudentDashboardView(APIView):
             status__in=['issued', 'overdue', 'partially_paid'],
         ).count()
 
+        # Program progress milestones (enrollments + competencies)
+        from apps.exams.models import StudentCompetency
+        milestones = []
+        if total_courses > 0:
+            milestones.append({'label': 'Theory Progress', 'current': completed_courses, 'target': total_courses})
+        if all_flight_lessons > 0:
+            program_hour_targets = {'PPL': 45, 'CPL': 200, 'IR': 50, 'MEP': 15, 'MCC': 40}
+            milestones.append({'label': 'Flight Hours', 'current': total_flight_hours, 'target': program_hour_targets.get(student.program, 45)})
+        competency_qs = StudentCompetency.objects.filter(student=student)
+        if competency_qs.exists():
+            milestones.append({'label': 'Competencies Acquired', 'current': competency_qs.filter(status='acquired').count(), 'target': competency_qs.count()})
+        program_progress = {
+            'theory_progress': theory_progress,
+            'flight_progress': flight_progress,
+            'milestones': milestones,
+        }
+
         # Expiring documents (medical certificates expiring within 30 days)
         expiring_soon = MedicalCertificate.objects.filter(
             student=student,
@@ -202,10 +219,12 @@ class StudentDashboardView(APIView):
             'passed_exams_count': passed_exams_count,
             'failed_exams_count': failed_exams_count,
             'notifications': notifications_data,
+            'recent_notifications': notifications_data,
             'upcoming_schedule': upcoming_schedule,
             'recent_results': recent_results,
             'unpaid_invoices_count': unpaid_invoices_count,
             'expiring_documents': expiring_documents,
+            'program_progress': program_progress,
         })
 
 
@@ -220,6 +239,103 @@ def verify_certificate(request):
         return Response({'valid': True, 'certificate': CertificateSerializer(cert).data})
     except Certificate.DoesNotExist:
         return Response({'valid': False, 'message': 'Certificate not found'})
+
+
+@api_view(['GET'])
+@permission_classes([])  # Public endpoint — no auth required
+def tv_schedule(request):
+    """Public daily/weekly/monthly schedule for the school TV display."""
+    from datetime import date as _date, timedelta as _td
+    from django.utils.dateparse import parse_date
+
+    today = timezone.localdate()
+    day = request.query_params.get('date', '')
+    week_start = request.query_params.get('from', '')
+    week_end = request.query_params.get('to', '')
+
+    if week_start or week_end:
+        try:
+            start = parse_date(week_start) or today
+            end = parse_date(week_end) or start
+            if end < start:
+                start, end = end, start
+            if (end - start).days > 31:
+                end = start + _td(days=31)
+        except Exception:
+            return Response({'message': 'Invalid date range'}, status=400)
+    else:
+        try:
+            start = parse_date(day) or today
+        except Exception:
+            return Response({'message': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
+        end = start
+
+    flights = list(FlightLesson.objects.filter(
+        scheduled_date__range=(start, end)
+    ).select_related('student', 'instructor', 'aircraft', 'lesson_template'))
+    courses = list(Course.objects.filter(
+        scheduled_date__range=(start, end)
+    ).select_related('subject', 'instructor', 'room'))
+    sims = list(SimulatorSession.objects.filter(
+        scheduled_date__date__range=(start, end)
+    ).select_related('student', 'instructor', 'simulator'))
+
+    events = []
+    for f in flights:
+        events.append({
+            'id': str(f.id),
+            'type': 'flight',
+            'title': f.lesson_template.title if f.lesson_template else 'Flight',
+            'student': f.student.full_name,
+            'instructor': f'{f.instructor.first_name} {f.instructor.last_name}'.strip(),
+            'location': f.aircraft.registration if f.aircraft else None,
+            'date': f.scheduled_date.isoformat(),
+            'start': f.start_time.isoformat() if f.start_time else None,
+            'end': f.end_time.isoformat() if f.end_time else None,
+            'status': f.status,
+        })
+    for c in courses:
+        events.append({
+            'id': str(c.id),
+            'type': 'course',
+            'title': c.title,
+            'student': None,
+            'instructor': f'{c.instructor.first_name} {c.instructor.last_name}'.strip(),
+            'location': c.room.name if c.room else None,
+            'date': c.scheduled_date.isoformat(),
+            'start': f'{c.scheduled_date.isoformat()}T{c.start_time}' if c.start_time else None,
+            'end': f'{c.scheduled_date.isoformat()}T{c.end_time}' if c.end_time else None,
+            'status': c.status,
+        })
+    for s in sims:
+        sim_end = None
+        if s.duration:
+            try:
+                sim_end = (s.scheduled_date + timedelta(hours=float(s.duration))).isoformat()
+            except Exception:
+                sim_end = None
+        events.append({
+            'id': str(s.id),
+            'type': 'simulator',
+            'title': f'Simulator {s.simulator.name}' if s.simulator else 'Simulator',
+            'student': s.student.full_name,
+            'instructor': f'{s.instructor.first_name} {s.instructor.last_name}'.strip(),
+            'location': s.simulator.name if s.simulator else None,
+            'date': timezone.localtime(s.scheduled_date).date().isoformat(),
+            'start': s.scheduled_date.isoformat(),
+            'end': sim_end,
+            'status': s.status,
+        })
+
+    events.sort(key=lambda e: (e['date'] or '', e['start'] or ''))
+
+    return Response({
+        'date': today.isoformat(),
+        'range_start': start.isoformat(),
+        'range_end': end.isoformat(),
+        'events': events,
+        'count': len(events),
+    })
 
 
 @api_view(['GET'])
@@ -360,7 +476,6 @@ def exam_reports(request):
 @permission_classes([IsAuthenticated, HasRolePermission])
 def fleet_report(request):
     """GET /api/reports/fleet/ — aircraft usage, instructor utilization"""
-    from apps.flight_training.models import Aircraft, FlightLesson
     from apps.students.models import FlightInstructor
     from django.db.models import Sum, Count
 
@@ -401,18 +516,42 @@ def student_history(request):
     return Response({'events': events})
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def certificate_pdf(request, cert_id):
-    cert = Certificate.objects.get(id=cert_id)
-    return _cert_pdf(cert)
+class CertificatePdfView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
+
+    def get(self, request, cert_id):
+        try:
+            cert = Certificate.objects.get(id=cert_id)
+        except Certificate.DoesNotExist:
+            return Response({'error': 'Certificate not found'}, status=404)
+        if request.user.role == 'student':
+            try:
+                student = Student.objects.get(user=request.user)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=404)
+            if cert.student_id != student.id:
+                return Response({'error': 'Permission denied'}, status=403)
+        return _cert_pdf(cert)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def invoice_pdf(request, inv_id):
-    inv = Invoice.objects.get(id=inv_id)
-    return _inv_pdf(inv)
+class InvoicePdfView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'invoicing.view'
+
+    def get(self, request, inv_id):
+        try:
+            inv = Invoice.objects.get(id=inv_id)
+        except Invoice.DoesNotExist:
+            return Response({'error': 'Invoice not found'}, status=404)
+        if request.user.role == 'student':
+            try:
+                student = Student.objects.get(user=request.user)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=404)
+            if inv.student_id != student.id:
+                return Response({'error': 'Permission denied'}, status=403)
+        return _inv_pdf(inv)
 
 
 @api_view(['POST'])
@@ -750,15 +889,16 @@ urlpatterns = [
     path('dashboard/kpis/', DashboardKPIView.as_view(), name='dashboard-kpis'),
     path('student/dashboard/', StudentDashboardView.as_view(), name='student-dashboard'),
     path('certificates/verify/', verify_certificate, name='verify-certificate'),
+    path('schedule/tv/', tv_schedule, name='tv-schedule'),
     path('quality/dashboard/', QualityDashboardView.as_view(), name='quality-dashboard'),
     path('finance/reports/', finance_reports, name='finance-reports'),
     path('export/students/', ExportStudentsView.as_view(), name='export-students'),
     path('export/invoices/', ExportInvoicesView.as_view(), name='export-invoices'),
     path('export/flights/', ExportFlightsView.as_view(), name='export-flights'),
-    path('attendance/<uuid:course_id>/pdf/', generate_attendance_pdf, name='attendance-pdf'),
-    path('audits/<uuid:audit_id>/pdf/', generate_audit_report_pdf, name='audit-pdf'),
-    path('certificates/<uuid:cert_id>/pdf/', certificate_pdf, name='certificate-pdf'),
-    path('invoices/<uuid:inv_id>/pdf/', invoice_pdf, name='invoice-pdf'),
+    path('attendance/<uuid:course_id>/pdf/', AttendancePdfView.as_view(), name='attendance-pdf'),
+    path('audits/<uuid:audit_id>/pdf/', AuditReportPdfView.as_view(), name='audit-pdf'),
+    path('certificates/<uuid:cert_id>/pdf/', CertificatePdfView.as_view(), name='certificate-pdf'),
+    path('invoices/<uuid:inv_id>/pdf/', InvoicePdfView.as_view(), name='invoice-pdf'),
     path('contact/submit/', submit_contact, name='submit-contact'),
     path('search/', search_view, name='search'),
     path('system/backup/', trigger_backup, name='trigger-backup'),
@@ -766,9 +906,10 @@ urlpatterns = [
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
     path('export/courses/', ExportCoursesView.as_view(), name='export-courses'),
     path('export/certificates/', ExportCertificatesView.as_view(), name='export-certificates'),
-    path('courses/export/pdf/', generate_courses_pdf, name='courses-export-pdf'),
+    path('export/exams/', ExportExamsView.as_view(), name='export-exams'),
+    path('courses/export/pdf/', CoursesPdfView.as_view(), name='courses-export-pdf'),
     path('courses/export/excel/', ExportCoursesView.as_view(), name='courses-export-excel'),
-    path('flights/export/pdf/', generate_flights_pdf, name='flights-export-pdf'),
+    path('flights/export/pdf/', FlightsPdfView.as_view(), name='flights-export-pdf'),
 
     path('export/audits/', ExportAuditsView.as_view(), name='export-audits'),
     path('export/non-conformities/', ExportNCRsView.as_view(), name='export-ncrs'),

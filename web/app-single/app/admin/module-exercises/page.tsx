@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -45,13 +45,13 @@ export default function AdminModuleExercisesPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<ModuleExercise[]>({
     queryKey: ["admin-module-exercises"],
-    queryFn: async () => { const d = await api.get<any>("/module-exercises/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/module-exercises/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: modules = [] } = useQuery<any[]>({
     queryKey: ["admin-me-modules"],
-    queryFn: async () => { const d = await api.get<any>("/modules/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/modules/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -90,24 +90,24 @@ export default function AdminModuleExercisesPage() {
     { key: "due_date", header: "Due Date", render: (a) => <span className="text-sm text-gray-300">{fmtDate(a.due_date)}</span> },
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => { setEditItem(a); setEditForm({ module: a.module, title: a.title, instructions: a.instructions || "", due_date: a.due_date || "" }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">Edit</button>
-        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">Delete</button>
+        <button onClick={() => { setEditItem(a); setEditForm({ module: a.module, title: a.title, instructions: a.instructions || "", due_date: a.due_date || "" }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">{t('common.edit')}</button>
+        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">{t('common.delete')}</button>
       </div>
     )},
   ], []);
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Module Exercises" backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
+      <PageHeader title={t("admin.moduleExercises", "Module Exercises")} backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
         <button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">+ New Exercise</button>
       } />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed"} onRetry={() => refetch()} />}
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState message={records?.length === 0 ? "No exercises yet." : "No matches."} title={records?.length === 0 ? "No exercises" : "No matches"} action={records?.length === 0 ? { label: "New Exercise", onClick: () => setCreateOpen(true) } : undefined} />
         ) : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(i) => setSelected(i as ModuleExercise)} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Exercise Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Exercise Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
             <DetailField label="Title" value={selected.title} />
             <DetailField label="Instructions" value={selected.instructions || "—"} />
@@ -117,7 +117,7 @@ export default function AdminModuleExercisesPage() {
         </ModalForm>
 
         <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} title="New Exercise" footer={<>
-          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => createMutation.mutate(buildPayload(createForm))} disabled={createMutation.isPending || !createForm.title || !createForm.module} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button>
         </>}>
           <div className="space-y-4">
@@ -136,7 +136,7 @@ export default function AdminModuleExercisesPage() {
         </ModalForm>
 
         <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Exercise" footer={<>
-          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: buildPayload(editForm) }); }} disabled={updateMutation.isPending || !editForm.title || !editForm.module} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button>
         </>}>
           <div className="space-y-4">
@@ -157,7 +157,7 @@ export default function AdminModuleExercisesPage() {
               <h3 className="text-lg font-semibold text-white">Delete Exercise</h3>
               <p className="text-sm text-gray-400">Remove exercise "{deleteTarget.title}"?</p>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
                 <button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button>
               </div>
             </div>

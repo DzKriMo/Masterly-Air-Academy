@@ -1,9 +1,9 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
@@ -20,7 +20,7 @@ interface Notif {
 
 export default function AdminNotificationsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
   const { showToast } = useToast();
   const qc = useQueryClient();

@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -52,7 +52,7 @@ const emptyForm: CertFormData = {
 
 export default function AdminCertificatesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -63,15 +63,11 @@ export default function AdminCertificatesPage() {
   const [form, setForm] = useState<CertFormData>(emptyForm);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
-
   const { data: certificates, isLoading, error, refetch } = useQuery<Certificate[]>({
     queryKey: ["admin-certificates"],
     queryFn: async () => {
       const d = await api.get<any>("/certificates/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -80,7 +76,7 @@ export default function AdminCertificatesPage() {
     queryKey: ["admin-students-dropdown"],
     queryFn: async () => {
       const d = await api.get<any>("/students/?limit=500");
-      const list = (d as any)?.results || (d as any) || [];
+      const list = unwrapResults(d);
       return list.map((s: any) => ({
         id: s.id, full_name: s.full_name || `${s.first_name || ""} ${s.last_name || ""}`.trim(),
         student_number: s.student_number || "",
@@ -196,7 +192,7 @@ export default function AdminCertificatesPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
-          <ErrorCard message={(error as any)?.message || "Failed to load certificates"} onRetry={() => refetch()} />
+          <ErrorCard message={error?.message || "Failed to load certificates"} onRetry={() => refetch()} />
         )}
 
         {!isLoading && certificates && certificates.length > 0 && (

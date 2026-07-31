@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -36,7 +36,7 @@ export default function AdminQuizAttemptsPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<QA[]>({
     queryKey: ["admin-qa"],
-    queryFn: async () => { const d = await api.get<any>("/quiz-attempts/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/quiz-attempts/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -56,14 +56,14 @@ export default function AdminQuizAttemptsPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Quiz Attempts" backHref="/admin/dashboard" backLabel={t("common.back", "Back")} />
+      <PageHeader title={t("admin.quizAttempts", "Quiz Attempts")} backHref="/admin/dashboard" backLabel={t("common.back", "Back")} />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed"} onRetry={() => refetch()} />}
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState message={records?.length === 0 ? "No quiz attempts yet." : "No matches."} title={records?.length === 0 ? "No attempts" : "No matches"} />
         ) : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(i) => setSelected(i as QA)} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Quiz Attempt Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Quiz Attempt Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
             <DetailField label="Student" value={selected.student_name} />
             <DetailField label="Score" value={selected.score} />

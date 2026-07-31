@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -429,7 +429,7 @@ export default function AdminInvoicesPage() {
         {/* Error */}
         {error && !loading && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load invoices"}
+            message={error?.message || "Failed to load invoices"}
             onRetry={() => invoicesQuery.refetch()}
           />
         )}

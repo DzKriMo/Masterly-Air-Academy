@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -22,7 +22,8 @@ export default function AdminReportsPage() {
   useAuthGuard(isAuthenticated, isLoading);
   const router = useRouter();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabId>("students");
+  const isTrainingAdmin = user?.role === "training_admin";
+  const [activeTab, setActiveTab] = useState<TabId>(isTrainingAdmin ? "students" : "students");
   const [error, setError] = useState<string | null>(null);
 
   // ── Data queries ──────────────────────────────────────────
@@ -35,7 +36,7 @@ export default function AdminReportsPage() {
   const financialReport = useQuery({
     queryKey: ["report-financial"],
     queryFn: () => api.get<any>("/reports/financial/").catch(() => null),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isTrainingAdmin,
   });
 
   const examReport = useQuery({
@@ -91,9 +92,11 @@ export default function AdminReportsPage() {
           <TabButton active={activeTab === "students"} onClick={() => setActiveTab("students")}>
             {t("admin.studentReports", "Student Reports")}
           </TabButton>
-          <TabButton active={activeTab === "financial"} onClick={() => setActiveTab("financial")}>
-            {t("admin.financialReports", "Financial Reports")}
-          </TabButton>
+          {!isTrainingAdmin && (
+            <TabButton active={activeTab === "financial"} onClick={() => setActiveTab("financial")}>
+              {t("admin.financialReports", "Financial Reports")}
+            </TabButton>
+          )}
           <TabButton active={activeTab === "exams"} onClick={() => setActiveTab("exams")}>
             {t("admin.examReports", "Exam Reports")}
           </TabButton>

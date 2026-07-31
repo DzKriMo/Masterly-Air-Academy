@@ -50,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const NOTIFICATION_BADGE = () => unread.notifications;
   const MESSAGES_BADGE = () => unread.messages;
+  const APPLICATIONS_BADGE = () => unread.applicationsPending;
 
   const SECTIONS: NavSection[] = useMemo(() => [
     {
@@ -64,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       id: "administration",
       title: t("admin.administration", "Administration"),
       Icon: Users,
+      badgeFn: APPLICATIONS_BADGE,
       items: [
         { href: "/admin/users", label: t("admin.users", "Users"), Icon: Users },
         { href: "/admin/roles", label: t("admin.roles", "Roles"), Icon: ShieldCheck },
@@ -208,9 +210,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) => pathname.startsWith(href);
 
   useEffect(() => {
-    const activeSection = SECTIONS.find(s => s.items.some(i => isActive(i.href)));
-    if (activeSection && !openSections[activeSection.id]) {
+    const activeSection = SECTIONS.find(s => s.items.some(i => pathname.startsWith(i.href)));
+    if (activeSection) {
       setOpenSections(prev => {
+        if (prev[activeSection.id]) return prev;
         const next = { ...prev, [activeSection.id]: true };
         setStored(activeSection.id, true);
         return next;
@@ -291,7 +294,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {section.items.map(item => {
                       const active = isActive(item.href);
                       const ItemIcon = item.Icon;
-                      const showBadge = item.href === "/admin/notifications" && section.badgeFn ? sectionBadge : item.href === "/admin/messages" ? unread.messages : 0;
+                      const showBadge = item.href === "/admin/notifications" && section.badgeFn ? sectionBadge : item.href === "/admin/messages" ? unread.messages : item.href === "/admin/applications" ? unread.applicationsPending : 0;
                       return (
                         <Link
                           key={item.href}
@@ -320,16 +323,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="p-2 border-t border-navy-700 shrink-0">
-          <a
-            href="/django-admin/"
-            target="_blank"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-navy-700 transition-colors"
-          >
-            <Shield className="w-4 h-4 shrink-0" />
-            {t("admin.djangoAdmin", "Django Admin")}
-          </a>
-        </div>
+        {user?.role !== "training_admin" && (
+          <div className="p-2 border-t border-navy-700 shrink-0">
+            <a
+              href="/django-admin/"
+              target="_blank"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-navy-700 transition-colors"
+            >
+              <Shield className="w-4 h-4 shrink-0" />
+              {t("admin.djangoAdmin", "Django Admin")}
+            </a>
+          </div>
+        )}
         <div className="p-4 border-t border-navy-700 shrink-0">
           <button
             onClick={async () => { await logout(); router.push("/login"); }}

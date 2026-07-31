@@ -51,6 +51,8 @@ const TYPE_ICON_COLORS: Record<string, string> = {
 export default function StudentNotificationsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -65,13 +67,23 @@ export default function StudentNotificationsPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
-    api.get("/notifications/")
-      .then((d: any) => { setNotifications(d.results || []); setError(null); })
+    api.get("/notifications/?page=1")
+      .then((d: any) => { setNotifications(d.results || []); setHasMore(!!d.next); setPage(1); setError(null); })
       .catch(err => { console.error("Failed to load notifications:", err); setError(t('student.notifLoadError', "Failed to load notifications. Please try again.")); })
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
   useEffect(() => { loadNotifications(); }, [loadNotifications]);
+
+  const loadMore = () => {
+    api.get<any>(`/notifications/?page=${page + 1}`)
+      .then((d: any) => {
+        setNotifications(prev => [...prev, ...(d.results || [])]);
+        setHasMore(!!d.next);
+        setPage(p => p + 1);
+      })
+      .catch(() => {});
+  };
 
   const markAsRead = async (id: string) => {
     try {
@@ -191,6 +203,14 @@ export default function StudentNotificationsPage() {
 
           {filtered.length === 0 && (
             <p className="text-gray-500 text-sm text-center py-8">{t('student.noNotifFilter', 'No notifications match your filters.')}</p>
+          )}
+
+          {hasMore && (
+            <div className="mt-4 text-center">
+              <button onClick={loadMore} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+                {t('common.loadMore', 'Load more')}
+              </button>
+            </div>
           )}
         </>
       )}

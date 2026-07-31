@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -65,31 +65,31 @@ export default function AdminFlightLessonsPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<FL[]>({
     queryKey: ["admin-fl"],
-    queryFn: async () => { const d = await api.get<any>("/flight-lessons/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/flight-lessons/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: students = [] } = useQuery<any[]>({
     queryKey: ["admin-fl-students"],
-    queryFn: async () => { const d = await api.get<any>("/students/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/students/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: instructors = [] } = useQuery<any[]>({
     queryKey: ["admin-fl-instructors"],
-    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: aircraft = [] } = useQuery<any[]>({
     queryKey: ["admin-fl-aircraft"],
-    queryFn: async () => { const d = await api.get<any>("/aircraft/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/aircraft/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: templates = [] } = useQuery<any[]>({
     queryKey: ["admin-fl-templates"],
-    queryFn: async () => { const d = await api.get<any>("/flight-lesson-templates/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/flight-lesson-templates/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -140,19 +140,19 @@ export default function AdminFlightLessonsPage() {
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
         {a.status === "scheduled" && <button onClick={() => statusActionMutation.mutate({ id: a.id, action: "conflicts" })} disabled={statusActionMutation.isPending} className="px-2 py-1 text-xs text-amber-400 hover:bg-amber-500/10 rounded transition-colors">Check</button>}
-        <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, instructor: a.instructor || "", aircraft: a.aircraft, lesson_template: a.lesson_template || "", scheduled_date: a.scheduled_date, start_time: a.start_time, end_time: a.end_time, status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">Edit</button>
-        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">Delete</button>
+        <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, instructor: a.instructor || "", aircraft: a.aircraft, lesson_template: a.lesson_template || "", scheduled_date: a.scheduled_date, start_time: a.start_time, end_time: a.end_time, status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">{t('common.edit')}</button>
+        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">{t('common.delete')}</button>
       </div>
     )},
   ], []);
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Flight Lessons" backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
+      <PageHeader title={t("admin.flightLessons", "Flight Lessons")} backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
         <button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">+ New Lesson</button>
       } />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed"} onRetry={() => refetch()} />}
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState message={records?.length === 0 ? "No flight lessons yet." : "No matches."} title={records?.length === 0 ? "No lessons" : "No matches"} action={records?.length === 0 ? { label: "New Lesson", onClick: () => setCreateOpen(true) } : undefined} />
         ) : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(i) => setSelected(i as FL)} />}
@@ -165,7 +165,7 @@ export default function AdminFlightLessonsPage() {
             {selected && selected.status === "in_progress" && (
               <button onClick={() => statusActionMutation.mutate({ id: selected.id, action: "evaluate" })} disabled={statusActionMutation.isPending} className="px-4 py-2 text-sm bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/20">{statusActionMutation.isPending ? "..." : "Evaluate"}</button>
             )}
-            <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>
+            <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>
           </div>
         }>
           {selected && <div className="space-y-4">
@@ -196,7 +196,7 @@ export default function AdminFlightLessonsPage() {
         </ModalForm>
 
         <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} title="New Flight Lesson" footer={<>
-          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => createMutation.mutate(buildPayload(createForm))} disabled={createMutation.isPending || !createForm.student || !createForm.aircraft || !createForm.scheduled_date || !createForm.start_time || !createForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button>
         </>}>
           <div className="space-y-4">
@@ -232,7 +232,7 @@ export default function AdminFlightLessonsPage() {
         </ModalForm>
 
         <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Flight Lesson" footer={<>
-          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: buildPayload(editForm) }); }} disabled={updateMutation.isPending || !editForm.student || !editForm.aircraft || !editForm.scheduled_date || !editForm.start_time || !editForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button>
         </>}>
           <div className="space-y-4">
@@ -273,7 +273,7 @@ export default function AdminFlightLessonsPage() {
               <h3 className="text-lg font-semibold text-white">Delete Flight Lesson</h3>
               <p className="text-sm text-gray-400">Remove lesson for {deleteTarget.student_name}?</p>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
                 <button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button>
               </div>
             </div>

@@ -97,12 +97,14 @@ export default function TakeExamPage() {
     const onHide = () => {
       if (submittedRef.current || cooldown) return;
       cooldown = true;
-      setTimeout(() => { cooldown = false; }, 1000);
+      setTimeout(() => { cooldown = false; }, 5000);
       violations++;
       if (violations === 1) {
         setCheatWarnings(1);
+        showToast("warning", t("exam.tabSwitchWarning"));
       } else {
         setAutoSubmitted(true);
+        showToast("error", t("exam.autoSubmittedCheat"));
         doSubmit();
       }
     };
@@ -114,7 +116,11 @@ export default function TakeExamPage() {
   }, []);
 
   useEffect(() => {
-    if (timeLeft <= 0 && !submitted && questions.length > 0) { doSubmit(); }
+    if (timeLeft <= 0 && !submitted && questions.length > 0) {
+      setAutoSubmitted(true);
+      showToast("warning", t("exam.autoSubmitted"));
+      doSubmit();
+    }
   }, [timeLeft]);
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

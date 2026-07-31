@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -43,7 +43,7 @@ const emptyForm: ExamFormData = {
 
 export default function AdminExamsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -58,15 +58,11 @@ export default function AdminExamsPage() {
   const [previewData, setPreviewData] = useState<{exam: any; questions: any[]} | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
-
   const { data: exams, isLoading, error, refetch } = useQuery<Exam[]>({
     queryKey: ["admin-exams"],
     queryFn: async () => {
       const d = await api.get<any>("/exams/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -75,7 +71,7 @@ export default function AdminExamsPage() {
     queryKey: ["admin-exams-subjects"],
     queryFn: async () => {
       const d = await api.get<any>("/subjects/?limit=500");
-      return ((d as any)?.results || (d as any) || []).map((s: any) => ({
+      return (unwrapResults(d)).map((s: any) => ({
         id: s.id, code: s.code, title_en: s.title_en || s.title || "",
       }));
     },
@@ -259,7 +255,7 @@ export default function AdminExamsPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load exams"}
+            message={error?.message || "Failed to load exams"}
             onRetry={() => refetch()}
           />
         )}
@@ -337,7 +333,7 @@ export default function AdminExamsPage() {
           footer={
             <>
               <button
-                onClick={() => { if (selected) { setPreviewLoading(true); setPreviewOpen(true); api.get<any>(`/exams/${selected.id}/preview/`).then(d => setPreviewData(d as any)).catch(() => setPreviewData(null)).finally(() => setPreviewLoading(false)); } }}
+                onClick={() => { if (selected) { setPreviewLoading(true); setPreviewOpen(true); api.get<any>(`/exams/${selected.id}/preview/`).then(d => setPreviewData(d)).catch(() => setPreviewData(null)).finally(() => setPreviewLoading(false)); } }}
                 className="px-4 py-2 text-sm bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-400 transition-colors"
               >
                 Preview

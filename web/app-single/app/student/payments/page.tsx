@@ -20,23 +20,47 @@ interface Invoice {
   id: string;
   invoice_number: string;
   amount: string;
+  currency: string;
   status: string;
-  due_date: string;
+  due_at: string;
   description: string;
 }
 
 interface Payment {
   id: string;
   amount: string;
+  currency: string;
   method: string;
-  payment_date: string;
+  paid_at: string;
   reference: string;
 }
+
+const fmtCurrency = (amount: string | number, currency = "DZD") => {
+  const n = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(n)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+};
+
+const fmtDate = (value?: string | null) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString();
+};
 
 export default function StudentPaymentsPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [invPage, setInvPage] = useState(1);
+  const [invHasMore, setInvHasMore] = useState(false);
+  const [payPage, setPayPage] = useState(1);
+  const [payHasMore, setPayHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invFilters, setInvFilters] = useState<Record<string, string>>({});
@@ -52,11 +76,13 @@ export default function StudentPaymentsPage() {
     setLoading(true);
     setError(null);
     Promise.all([
-      api.get("/invoices/").catch(() => ({ results: [] })),
-      api.get("/payments/").catch(() => ({ results: [] })),
+      api.get("/invoices/?page=1").catch(() => ({ results: [] })),
+      api.get("/payments/?page=1").catch(() => ({ results: [] })),
     ]).then(([invData, payData]: any) => {
       setInvoices(invData.results || []);
+      setInvHasMore(!!invData.next);
       setPayments(payData.results || []);
+      setPayHasMore(!!payData.next);
       setError(null);
     }).catch(err => {
       console.error("Failed to load payment data:", err);
@@ -65,6 +91,26 @@ export default function StudentPaymentsPage() {
   }, [isAuthenticated]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadMore = useCallback((kind: "invoices" | "payments") => {
+    if (!isAuthenticated) return;
+    const page = kind === "invoices" ? invPage : payPage;
+    const url = kind === "invoices" ? "/invoices/" : "/payments/";
+    api.get<any>(`${url}?page=${page + 1}`)
+      .then((d: any) => {
+        const items = d.results || [];
+        if (kind === "invoices") {
+          setInvoices(prev => [...prev, ...items]);
+          setInvHasMore(!!d.next);
+          setInvPage(p => p + 1);
+        } else {
+          setPayments(prev => [...prev, ...items]);
+          setPayHasMore(!!d.next);
+          setPayPage(p => p + 1);
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, invPage, payPage]);
 
   const totalInvoiced = invoices.reduce((sum, inv) => sum + parseFloat(inv.amount || "0"), 0);
   const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0);
@@ -112,9 +158,9 @@ export default function StudentPaymentsPage() {
       <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono">{item.invoice_number}</span>
     )},
     { key: "description", header: t('common.description', 'Description'), render: (item) => <span className="text-white text-sm">{item.description || "-"}</span> },
-    { key: "amount", header: t('common.amount', 'Amount'), render: (item) => <span className="text-white font-bold">${parseFloat(item.amount).toFixed(2)}</span> },
+    { key: "amount", header: t('common.amount', 'Amount'), render: (item) => <span className="text-white font-bold">{fmtCurrency(item.amount, item.currency)}</span> },
     { key: "status", header: t('common.status'), render: (item) => statusBadge(item.status) },
-    { key: "due_date", header: t('common.dueDate', 'Due Date'), render: (item) => <span className="text-xs text-gray-500">{new Date(item.due_date).toLocaleDateString()}</span> },
+    { key: "due_at", header: t('common.dueDate', 'Due Date'), render: (item) => <span className="text-xs text-gray-500">{fmtDate(item.due_at)}</span> },
     { key: "id", header: "", sortable: false, render: (item) => (
       <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item.id); }} className="px-3 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors whitespace-nowrap">
         {t('invoice.downloadPdf', 'Download PDF')}
@@ -123,9 +169,9 @@ export default function StudentPaymentsPage() {
   ];
 
   const paymentColumns: Column<Payment>[] = [
-    { key: "amount", header: t('common.amount', 'Amount'), render: (item) => <span className="text-white font-bold">${parseFloat(item.amount).toFixed(2)}</span> },
+    { key: "amount", header: t('common.amount', 'Amount'), render: (item) => <span className="text-white font-bold">{fmtCurrency(item.amount, item.currency)}</span> },
     { key: "method", header: t('common.method', 'Method'), render: (item) => <span className="text-xs text-gray-400 capitalize">{item.method}</span> },
-    { key: "payment_date", header: t('common.date'), render: (item) => <span className="text-xs text-gray-500">{new Date(item.payment_date).toLocaleDateString()}</span> },
+    { key: "paid_at", header: t('common.date'), render: (item) => <span className="text-xs text-gray-500">{fmtDate(item.paid_at)}</span> },
     { key: "reference", header: t('common.reference', 'Reference'), render: (item) => <span className="text-xs text-gray-500 font-mono">{item.reference || "-"}</span> },
   ];
 
@@ -139,15 +185,15 @@ export default function StudentPaymentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-navy-800 rounded-xl border border-navy-700 p-6">
               <p className="text-sm text-gray-400 mb-1">{t('student.totalInvoiced', 'Total Invoiced')}</p>
-              <p className="text-3xl font-bold text-white">${totalInvoiced.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-white">{fmtCurrency(totalInvoiced, "DZD")}</p>
             </div>
             <div className="bg-navy-800 rounded-xl border border-navy-700 p-6">
               <p className="text-sm text-gray-400 mb-1">{t('student.totalPaid', 'Total Paid')}</p>
-              <p className="text-3xl font-bold text-green-400">${totalPaid.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-green-400">{fmtCurrency(totalPaid, "DZD")}</p>
             </div>
             <div className="bg-navy-800 rounded-xl border border-navy-700 p-6">
               <p className="text-sm text-gray-400 mb-1">{t('student.outstandingBalance', 'Outstanding Balance')}</p>
-              <p className={`text-3xl font-bold ${outstanding > 0 ? 'text-red-400' : 'text-green-400'}`}>${outstanding.toFixed(2)}</p>
+              <p className={`text-3xl font-bold ${outstanding > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmtCurrency(outstanding, "DZD")}</p>
             </div>
           </div>
 
@@ -183,6 +229,11 @@ export default function StudentPaymentsPage() {
                     <button onClick={() => setSelectedInvoice(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
                       {t("close", "Close")}
                     </button>
+                    {selectedInvoice && selectedInvoice.status !== "paid" && (
+                      <button onClick={() => { showToast("info", t('student.payOnlineMsg', 'Online payment coming soon. Please contact administration.')); }} className="px-5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-bold transition-colors">
+                        {t('student.payOnline', 'Pay Online')}
+                      </button>
+                    )}
                     {selectedInvoice && (
                       <button onClick={() => { downloadInvoicePdf(selectedInvoice.id); }} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 rounded-lg text-sm font-bold transition-colors">
                         {t("invoice.downloadPdf", "Download PDF")}
@@ -197,9 +248,9 @@ export default function StudentPaymentsPage() {
                       <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">{t("common.details", "Details")}</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <DetailField label={t("invoice.number", "Invoice#")} value={selectedInvoice.invoice_number} />
-                        <DetailField label={t("common.amount", "Amount")} value={`$${parseFloat(selectedInvoice.amount).toFixed(2)}`} />
+                        <DetailField label={t("common.amount", "Amount")} value={fmtCurrency(selectedInvoice.amount, selectedInvoice.currency)} />
                         <DetailField label={t("common.status")} value={selectedInvoice.status} />
-                        <DetailField label={t("common.dueDate", "Due Date")} value={new Date(selectedInvoice.due_date).toLocaleDateString()} />
+                        <DetailField label={t("common.dueDate", "Due Date")} value={fmtDate(selectedInvoice.due_at)} />
                         <div className="col-span-2">
                           <DetailField label={t("common.description", "Description")} value={selectedInvoice.description || "-"} />
                         </div>
@@ -208,6 +259,13 @@ export default function StudentPaymentsPage() {
                   </div>
                 )}
               </ModalForm>
+              {invHasMore && (
+                <div className="mt-4 text-center">
+                  <button onClick={() => loadMore("invoices")} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+                    {t('common.loadMore', 'Load more')}
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -216,12 +274,21 @@ export default function StudentPaymentsPage() {
           {payments.length === 0 ? (
             <EmptyState message={t('student.noPayments', 'No payments recorded yet.')} />
           ) : (
-            <DataTable
-              columns={paymentColumns}
-              data={payments as any}
-              keyField="id"
-              emptyMessage={t('student.noPayments', 'No payments recorded yet.')}
-            />
+            <>
+              <DataTable
+                columns={paymentColumns}
+                data={payments as any}
+                keyField="id"
+                emptyMessage={t('student.noPayments', 'No payments recorded yet.')}
+              />
+              {payHasMore && (
+                <div className="mt-4 text-center">
+                  <button onClick={() => loadMore("payments")} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+                    {t('common.loadMore', 'Load more')}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

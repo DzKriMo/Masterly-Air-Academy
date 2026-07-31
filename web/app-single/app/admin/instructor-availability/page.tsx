@@ -1,11 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -40,7 +39,6 @@ function fmtTime(t: string) {
 export default function AdminInstructorAvailabilityPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   useAuthGuard(isAuthenticated, authLoading);
-  const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -58,13 +56,13 @@ export default function AdminInstructorAvailabilityPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<Availability[]>({
     queryKey: ["admin-availability"],
-    queryFn: async () => { const d = await api.get<any>("/instructor-availability/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/instructor-availability/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: instructors = [] } = useQuery<any[]>({
     queryKey: ["admin-avail-instructors"],
-    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -103,8 +101,8 @@ export default function AdminInstructorAvailabilityPage() {
     {
       key: "actions", header: "", render: (a) => (
         <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => { setEditItem(a); setEditForm({ instructor: a.instructor, day_of_week: String(a.day_of_week), start_time: a.start_time, end_time: a.end_time, is_available: a.is_available }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded">Edit</button>
-          <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">Delete</button>
+          <button onClick={() => { setEditItem(a); setEditForm({ instructor: a.instructor, day_of_week: String(a.day_of_week), start_time: a.start_time, end_time: a.end_time, is_available: a.is_available }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded">{t('common.edit')}</button>
+          <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">{t('common.delete')}</button>
         </div>
       ),
     },
@@ -112,13 +110,13 @@ export default function AdminInstructorAvailabilityPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Instructor Availability" backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ Add Slot</button>} />
+      <PageHeader title={t("admin.instructorAvailability", "Instructor Availability")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ Add Slot</button>} />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed to load"} onRetry={() => refetch()} />}
         <FilterBar filters={[{ key: "instructor", label: "All Instructors", options: instructors.map((i: any) => ({ value: i.id, label: `${i.first_name} ${i.last_name}` })) }]} values={filterValues} onChange={(k, v) => setFilterValues((p) => ({ ...p, [k]: v }))} onClear={() => { setFilterValues({}); setSearchValue(""); }} searchValue={searchValue} onSearchChange={setSearchValue} searchPlaceholder="Search by instructor..." />
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={records?.length === 0 ? "No availability slots." : "No matches."} title={records?.length === 0 ? "No slots yet" : "No matches"} action={records?.length === 0 ? { label: "Add Slot", onClick: () => setCreateOpen(true) } : undefined} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Availability)} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Availability Slot" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Availability Slot" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
             <DetailField label="Instructor" value={selected.instructor_name} />
             <DetailField label="Day" value={DAY_NAMES[selected.day_of_week] || "—"} />
@@ -128,7 +126,7 @@ export default function AdminInstructorAvailabilityPage() {
           </div>}
         </ModalForm>
 
-        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ instructor: "", day_of_week: "0", start_time: "08:00", end_time: "17:00", is_available: true }); setCreateError(""); }} title="Add Availability Slot" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ instructor: "", day_of_week: "0", start_time: "08:00", end_time: "17:00", is_available: true }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.instructor} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
+        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ instructor: "", day_of_week: "0", start_time: "08:00", end_time: "17:00", is_available: true }); setCreateError(""); }} title="Add Availability Slot" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ instructor: "", day_of_week: "0", start_time: "08:00", end_time: "17:00", is_available: true }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.instructor} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
           <div className="space-y-4">
             {createError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>}
             <div><label className="block text-sm text-gray-400 mb-1">Instructor <span className="text-red-400">*</span></label><select value={createForm.instructor} onChange={(e) => setCreateForm((f) => ({ ...f, instructor: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"><option value="">Select instructor...</option>{instructors.map((i: any) => <option key={i.id} value={i.id}>{i.first_name} {i.last_name}</option>)}</select></div>
@@ -141,7 +139,7 @@ export default function AdminInstructorAvailabilityPage() {
           </div>
         </ModalForm>
 
-        <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Slot" footer={<><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: editForm }); }} disabled={updateMutation.isPending || !editForm.instructor} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button></>}>
+        <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Slot" footer={<><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: editForm }); }} disabled={updateMutation.isPending || !editForm.instructor} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button></>}>
           <div className="space-y-4">
             {editError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>}
             <div><label className="block text-sm text-gray-400 mb-1">Instructor</label><select value={editForm.instructor} onChange={(e) => setEditForm((f) => ({ ...f, instructor: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{instructors.map((i: any) => <option key={i.id} value={i.id}>{i.first_name} {i.last_name}</option>)}</select></div>
@@ -154,7 +152,7 @@ export default function AdminInstructorAvailabilityPage() {
           </div>
         </ModalForm>
 
-        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete Slot</h3><p className="text-sm text-gray-400">Delete this availability slot?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
+        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete Slot</h3><p className="text-sm text-gray-400">Delete this availability slot?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
       </main>
     </div>
   );

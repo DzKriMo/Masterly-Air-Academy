@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -64,7 +64,7 @@ export default function InstructorExamsPage() {
     queryKey: ["instructor-exams"],
     queryFn: async () => {
       const d = await api.get<any>("/exams/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -73,7 +73,7 @@ export default function InstructorExamsPage() {
     queryKey: ["instructor-exams-subjects"],
     queryFn: async () => {
       const d = await api.get<any>("/subjects/?limit=500");
-      return ((d as any)?.results || (d as any) || []).map((s: any) => ({
+      return (unwrapResults(d)).map((s: any) => ({
         id: s.id, code: s.code, title_en: s.title_en || s.title || "",
       }));
     },
@@ -183,7 +183,7 @@ export default function InstructorExamsPage() {
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed to load"} onRetry={() => refetch()} />}
 
         <FilterBar
           filters={[

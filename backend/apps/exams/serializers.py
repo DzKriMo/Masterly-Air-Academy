@@ -53,13 +53,20 @@ class SkillTestSerializer(serializers.ModelSerializer):
 
 
 class PracticalEvaluationSerializer(serializers.ModelSerializer):
+    instructor_name = serializers.SerializerMethodField()
+
     class Meta:
         model = PracticalEvaluation
         fields = [
-            'id', 'student', 'instructor', 'lesson_type', 'lesson_id',
+            'id', 'student', 'instructor', 'instructor_name', 'lesson_type', 'lesson_id',
             'date', 'competencies', 'result', 'grade', 'observations',
             'strengths', 'improvements', 'recommendations', 'decision',
         ]
+
+    def get_instructor_name(self, obj):
+        if hasattr(obj, 'instructor') and obj.instructor:
+            return f'{obj.instructor.first_name} {obj.instructor.last_name}'
+        return ''
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -117,6 +124,12 @@ class ExamSerializer(serializers.ModelSerializer):
 class ExamAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
     exam_code = serializers.CharField(source='exam.code', read_only=True)
+    student = serializers.PrimaryKeyRelatedField(read_only=True)
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    is_passed = serializers.BooleanField(read_only=True)
+    started_at = serializers.DateTimeField(read_only=True)
+    completed_at = serializers.DateTimeField(read_only=True)
+    notes = serializers.CharField(read_only=True)
 
     class Meta:
         model = ExamAttempt
@@ -134,6 +147,7 @@ class QuizSerializer(serializers.ModelSerializer):
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
 
     class Meta:
         model = QuizAttempt
@@ -160,6 +174,7 @@ class ExamSubmitSerializer(serializers.Serializer):
 
 class CertificateSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    student = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Certificate
@@ -167,3 +182,14 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     def get_student_name(self, obj):
         return obj.student.full_name
+
+
+class StudentCompetencySerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentCompetency
+        fields = ['id', 'student', 'student_name', 'program', 'competency', 'status', 'achieved_at', 'notes']
+
+    def get_student_name(self, obj):
+        return obj.student.full_name if hasattr(obj, 'student') else ''

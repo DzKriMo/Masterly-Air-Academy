@@ -23,12 +23,31 @@ export default function DirectorNotificationsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Notif | null>(null);
+  const [extra, setExtra] = useState<Notif[]>([]);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: notifData, isLoading } = useQuery({
     queryKey: ["director-notifications"],
-    queryFn: () => api.get<any>("/notifications/").then(d => d.results || []),
+    queryFn: () => api.get<any>("/notifications/"),
     refetchInterval: 30000,
   });
+  const notifications = notifData?.results || [];
+  const hasMore = !!notifData?.next;
+  const allNotifs = useMemo(() => [...notifications, ...extra], [notifications, extra]);
+
+  const loadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const d = await api.get<any>(`/notifications/?page=${page + 1}`);
+      setExtra((prev) => [...prev, ...(d?.results || [])]);
+      setPage((p) => p + 1);
+    } catch {}
+    finally {
+      setLoadingMore(false);
+    }
+  };
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => api.post(`/notifications/${id}/mark_read/`),
@@ -49,12 +68,12 @@ export default function DirectorNotificationsPage() {
   };
 
   const filtered = useMemo(() => {
-    let r = notifications;
+    let r = allNotifs;
     if (filters.read === "unread") r = r.filter((n: Notif) => !n.is_read);
     if (filters.read === "read") r = r.filter((n: Notif) => n.is_read);
     if (search) { const q = search.toLowerCase(); r = r.filter((n: Notif) => n.title?.toLowerCase().includes(q) || n.message?.toLowerCase().includes(q)); }
     return r;
-  }, [notifications, filters, search]);
+  }, [allNotifs, filters, search]);
 
   const columns: Column<Notif>[] = [
     { key: "unread", header: "", sortable: false, render: (n) => !n.is_read ? <div className="w-2 h-2 rounded-full bg-gold-500" /> : <div className="w-2 h-2" /> },
@@ -73,7 +92,22 @@ export default function DirectorNotificationsPage() {
     />
     <main className="max-w-5xl mx-auto px-6 py-8">
       <FilterBar filters={[{ key: "read", label: t("common.all", "All"), options: [{ value: "unread", label: t("common.unread", "Unread") }, { value: "read", label: t("common.read", "Read") }] }]} values={filters} onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))} onClear={() => { setFilters({}); setSearch(""); }} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t("common.search", "Search...")} />
-      {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={t("common.noNotifications", "No notifications.")} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(n) => openDetail(n as Notif)} />}
+      {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={t("common.noNotifications", "No notifications.")} /> : (
+        <>
+          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(n) => openDetail(n as Notif)} />
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? t("common.loading", "Loading...") : "Load more"}
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       <ModalForm open={!!selected} onClose={() => setSelected(null)} title={selected?.title || ""} footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t("common.close", "Close")}</button>}>
         {selected && (<div className="space-y-4">

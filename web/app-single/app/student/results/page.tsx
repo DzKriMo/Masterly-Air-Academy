@@ -14,8 +14,6 @@ import { PageHeader } from "@/components/page-header";
 interface Attempt {
   id: string;
   exam_code: string;
-  exam_title: string;
-  subject: string;
   score: number | null;
   is_passed: boolean | null;
   completed_at: string | null;
@@ -45,7 +43,7 @@ interface GroundEval {
 
 interface Competency {
   id: string;
-  name: string;
+  competency: string;
   status: string;
   program: string;
   description?: string;
@@ -60,8 +58,15 @@ export default function StudentResultsPage() {
   const [evals, setEvals] = useState<PracticalEval[]>([]);
   const [groundEvals, setGroundEvals] = useState<GroundEval[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [evalPage, setEvalPage] = useState(1);
+  const [evalHasMore, setEvalHasMore] = useState(false);
+  const [groundPage, setGroundPage] = useState(1);
+  const [groundHasMore, setGroundHasMore] = useState(false);
+  const [compPage, setCompPage] = useState(1);
+  const [compHasMore, setCompHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [compSearch, setCompSearch] = useState("");
   const { t } = useTranslation();
 
   const programs = ["PPL", "CPL", "IR", "MEP", "MCC"];
@@ -74,14 +79,17 @@ export default function StudentResultsPage() {
     setError(null);
     Promise.all([
       api.get("/exams/my_attempts/").catch(() => []),
-      api.get("/practical-evaluations/").catch(() => ({ results: [] })),
-      api.get("/competencies/").catch(() => ({ results: [] })),
-      api.get("/ground-evaluations/").catch(() => ({ results: [] })),
+      api.get("/practical-evaluations/?page=1").catch(() => ({ results: [] })),
+      api.get("/competencies/?page=1").catch(() => ({ results: [] })),
+      api.get("/ground-evaluations/?page=1").catch(() => ({ results: [] })),
     ]).then(([attData, evalData, compData, groundData]: any) => {
       setAttempts(Array.isArray(attData) ? attData : []);
       setEvals(evalData.results || []);
+      setEvalHasMore(!!evalData.next);
       setCompetencies(compData.results || []);
+      setCompHasMore(!!compData.next);
       setGroundEvals((groundData.results || []).sort((a: GroundEval, b: GroundEval) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setGroundHasMore(!!groundData.next);
       setError(null);
     }).catch(err => {
       console.error("Failed to load results:", err);
@@ -91,6 +99,29 @@ export default function StudentResultsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const loadMore = (kind: "practical" | "ground" | "competencies") => {
+    const page = kind === "practical" ? evalPage : kind === "ground" ? groundPage : compPage;
+    const url = kind === "practical" ? "/practical-evaluations/" : kind === "ground" ? "/ground-evaluations/" : "/competencies/";
+    api.get<any>(`${url}?page=${page + 1}`)
+      .then((d: any) => {
+        const items = d.results || [];
+        if (kind === "practical") {
+          setEvals(prev => [...prev, ...items]);
+          setEvalHasMore(!!d.next);
+          setEvalPage(p => p + 1);
+        } else if (kind === "ground") {
+          setGroundEvals(prev => [...prev, ...items].sort((a: GroundEval, b: GroundEval) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+          setGroundHasMore(!!d.next);
+          setGroundPage(p => p + 1);
+        } else {
+          setCompetencies(prev => [...prev, ...items]);
+          setCompHasMore(!!d.next);
+          setCompPage(p => p + 1);
+        }
+      })
+      .catch(() => {});
+  };
+
   // Summary calculations
   const passedCount = attempts.filter(a => a.is_passed === true).length;
   const failedCount = attempts.filter(a => a.is_passed === false).length;
@@ -98,7 +129,7 @@ export default function StudentResultsPage() {
   const passRate = totalAttempts > 0 ? Math.round((passedCount / totalAttempts) * 100) : 0;
   const scores = attempts.filter(a => a.score !== null).map(a => a.score as number);
   const averageScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  const bestSubject = attempts.length > 0 ? attempts.reduce((best, curr) => (curr.score || 0) > (best.score || 0) ? curr : best, attempts[0]).exam_title || attempts[0].subject || "-" : "-";
+  const bestSubject = attempts.length > 0 ? attempts.reduce((best, curr) => (curr.score || 0) > (best.score || 0) ? curr : best, attempts[0]).exam_code || "-" : "-";
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "theory", label: t('student.theory', 'Theory') },
@@ -108,8 +139,7 @@ export default function StudentResultsPage() {
   ];
 
   const attemptColumns: Column<Attempt>[] = [
-    { key: "exam_title", header: t('common.exam', 'Exam'), render: (item) => <span className="text-white font-medium">{item.exam_title || item.exam_code}</span> },
-    { key: "subject", header: t('common.subject', 'Subject') },
+    { key: "exam_code", header: t('common.exam', 'Exam'), render: (item) => <span className="text-white font-medium">{item.exam_code}</span> },
     { key: "score", header: t('common.score', 'Score %'), render: (item) => (
       <span className={`text-sm font-bold ${item.is_passed ? "text-green-400" : item.score !== null ? "text-red-400" : "text-gray-500"}`}>
         {item.score !== null ? `${item.score}%` : t('student.inProgress', 'In progress')}
@@ -160,10 +190,10 @@ export default function StudentResultsPage() {
   const compNameSet = new Set<string>();
   competencies.forEach(c => {
     if (!compMatrix[c.program]) compMatrix[c.program] = {};
-    compMatrix[c.program][c.name] = c;
-    compNameSet.add(c.name);
+    compMatrix[c.program][c.competency] = c;
+    compNameSet.add(c.competency);
   });
-  const allCompetencyNames = Array.from(compNameSet).sort();
+  const allCompetencyNames = Array.from(compNameSet).sort().filter(n => !compSearch || n.toLowerCase().includes(compSearch.toLowerCase()));
 
   const compBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -222,21 +252,27 @@ export default function StudentResultsPage() {
           {activeTab === "practical" && (
             evals.length === 0
               ? <EmptyState message={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
-              : <DataTable columns={evalColumns} data={evals as any} keyField="id" emptyMessage={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
+              : <><DataTable columns={evalColumns} data={evals as any} keyField="id" emptyMessage={t('student.noPracticalEvals', 'No practical evaluations yet.')} />
+                  {evalHasMore && <LoadMoreButton onClick={() => loadMore("practical")} label={t('common.loadMore', 'Load more')} />}</>
           )}
 
           {/* Ground Tab */}
           {activeTab === "ground" && (
             groundEvals.length === 0
               ? <EmptyState message={t('student.noGroundEvals', 'No ground course evaluations yet.')} />
-              : <DataTable columns={groundColumns} data={groundEvals as any} keyField="id" emptyMessage={t('student.noGroundEvals', 'No ground course evaluations yet.')} />
+              : <><DataTable columns={groundColumns} data={groundEvals as any} keyField="id" emptyMessage={t('student.noGroundEvals', 'No ground course evaluations yet.')} />
+                  {groundHasMore && <LoadMoreButton onClick={() => loadMore("ground")} label={t('common.loadMore', 'Load more')} />}</>
           )}
 
           {/* Competencies Tab — Matrix Grid */}
           {activeTab === "competencies" && (
             competencies.length === 0
               ? <EmptyState message={t('student.noCompetencies', 'No competencies recorded yet.')} />
-              : <div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
+              : <><div className="mb-4">
+                  <input type="text" value={compSearch} onChange={e => setCompSearch(e.target.value)}
+                    placeholder={t('student.searchCompetencies', 'Search competencies...')}
+                    className="w-full max-w-md px-4 py-2.5 bg-navy-800 border border-navy-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gold-500/50" />
+                </div><div className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -275,8 +311,19 @@ export default function StudentResultsPage() {
                     </table>
                   </div>
                 </div>
+                {compHasMore && <LoadMoreButton onClick={() => loadMore("competencies")} label={t('common.loadMore', 'Load more')} />}</>
           )}
         </>
       )}
     </main></div>);
+}
+
+function LoadMoreButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <div className="mt-4 text-center">
+      <button onClick={onClick} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+        {label}
+      </button>
+    </div>
+  );
 }

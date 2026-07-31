@@ -10,8 +10,25 @@ import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
+import { fmtCurrency } from "@/lib/format-utils";
 const FCOLORS = ["#22c55e","#3b82f6","#ef4444","#f59e0b"];
 const BUCKET_COLORS = ["#22c55e","#f59e0b","#f97316","#ef4444"];
+
+const fetchAllInvoices = async (): Promise<Invoice[]> => {
+  const all: Invoice[] = [];
+  let page = 1;
+  for (;;) {
+    const d = await api
+      .get<any>(`/invoices/?page=${page}`)
+      .catch(() => null);
+    if (!d) break;
+    const results = d.results || (Array.isArray(d) ? d : []);
+    all.push(...results);
+    if (!d.next || results.length === 0 || all.length >= 500) break;
+    page++;
+  }
+  return all;
+};
 
 interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
 
@@ -33,11 +50,11 @@ export default function FinanceDashboard() {
   useEffect(() => {
     if (!isAuthenticated) return;
     Promise.all([
-      api.get("/invoices/").catch(() => ({results: []})),
+      fetchAllInvoices().catch(() => []),
       api.get("/finance/reports/").catch(() => null)
     ])
       .then(([invData, rptData]) => {
-        setInvoices((invData as unknown as {results: Invoice[]}).results || []);
+        setInvoices(invData);
         setReports(rptData as unknown as ReportsData);
         setError(null);
       })
@@ -66,13 +83,13 @@ export default function FinanceDashboard() {
       />
 
       <main className="px-6 py-8">
-        {error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); Promise.all([api.get("/invoices/").catch(() => ({results: []})), api.get("/finance/reports/").catch(() => null)]).then(([invData, rptData]) => { setInvoices((invData as unknown as {results: Invoice[]}).results || []); setReports(rptData as unknown as ReportsData); setError(null); }).catch(err => { setError(t('common.error', 'Failed to load data. Please try again.')); }).finally(() => setLoading(false)); }} />}
+        {error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); Promise.all([fetchAllInvoices().catch(() => []), api.get("/finance/reports/").catch(() => null)]).then(([invData, rptData]) => { setInvoices(invData); setReports(rptData as unknown as ReportsData); setError(null); }).catch(err => { setError(t('common.error', 'Failed to load data. Please try again.')); }).finally(() => setLoading(false)); }} />}
         {loading ? <LoadingSkeleton type="card" rows={4} /> : <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-            <StatCard label={t('finance.totalIssued','Total Issued')} value={`${totalIssued.toLocaleString()} DZD`} color="text-blue-400" />
-            <StatCard label={t('finance.collected','Collected')} value={`${totalPaid.toLocaleString()} DZD`} color="text-green-400" />
-            <StatCard label={t('finance.outstanding','Outstanding')} value={`${outstanding.toLocaleString()} DZD`} color="text-yellow-400" />
-            <StatCard label={t('finance.overdue','Overdue')} value={`${overdue.toLocaleString()} DZD`} color="text-red-400" />
+            <StatCard label={t('finance.totalIssued','Total Issued')} value={fmtCurrency(totalIssued, "DZD")} color="text-blue-400" />
+            <StatCard label={t('finance.collected','Collected')} value={fmtCurrency(totalPaid, "DZD")} color="text-green-400" />
+            <StatCard label={t('finance.outstanding','Outstanding')} value={fmtCurrency(outstanding, "DZD")} color="text-yellow-400" />
+            <StatCard label={t('finance.overdue','Overdue')} value={fmtCurrency(overdue, "DZD")} color="text-red-400" />
             <StatCard label={t('finance.collectionRate','Collection Rate')} value={`${collectionRate}%`} color="text-cyan-400" />
           </div>
 
@@ -169,7 +186,7 @@ export default function FinanceDashboard() {
                           <tr key={d.student_id} className="border-b border-navy-700/50">
                             <td className="py-2 text-gray-500">{i+1}</td>
                             <td className="py-2 text-white">{d.student_name}</td>
-                            <td className="py-2 text-right text-red-400 font-medium">{d.total_outstanding.toLocaleString()} DZD</td>
+                            <td className="py-2 text-right text-red-400 font-medium">{fmtCurrency(d.total_outstanding, "DZD")}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -191,7 +208,7 @@ export default function FinanceDashboard() {
                       <span className="text-gray-400 text-sm ml-3">{inv.student_name}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-white font-semibold text-sm">{parseFloat(inv.amount).toLocaleString()} {inv.currency}</span>
+                      <span className="text-white font-semibold text-sm">{fmtCurrency(inv.amount, inv.currency)}</span>
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${inv.status === 'paid' ? 'bg-green-500/10 text-green-400' : inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' : inv.status === 'issued' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>{inv.status}</span>
                     </div>
                   </div>

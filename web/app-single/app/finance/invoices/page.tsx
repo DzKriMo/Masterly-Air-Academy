@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fmtCurrency, fmtDate } from "@/lib/format-utils";
 import { invoiceSchema } from "@/lib/validators";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -35,12 +36,38 @@ export default function InvoicesPage() {
   const [editForm, setEditForm] = useState({ status: "", due_at: "" });
   const { t } = useTranslation();
 
-  const { data: invoicesData, isLoading: loading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => api.get<any>("/invoices/"),
-    enabled: isAuthenticated,
-  });
-  const invoices: Invoice[] = invoicesData?.results || [];
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadInvoices = useCallback(async (p: number, append: boolean) => {
+    try {
+      const d = await api.get<any>(p > 1 ? `/invoices/?page=${p}` : "/invoices/");
+      const results = d?.results || (Array.isArray(d) ? d : []);
+      setInvoices((prev) => (append ? [...prev, ...results] : results));
+      setHasMore(!!d?.next);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load invoices");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    loadInvoices(1, false);
+  }, [isAuthenticated, loadInvoices]);
+
+  const loadMore = () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setPage((p) => p + 1);
+    loadInvoices(page + 1, true);
+  };
 
   const { data: studentsData } = useQuery({
     queryKey: ["students"],
@@ -57,6 +84,9 @@ export default function InvoicesPage() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       setShowForm(false);
       setForm({ student: "", type: "tuition", description: "", amount: "", currency: "DZD", due_at: "" });
+      setPage(1);
+      setLoading(true);
+      loadInvoices(1, false);
       showToast("success", t('finance.invoiceCreated', 'Invoice created.'));
     },
     onError: (e: Error) => showToast("error", e.message),
@@ -68,6 +98,9 @@ export default function InvoicesPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
+      setPage(1);
+      setLoading(true);
+      loadInvoices(1, false);
       showToast("success", t('finance.paymentRecorded', 'Payment recorded.'));
     },
     onError: () => showToast("error", t('finance.paymentFailed', 'Failed to record payment')),
@@ -81,7 +114,7 @@ export default function InvoicesPage() {
   };
 
   const handleRecordPayment = (inv: Invoice) => {
-    const amt = prompt(`${t('finance.enterPaymentAmount', 'Enter payment amount for')} ${inv.invoice_number} (${t('finance.balance', 'Balance')}: ${parseFloat(inv.balance).toLocaleString()} ${inv.currency}):`, inv.balance);
+    const amt = prompt(`${t('finance.enterPaymentAmount', 'Enter payment amount for')} ${inv.invoice_number} (${t('finance.balance', 'Balance')}: ${fmtCurrency(inv.balance, inv.currency)}):`, inv.balance);
     if (!amt) return;
     recordPayment.mutate({ inv, amount: parseFloat(amt) });
   };
@@ -111,9 +144,9 @@ export default function InvoicesPage() {
       </div>
     )},
     { key: "student_name", header: t('finance.student', 'Student'), render: (inv) => <span className="text-gray-400 text-sm">{inv.student_name}</span> },
-    { key: "due_at", header: t('finance.dueDate', 'Due Date'), render: (inv) => <span className="text-xs text-gray-400">{inv.due_at || t('common.na', 'N/A')}</span> },
-    { key: "balance", header: t('finance.balance', 'Balance'), render: (inv) => <span className="text-xs text-gray-400">{parseFloat(inv.balance).toLocaleString()} {inv.currency}</span> },
-    { key: "amount", header: t('finance.amount', 'Amount'), render: (inv) => <span className="text-white font-bold">{parseFloat(inv.amount).toLocaleString()} {inv.currency}</span> },
+    { key: "due_at", header: t('finance.dueDate', 'Due Date'), render: (inv) => <span className="text-xs text-gray-400">{fmtDate(inv.due_at)}</span> },
+    { key: "balance", header: t('finance.balance', 'Balance'), render: (inv) => <span className="text-xs text-gray-400">{fmtCurrency(inv.balance, inv.currency)}</span> },
+    { key: "amount", header: t('finance.amount', 'Amount'), render: (inv) => <span className="text-white font-bold">{fmtCurrency(inv.amount, inv.currency)}</span> },
     {
       key: "actions",
       header: "",
@@ -161,20 +194,31 @@ export default function InvoicesPage() {
         {loading ? <LoadingSkeleton type="table" rows={8}/> : filtered.length === 0 && invoices.length === 0 ? <EmptyState message={t('finance.noInvoices', 'No invoices found.')} /> : <>
           <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('finance.searchInvoices', 'Search invoices...')}/>
           <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(inv) => { setSelected(inv as Invoice); setEditing(false); setEditForm({ status: inv.status || "", due_at: inv.due_at || "" }); }}/>
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? t('common.loading', 'Loading...') : 'Load more'}
+              </button>
+            </div>
+          )}
         </>}
 
-      <ModalForm open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} title={editing ? `Edit: ${selected?.invoice_number}` : selected?.invoice_number || ''} footer={editing ? (<><button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Cancel</button><button onClick={async () => { try { await api.patch(`/invoices/${selected!.id}/`, editForm); showToast("success", "Updated"); setEditing(false); setSelected(null); qc.invalidateQueries({ queryKey: ["invoices"] }); } catch(e:any) { showToast("error", e.message); }}} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Save</button></>) : (<><button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button><button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Edit</button></>)}>
+      <ModalForm open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} title={editing ? `Edit: ${selected?.invoice_number}` : selected?.invoice_number || ''} footer={editing ? (<><button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Cancel</button><button onClick={async () => { try { await api.patch(`/invoices/${selected!.id}/`, editForm); showToast("success", "Updated"); setEditing(false); setSelected(null); setPage(1); setLoading(true); loadInvoices(1, false); } catch(e:any) { showToast("error", e.message); }}} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Save</button></>) : (<><button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button><button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Edit</button></>)}>
         {selected && (<div className="space-y-6"><div className="grid grid-cols-2 gap-4">
           <div><p className="text-xs text-gray-500 mb-0.5">Invoice #</p><p className="text-sm text-white">{selected.invoice_number}</p></div>
           <div><p className="text-xs text-gray-500 mb-0.5">Student</p><p className="text-sm text-white">{selected.student_name}</p></div>
-          <div><p className="text-xs text-gray-500 mb-0.5">Amount</p><p className="text-sm text-white">{parseFloat(selected.amount).toLocaleString()} {selected.currency}</p></div>
-          <div><p className="text-xs text-gray-500 mb-0.5">Balance</p><p className="text-sm text-white">{parseFloat(selected.balance).toLocaleString()} {selected.currency}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Amount</p><p className="text-sm text-white">{fmtCurrency(selected.amount, selected.currency)}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">Balance</p><p className="text-sm text-white">{fmtCurrency(selected.balance, selected.currency)}</p></div>
           {editing ? (
             <div><p className="text-xs text-gray-500 mb-0.5">Status</p><select value={editForm.status} onChange={e => setEditForm(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm"><option value="draft">Draft</option><option value="issued">Issued</option><option value="paid">Paid</option><option value="partially_paid">Partially Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option></select></div>
           ) : (<div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selected.status}</p></div>)}
           {editing ? (
             <div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><input type="date" value={editForm.due_at} onChange={e => setEditForm(p => ({...p, due_at: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm" /></div>
-          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><p className="text-sm text-white">{selected.due_at ? new Date(selected.due_at).toLocaleDateString() : '—'}</p></div>)}
+          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><p className="text-sm text-white">{fmtDate(selected.due_at)}</p></div>)}
         </div></div>)}
       </ModalForm>
       </main>

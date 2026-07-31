@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -104,6 +105,13 @@ export default function LoginPage() {
 
           
         </form>
+
+        <p className="text-center text-sm text-gray-600 mt-8">
+          {t("studentLoginQuestion", "Student?")}{" "}
+          <Link href="/student/login" className="text-gold-500 hover:underline">
+            {t("studentLoginLink", "Go to Student Login")}
+          </Link>
+        </p>
       </div>
     </div>
   );

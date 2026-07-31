@@ -22,10 +22,10 @@ import { PageHeader } from "@/components/page-header";
 interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: number; competencies_acquired?: number; observations?: string; }
 
 export default function StudentFlightsPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
-  const [log, setLog] = useState<{ total_flight_hours: number; total_lessons: number; lessons: FlightEntry[] } | null>(null);
+  const [log, setLog] = useState<{ total_flight_hours: number; total_lessons: number; program?: string | null; student_name?: string | null; student_number?: string | null; lessons: FlightEntry[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -38,9 +38,9 @@ export default function StudentFlightsPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
-    api.get<{ total_flight_hours: number; total_lessons: number; lessons: FlightEntry[] }>("/students/flight-log/")
+    api.get<{ total_flight_hours: number; total_lessons: number; program?: string | null; student_name?: string | null; student_number?: string | null; lessons: FlightEntry[] }>("/students/flight-log/")
       .then(data => {
-        const payload = (data as unknown as { total_flight_hours: number; total_lessons: number; lessons: FlightEntry[] });
+        const payload = (data as unknown as { total_flight_hours: number; total_lessons: number; program?: string | null; student_name?: string | null; student_number?: string | null; lessons: FlightEntry[] });
         setLog(payload);
         setError(null);
       })
@@ -83,8 +83,12 @@ export default function StudentFlightsPage() {
     doc.setTextColor(10, 22, 40);
     doc.text(t('student.logbookTitle'), 14, 20);
     doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    const studentRef = log?.student_name || user?.name || "";
+    doc.text(`${t('common.student', 'Student')}: ${studentRef}${log?.student_number ? ` (${log.student_number})` : ""}`, 14, 28);
+    doc.text(`${t('common.program', 'Program')}: ${log?.program || "—"}`, 14, 34);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${t('student.totalHoursLabel')} ${log?.total_flight_hours || 0}h  |  ${t('student.lessonsLabel')} ${log?.total_lessons || 0}`, 14, 28);
+    doc.text(`${t('student.totalHoursLabel')} ${log?.total_flight_hours || 0}h  |  ${t('student.lessonsLabel')} ${log?.total_lessons || 0}`, 14, 40);
 
     const rows = lessons.map(l => [
       l.date,
@@ -96,7 +100,7 @@ export default function StudentFlightsPage() {
     autoTable(doc, {
       head: [[t("date"), t("aircraft"), t("duration"), t("common.grade")]],
       body: rows,
-      startY: 34,
+      startY: 46,
       theme: 'grid',
       headStyles: { fillColor: [196, 148, 60] },
       styles: { fontSize: 9, textColor: [30, 41, 59] },

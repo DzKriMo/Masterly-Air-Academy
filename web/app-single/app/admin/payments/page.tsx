@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
+import { fmtCurrency, fmtDate } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -25,10 +26,11 @@ interface Payment {
   invoice_number: string;
   invoice: string;
   amount: string;
+  currency: string;
   method: string;
   reference: string;
   notes: string;
-  created_at: string;
+  paid_at: string;
 }
 
 interface Student {
@@ -74,6 +76,14 @@ export default function AdminPaymentsPage() {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
 
+  // ── Pagination state ──
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   // ── Detail modal ──
   const [selected, setSelected] = useState<Payment | null>(null);
 
@@ -92,19 +102,33 @@ export default function AdminPaymentsPage() {
   // ── Auth guard ──
 
   // ── Data queries ──
-  const {
-    data: payments,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<Payment[]>({
-    queryKey: ["admin-payments"],
-    queryFn: async () => {
-      const d = await api.get<any>("/payments/");
-      return (d as any) ?.results || (d as any) || [];
-    },
-    enabled: isAuthenticated,
-  });
+  const loadPayments = useCallback(async (p: number, append: boolean) => {
+    try {
+      const d = await api.get<any>(p > 1 ? `/payments/?page=${p}` : "/payments/");
+      const results = d?.results || (Array.isArray(d) ? d : []);
+      setPayments((prev) => (append ? [...prev, ...results] : results));
+      setHasMore(!!d?.next);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load payments");
+    } finally {
+      setIsLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setIsLoading(true);
+    loadPayments(1, false);
+  }, [isAuthenticated, loadPayments]);
+
+  const loadMore = () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setPage((p) => p + 1);
+    loadPayments(page + 1, true);
+  };
 
   const { data: students } = useQuery<Student[]>({
     queryKey: ["admin-students-dropdown"],
@@ -150,7 +174,9 @@ export default function AdminPaymentsPage() {
         reference: "",
         notes: "",
       });
-      queryClient.invalidateQueries({ queryKey: ["admin-payments"] });
+      setPage(1);
+      setIsLoading(true);
+      loadPayments(1, false);
       queryClient.invalidateQueries({ queryKey: ["admin-payments-stats"] });
     },
     onError: (err: any) => {
@@ -185,7 +211,7 @@ export default function AdminPaymentsPage() {
         header: "Amount",
         render: (i) => (
           <span className="font-mono text-white">
-            {parseFloat(i.amount).toLocaleString()} DZD
+            {fmtCurrency(i.amount, i.currency)}
           </span>
         ),
       },
@@ -200,13 +226,11 @@ export default function AdminPaymentsPage() {
       },
       { key: "reference", header: "Reference" },
       {
-        key: "created_at",
+        key: "paid_at",
         header: t("common.date", "Date"),
         render: (i) => (
           <span className="text-xs text-gray-500">
-            {i.created_at
-              ? new Date(i.created_at).toLocaleDateString()
-              : "—"}
+            {fmtDate(i.paid_at)}
           </span>
         ),
       },
@@ -234,15 +258,15 @@ export default function AdminPaymentsPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any).message || "Failed to load payments"}
-            onRetry={() => refetch()}
+            message={error || "Failed to load payments"}
+            onRetry={() => { setIsLoading(true); loadPayments(1, false); }}
           />
         )}
 
         {/* Stats bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatsCard label="Total Payments" value={isLoading ? "—" : `${(stats?.total_amount ?? 0).toLocaleString()} DZD`} />
-          <StatsCard label="This Month" value={isLoading ? "—" : `${(stats?.this_month ?? 0).toLocaleString()} DZD`} valueClassName="text-gold-500" />
+          <StatsCard label="Total Payments" value={isLoading ? "—" : fmtCurrency(stats?.total_amount ?? 0, "DZD")} />
+          <StatsCard label="This Month" value={isLoading ? "—" : fmtCurrency(stats?.this_month ?? 0, "DZD")} valueClassName="text-gold-500" />
           <div className="bg-navy-800 border border-navy-700 rounded-xl p-4">
             <p className="text-xs text-gray-500 uppercase tracking-wider">
               By Method
@@ -262,7 +286,7 @@ export default function AdminPaymentsPage() {
                       {formatMethod(method)}:
                     </span>
                     <span className="text-white font-mono">
-                      {amount.toLocaleString()}
+                      {fmtCurrency(amount, "DZD")}
                     </span>
                   </div>
                 ))
@@ -315,7 +339,20 @@ export default function AdminPaymentsPage() {
             }
           />
         ) : (
-          <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Payment)} />
+          <>
+            <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Payment)} />
+            {hasMore && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading..." : "Load more"}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Detail Modal */}
@@ -343,7 +380,7 @@ export default function AdminPaymentsPage() {
                   <DetailField label="Student" value={selected.student_name} />
                   <DetailField
                     label="Amount"
-                    value={`${parseFloat(selected.amount).toLocaleString()} DZD`}
+                    value={fmtCurrency(selected.amount, selected.currency)}
                   />
                   <DetailField label="Invoice #" value={selected.invoice_number} />
                   <DetailField
@@ -362,11 +399,7 @@ export default function AdminPaymentsPage() {
                   />
                   <DetailField
                     label="Date"
-                    value={
-                      selected.created_at
-                        ? new Date(selected.created_at).toLocaleDateString()
-                        : "—"
-                    }
+                    value={fmtDate(selected.paid_at)}
                   />
                   <div className="col-span-2">
                     <DetailField
@@ -447,12 +480,12 @@ export default function AdminPaymentsPage() {
                 className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
               >
                 <option value="">Select invoice (optional)...</option>
-                {(invoices || []).map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.invoice_number} - {inv.student_name} (
-                    {parseFloat(inv.amount).toLocaleString()} DZD)
-                  </option>
-                ))}
+                  {(invoices || []).map((inv) => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.invoice_number} - {inv.student_name} (
+                      {fmtCurrency(inv.amount, "DZD")})
+                    </option>
+                  ))}
               </select>
             </div>
             <div>

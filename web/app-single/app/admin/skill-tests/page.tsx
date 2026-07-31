@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -54,19 +54,19 @@ export default function AdminSkillTestsPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<ST[]>({
     queryKey: ["admin-st"],
-    queryFn: async () => { const d = await api.get<any>("/skill-tests/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/skill-tests/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: students = [] } = useQuery<any[]>({
     queryKey: ["admin-st-students"],
-    queryFn: async () => { const d = await api.get<any>("/students/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/students/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: instructors = [] } = useQuery<any[]>({
     queryKey: ["admin-st-instructors"],
-    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/flight-instructors/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -111,24 +111,24 @@ export default function AdminSkillTestsPage() {
     { key: "result", header: "Result", render: (a) => a.result ? <span className={`text-xs px-2 py-0.5 rounded ${a.result === "pass" ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>{fmtStatus(a.result)}</span> : <span className="text-xs text-gray-500">—</span> },
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, examiner: a.examiner, scheduled_date: a.scheduled_date, result: a.result || "", observations: a.observations || "", recommendations: a.recommendations || "", status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">Edit</button>
-        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">Delete</button>
+        <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, examiner: a.examiner, scheduled_date: a.scheduled_date, result: a.result || "", observations: a.observations || "", recommendations: a.recommendations || "", status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">{t('common.edit')}</button>
+        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">{t('common.delete')}</button>
       </div>
     )},
   ], []);
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Skill Tests" backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
+      <PageHeader title={t("admin.skillTests", "Skill Tests")} backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
         <button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">+ New Test</button>
       } />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed"} onRetry={() => refetch()} />}
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
           <EmptyState message={records?.length === 0 ? "No skill tests yet." : "No matches."} title={records?.length === 0 ? "No tests" : "No matches"} action={records?.length === 0 ? { label: "New Test", onClick: () => setCreateOpen(true) } : undefined} />
         ) : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(i) => setSelected(i as ST)} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Skill Test Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Skill Test Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
             <DetailField label="Student" value={selected.student_name} />
             <DetailField label="Examiner" value={selected.examiner_name} />
@@ -143,7 +143,7 @@ export default function AdminSkillTestsPage() {
         </ModalForm>
 
         <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} title="New Skill Test" footer={<>
-          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => createMutation.mutate(buildPayload(createForm))} disabled={createMutation.isPending || !createForm.student || !createForm.examiner || !createForm.scheduled_date} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button>
         </>}>
           <div className="space-y-4">
@@ -167,7 +167,7 @@ export default function AdminSkillTestsPage() {
         </ModalForm>
 
         <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Skill Test" footer={<>
-          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: buildPayload(editForm) }); }} disabled={updateMutation.isPending || !editForm.student || !editForm.examiner || !editForm.scheduled_date} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button>
         </>}>
           <div className="space-y-4">
@@ -200,7 +200,7 @@ export default function AdminSkillTestsPage() {
               <h3 className="text-lg font-semibold text-white">Delete Skill Test</h3>
               <p className="text-sm text-gray-400">Remove test for {deleteTarget.student_name}?</p>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
                 <button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button>
               </div>
             </div>

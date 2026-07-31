@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -14,9 +15,10 @@ import { PageHeader } from "@/components/page-header";
 /* ── Types ────────────────────────────────────────── */
 interface HistoryEvent {
   id: string;
-  event_type: "exam" | "progress_check" | "skill_test" | "certificate";
+  type: "exam" | "progress_check" | "skill_test" | "certificate";
   date: string;
   title: string;
+  detail?: string;
   subject?: string;
   grade?: number;
   is_passed?: boolean;
@@ -71,6 +73,7 @@ const EVENT_META: Record<string, { label: string; icon: string; color: string; b
 export default function StudentHistoryPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
   const [events, setEvents] = useState<HistoryEvent[]>([]);
   const [studentInfo, setStudentInfo] = useState<{ name: string; program: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +106,7 @@ export default function StudentHistoryPage() {
   /* ── Filters ──────────────────────────────────── */
   const filterOptions: FilterOption[] = [
     {
-      key: "event_type",
+      key: "type",
       label: t("common.allTypes", "All Types"),
       options: [
         { value: "exam", label: t("history.exam", "Exam") },
@@ -115,7 +118,7 @@ export default function StudentHistoryPage() {
   ];
 
   const filteredEvents = events.filter((e) => {
-    if (filters.event_type && e.event_type !== filters.event_type) return false;
+    if (filters.type && e.type !== filters.type) return false;
     if (search && !e.title?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -128,6 +131,16 @@ export default function StudentHistoryPage() {
   /* ── Render helpers ───────────────────────────── */
   const getMeta = (type: string) =>
     EVENT_META[type] || EVENT_META.exam;
+
+  const eventLink = (ev: HistoryEvent) => {
+    switch (ev.type) {
+      case 'exam': return `/student/exams?focus=${ev.id}`;
+      case 'certificate': return `/student/certificates`;
+      case 'skill_test': return `/student/flights`;
+      case 'progress_check': return `/student/flights`;
+      default: return '#';
+    }
+  };
 
   const renderEventIcon = (meta: typeof EVENT_META.exam) => (
     <svg
@@ -143,6 +156,13 @@ export default function StudentHistoryPage() {
 
   const renderEventDetails = (ev: HistoryEvent) => {
     const parts: React.ReactNode[] = [];
+    if (ev.detail) {
+      parts.push(
+        <span key="detail" className="text-xs text-gray-500">
+          {ev.detail}
+        </span>
+      );
+    }
     if (ev.subject) {
       parts.push(
         <span key="subject" className="text-xs text-gray-500">
@@ -286,7 +306,7 @@ export default function StudentHistoryPage() {
 
                 <div className="space-y-0">
                   {sorted.map((ev) => {
-                    const meta = getMeta(ev.event_type);
+                    const meta = getMeta(ev.type);
                     return (
                       <div key={ev.id} className="relative flex items-start gap-5 pb-8 last:pb-0">
                         {/* Timeline dot */}
@@ -299,7 +319,7 @@ export default function StudentHistoryPage() {
                         </div>
 
                         {/* Event card */}
-                        <div className="flex-1 min-w-0 bg-navy-800 border border-navy-700 rounded-xl p-5 hover:bg-navy-700/50 transition-colors">
+                        <div className="flex-1 min-w-0 bg-navy-800 border border-navy-700 rounded-xl p-5 hover:bg-navy-700/50 transition-colors cursor-pointer" onClick={() => router.push(eventLink(ev))}>
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <h3 className="text-white font-bold text-base">
                               {ev.title}

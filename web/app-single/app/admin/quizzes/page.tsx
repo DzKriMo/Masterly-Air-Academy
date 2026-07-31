@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -83,7 +83,7 @@ export default function AdminQuizzesPage() {
     queryKey: ["admin-quizzes"],
     queryFn: async () => {
       const d = await api.get<any>("/quizzes/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -92,7 +92,7 @@ export default function AdminQuizzesPage() {
     queryKey: ["admin-quiz-modules"],
     queryFn: async () => {
       const d = await api.get<any>("/modules/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -286,7 +286,7 @@ export default function AdminQuizzesPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load quizzes"}
+            message={error?.message || "Failed to load quizzes"}
             onRetry={() => refetch()}
           />
         )}

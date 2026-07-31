@@ -1,11 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -59,7 +58,6 @@ function truncate(str: string | null, len: number): string {
 export default function AdminNCRsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   useAuthGuard(isAuthenticated, authLoading);
-  const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -74,19 +72,19 @@ export default function AdminNCRsPage() {
 
   const { data: ncrs, isLoading, error, refetch } = useQuery<NCR[]>({
     queryKey: ["admin-ncrs"],
-    queryFn: async () => { const d = await api.get<any>("/non-conformities/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/non-conformities/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: audits = [] } = useQuery<any[]>({
     queryKey: ["admin-ncr-audits"],
-    queryFn: async () => { const d = await api.get<any>("/audits/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/audits/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["admin-ncr-users"],
-    queryFn: async () => { const d = await api.get<any>("/users/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/users/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -129,7 +127,7 @@ export default function AdminNCRsPage() {
     {
       key: "actions", header: "", render: (n) => (
         <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => setDeleteTarget(n)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">Delete</button>
+          <button onClick={() => setDeleteTarget(n)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">{t('common.delete')}</button>
         </div>
       ),
     },
@@ -137,14 +135,14 @@ export default function AdminNCRsPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Non-Conformities" backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ New NCR</button>} />
+      <PageHeader title={t("admin.nonConformities", "Non-Conformities")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ New NCR</button>} />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed to load"} onRetry={() => refetch()} />}
         <FilterBar filters={[{ key: "severity", label: "All Severities", options: ["low", "medium", "high", "critical"].map((s) => ({ value: s, label: fmtStatus(s) })) }, { key: "status", label: "All Statuses", options: [{ value: "open", label: "Open" }, { value: "closed", label: "Closed" }] }, { key: "audit", label: "All Audits", options: audits.map((a: any) => ({ value: a.id, label: a.title })) }]} values={filterValues} onChange={(k, v) => setFilterValues((p) => ({ ...p, [k]: v }))} onClear={() => { setFilterValues({}); setSearchValue(""); }} searchValue={searchValue} onSearchChange={setSearchValue} searchPlaceholder="Search NCRs..." />
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={ncrs?.length === 0 ? "No NCRs yet." : "No matches."} title={ncrs?.length === 0 ? "No NCRs yet" : "No matches"} action={ncrs?.length === 0 ? { label: "New NCR", onClick: () => setCreateOpen(true) } : undefined} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as NCR)} />}
 
         {/* Detail */}
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title={`${selected?.ncr_number || ""} - ${selected?.title || ""}`} wide footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title={`${selected?.ncr_number || ""} - ${selected?.title || ""}`} wide footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && (
             <div className="space-y-6">
               <section><h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">NCR Details</h3>
@@ -171,7 +169,7 @@ export default function AdminNCRsPage() {
         </ModalForm>
 
         {/* Create */}
-        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ audit: "", title: "", description: "", severity: "medium", responsible: "", due_date: "" }); setCreateError(""); }} title="New Non-Conformity" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ audit: "", title: "", description: "", severity: "medium", responsible: "", due_date: "" }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.title || !createForm.description} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
+        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ audit: "", title: "", description: "", severity: "medium", responsible: "", due_date: "" }); setCreateError(""); }} title="New Non-Conformity" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ audit: "", title: "", description: "", severity: "medium", responsible: "", due_date: "" }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.title || !createForm.description} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
           <div className="space-y-4">
             {createError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>}
             <div><label className="block text-sm text-gray-400 mb-1">Title <span className="text-red-400">*</span></label><input type="text" value={createForm.title} onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
@@ -186,7 +184,7 @@ export default function AdminNCRsPage() {
         </ModalForm>
 
         {/* Delete */}
-        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete NCR</h3><p className="text-sm text-gray-400">Delete {deleteTarget.ncr_number}?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
+        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete NCR</h3><p className="text-sm text-gray-400">Delete {deleteTarget.ncr_number}?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
       </main>
     </div>
   );

@@ -23,7 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function QualityDashboard() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const TABS = ["overview", "audits", "ncrs", "capas", "risks", "safety", "documents"] as const;
   const tabLabels: Record<string, string> = {
@@ -126,12 +126,6 @@ export default function QualityDashboard() {
               { label: t('quality.ncrsExcel', 'NCRs (Excel)'), url: "/export/non-conformities/", filename: "ncrs.xlsx", type: "excel" },
               { label: t('quality.capasExcel', 'CAPAs (Excel)'), url: "/export/capas/", filename: "capas.xlsx", type: "excel" },
             ]} />
-            <button
-              onClick={async () => { await logout(); window.location.href = "/login"; }}
-              className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10"
-            >
-              {t('common.signOut', 'Logout')}
-            </button>
           </div>
         </div>
       </nav>

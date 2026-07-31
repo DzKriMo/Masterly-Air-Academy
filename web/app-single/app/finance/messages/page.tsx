@@ -37,7 +37,7 @@ interface UserOption {
 
 type Tab = "inbox" | "sent";
 
-export default function StudentMessagesPage() {
+export default function FinanceMessagesPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
@@ -45,15 +45,18 @@ export default function StudentMessagesPage() {
 
   const [received, setReceived] = useState<Msg[]>([]);
   const [sent, setSent] = useState<Msg[]>([]);
-  const [inboxPage, setInboxPage] = useState(1);
-  const [inboxHasMore, setInboxHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("inbox");
 
-  // Compose modal
+  const [receivedPage, setReceivedPage] = useState(1);
+  const [sentPage, setSentPage] = useState(1);
+  const [hasMoreRecv, setHasMoreRecv] = useState(false);
+  const [hasMoreSent, setHasMoreSent] = useState(false);
+
   const [composeOpen, setComposeOpen] = useState(false);
   const [recipients, setRecipients] = useState<UserOption[]>([]);
   const [recipientId, setRecipientId] = useState("");
@@ -61,69 +64,80 @@ export default function StudentMessagesPage() {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Reply modal
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
-  // View message modal
   const [viewMsg, setViewMsg] = useState<Msg | null>(null);
+
+  useAuthGuard(isAuthenticated, isLoading, "/login");
 
   const openView = (msg: Msg) => {
     setViewMsg(msg);
-    // Mark as read if unread and in inbox
     if (activeTab === 'inbox' && !msg.is_read) {
       api.post(`/messages/${msg.id}/mark_read/`).catch(() => {});
       setReceived(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
     }
   };
 
-  useAuthGuard(isAuthenticated, isLoading, "/student/login");
-
-  // Load recipients (admin and instructor roles - filter client-side)
   const loadRecipients = useCallback(() => {
     if (!isAuthenticated) return;
     api.get("/users/")
       .then((d: any) => {
         const allUsers = d.results || [];
-        const allowedRoles = ['admin', 'instructor', 'system_admin', 'flight_instructor', 'chief_flight_instructor', 'ground_instructor', 'admin_responsible', 'admin_agent', 'quality_manager', 'finance_manager'];
-        setRecipients(allUsers.filter((u: any) => allowedRoles.includes(u.role)));
+        setRecipients(allUsers.filter((u: any) => u.id !== user?.id));
       })
       .catch(() => {});
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.id]);
 
   const loadMessages = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
     Promise.all([
-      api.get("/messages/?page=1").catch(() => ({ results: [] })),
-      api.get("/messages/sent/").catch(() => []),
+      api.get("/messages/?page=1").catch(() => ({ results: [], next: null })),
+      api.get("/messages/sent/?page=1").catch(() => ({ results: [], next: null })),
     ]).then(([recvData, sentData]: any) => {
-      setReceived(recvData.results || []);
-      setInboxHasMore(!!recvData.next);
-      setInboxPage(1);
-      setSent(Array.isArray(sentData) ? sentData : sentData.results || []);
+      setReceived(recvData.results || recvData || []);
+      setSent(sentData.results || sentData || []);
+      setHasMoreRecv(!!recvData.next);
+      setHasMoreSent(!!sentData.next);
+      setReceivedPage(1);
+      setSentPage(1);
       setError(null);
     }).catch(err => {
       console.error("Failed to load messages:", err);
       setError(t('student.messagesLoadError', "Failed to load messages. Please try again."));
     }).finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   useEffect(() => { loadMessages(); }, [loadMessages]);
 
-  const loadMoreInbox = useCallback(() => {
-    if (!isAuthenticated) return;
-    api.get<any>(`/messages/?page=${inboxPage + 1}`)
-      .then((d: any) => {
-        setReceived(prev => [...prev, ...(d.results || [])]);
-        setInboxHasMore(!!d.next);
-        setInboxPage(p => p + 1);
-      })
-      .catch(() => {});
-  }, [isAuthenticated, inboxPage]);
+  const loadMoreMessages = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const isInbox = activeTab === "inbox";
+      const nextPage = isInbox ? receivedPage + 1 : sentPage + 1;
+      const path = isInbox ? `/messages/?page=${nextPage}` : `/messages/sent/?page=${nextPage}`;
+      const d = await api.get(path);
+      const results = d?.results || (Array.isArray(d) ? d : []);
+      if (isInbox) {
+        setReceived(prev => [...prev, ...results]);
+        setHasMoreRecv(!!d.next);
+        setReceivedPage(nextPage);
+      } else {
+        setSent(prev => [...prev, ...results]);
+        setHasMoreSent(!!d.next);
+        setSentPage(nextPage);
+      }
+    } catch {
+      setError(t('student.messagesLoadError', "Failed to load messages. Please try again."));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!recipientId || !subject.trim() || !body.trim()) {
@@ -197,6 +211,8 @@ export default function StudentMessagesPage() {
     return true;
   });
 
+  const unreadCount = received.filter(m => !m.is_read).length;
+
   const inboxColumns: Column<Msg>[] = [
     { key: "sender_name", header: t('student.from', 'From'), render: (item) => (
       <span className={`text-sm ${!item.is_read ? "text-white font-medium" : "text-gray-400"}`}>{item.sender_name}</span>
@@ -243,9 +259,9 @@ export default function StudentMessagesPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       <PageHeader
-        title={t('student.messages')}
-        backHref="/student/dashboard"
-        backLabel={t('student.backToDashboard')}
+        title={t("finance.messages", "Messages")}
+        backHref="/finance/dashboard"
+        backLabel={t('finance.dashboard', 'Back to Dashboard')}
         maxWidth="max-w-4xl"
         actions={
           <button onClick={openCompose} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors">
@@ -256,9 +272,17 @@ export default function StudentMessagesPage() {
       <main className="max-w-4xl mx-auto px-6 py-8">
         {error && <ErrorCard message={error} onRetry={loadMessages} />}
 
+        {unreadCount > 0 && !loading && (
+          <div className="mb-4 flex items-center gap-2 bg-gold-500/10 border border-gold-500/30 rounded-lg px-4 py-2.5 w-fit">
+            <span className="inline-block w-2 h-2 bg-gold-500 rounded-full" />
+            <span className="text-sm text-gold-400 font-medium">
+              {unreadCount} {unreadCount === 1 ? t('student.unreadMsg', 'unread message') : t('student.unreadMsgs', 'unread messages')}
+            </span>
+          </div>
+        )}
+
         {loading ? <LoadingSkeleton type="table" rows={5} /> : (
           <>
-            {/* Tab Switcher */}
             <div className="flex gap-1 mb-4 bg-navy-800 rounded-lg p-1 border border-navy-700 w-fit">
               <button onClick={() => setActiveTab("inbox")}
                 className={`px-4 py-2 text-sm rounded-md transition-colors ${activeTab === "inbox" ? "bg-gold-500 text-navy-900 font-semibold" : "text-gray-400 hover:text-white"}`}>
@@ -295,10 +319,14 @@ export default function StudentMessagesPage() {
                   onRowClick={(msg) => openView(msg as Msg)}
                   emptyMessage={t('student.noMessagesFilter', 'No messages match your filters.')}
                 />
-                {activeTab === "inbox" && inboxHasMore && (
-                  <div className="mt-4 text-center">
-                    <button onClick={loadMoreInbox} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
-                      {t('common.loadMore', 'Load more')}
+                {(activeTab === "inbox" ? hasMoreRecv : hasMoreSent) && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={loadMoreMessages}
+                      disabled={loadingMore}
+                      className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
+                    >
+                      {loadingMore ? t('common.loading', 'Loading...') : 'Load more'}
                     </button>
                   </div>
                 )}

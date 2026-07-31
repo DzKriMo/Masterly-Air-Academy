@@ -65,6 +65,12 @@ export default function MedicalPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
+                    {cert.file_url && (
+                      <a href={cert.file_url} target="_blank" rel="noopener noreferrer"
+                        className="shrink-0 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
+                        {t('common.download', 'Download')}
+                      </a>
+                    )}
                     <div className="flex-1 bg-navy-900 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${days < 0 ? 'bg-red-500' : days < 30 ? 'bg-yellow-500' : 'bg-green-500'}`}

@@ -16,6 +16,8 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ resource_type: "", resource_id: "", start_time: "", end_time: "", notes: "" });
 
@@ -35,12 +37,14 @@ export default function BookingsPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     Promise.all([
-      api.get<any>("/resource-bookings/"),
+      api.get<any>("/resource-bookings/?page=1"),
       api.get<any>("/aircraft/").catch(() => ({ results: [] })),
       api.get<any>("/rooms/").catch(() => ({ results: [] })),
       api.get<any>("/simulators/").catch(() => ({ results: [] })),
     ]).then(([bookRes, acRes, roomRes, simRes]) => {
       setBookings((bookRes as any)?.results || []);
+      setHasMore(!!(bookRes as any)?.next);
+      setPage(1);
       setAircraft(((acRes as any)?.results || []).filter((a: any) => a.status !== "retired"));
       setRooms((roomRes as any)?.results || []);
       setSimulators((simRes as any)?.results || []);
@@ -49,6 +53,16 @@ export default function BookingsPage() {
   };
 
   useEffect(() => { fetchBookings(); }, [isAuthenticated]);
+
+  const loadMore = () => {
+    api.get<any>(`/resource-bookings/?page=${page + 1}`)
+      .then((bookRes) => {
+        setBookings(prev => [...prev, ...((bookRes as any)?.results || [])]);
+        setHasMore(!!(bookRes as any)?.next);
+        setPage(p => p + 1);
+      })
+      .catch(() => {});
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,6 +197,13 @@ export default function BookingsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {hasMore && (
+          <div className="mt-4 text-center">
+            <button onClick={loadMore} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+              {t('common.loadMore', 'Load more')}
+            </button>
           </div>
         )}
       </div>

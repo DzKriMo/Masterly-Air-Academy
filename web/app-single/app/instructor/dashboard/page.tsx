@@ -38,7 +38,7 @@ export default function InstructorDashboard() {
 
   const { data: alertsData } = useQuery({
     queryKey: ['instr-alerts'],
-    queryFn: () => api.get<any>("/notifications/?limit=5").then(r => (r as unknown as any).results || []),
+    queryFn: () => api.get<any>("/notifications/").then(r => (r as unknown as any).results || []),
     enabled: isAuthenticated,
   });
   const alerts: any[] = alertsData || [];
@@ -89,7 +89,7 @@ export default function InstructorDashboard() {
 
             {/* Alerts */}
             <div className="bg-navy-800 rounded-xl border border-navy-700 p-6 mb-8">
-              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('common.notifications')}</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('common.notifications', 'Notifications')}</h3>
               {alerts.length === 0 ? (
                 <p className="text-sm text-gray-500">{t('common.noData', 'No notifications')}</p>
               ) : (

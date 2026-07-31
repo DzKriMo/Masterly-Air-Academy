@@ -155,6 +155,12 @@ class ApiClient {
   }
 }
 
+export function unwrapResults<T>(response: any, fallback: T[] = []): T[] {
+  if (response?.results && Array.isArray(response.results)) return response.results as T[];
+  if (Array.isArray(response)) return response as T[];
+  return fallback;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,

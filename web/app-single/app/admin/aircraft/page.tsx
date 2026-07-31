@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -173,8 +173,7 @@ export default function AdminAircraftPage() {
         loadMaintHistory(selectedAircraft.id);
         // Refetch the aircraft to update next_maintenance in the modal
         api.get<any>(`/aircraft/${selectedAircraft.id}/`).then(d => {
-          const updated = (d as any)?.data || d;
-          setSelectedAircraft(updated);
+          setSelectedAircraft(d as Aircraft);
         }).catch(() => {});
       }
     },
@@ -184,7 +183,7 @@ export default function AdminAircraftPage() {
   const loadMaintHistory = async (aircraftId: string) => {
     try {
       const d = await api.get<any>(`/maintenance-records/?aircraft=${aircraftId}`);
-      const results = (d as any)?.results || (Array.isArray(d) ? d : []);
+      const results = unwrapResults<MaintRecord>(d);
       setMaintHistory(results);
     } catch (err) {
       console.error('Failed to load maintenance history:', err);
@@ -321,7 +320,7 @@ export default function AdminAircraftPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load aircraft"}
+            message={error?.message || "Failed to load aircraft"}
             onRetry={() => refetch()}
           />
         )}

@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -53,7 +53,7 @@ interface SubjectFormData {
 
 export default function AdminSubjectsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
 
   // ── Filter state ──
@@ -117,11 +117,6 @@ export default function AdminSubjectsPage() {
     setDetailOpen(false);
     setEditOpen(true);
   }, []);
-
-  // ── Auth guard ──
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
 
   // ── Query ──
   const {
@@ -240,7 +235,7 @@ export default function AdminSubjectsPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load subjects"}
+            message={error?.message || "Failed to load subjects"}
             onRetry={() => refetch()}
           />
         )}

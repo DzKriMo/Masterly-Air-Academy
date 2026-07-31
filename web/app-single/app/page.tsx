@@ -380,7 +380,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110} className="opacity-80" /><span>{t("app_name")}, {t("tagline")}</span></div>
-            <div className="flex gap-4"><span>{t("footer_onprem")}</span><span className="text-gray-700">|</span><span>{t("footer_languages")}</span></div>
+            <div className="flex gap-4"><span>{t("footer_languages")}</span></div>
           </div>
           <p className="text-center text-xs text-gray-600 mt-6">&copy; {new Date().getFullYear()} {t("footer_copyright")}</p>
         </div>

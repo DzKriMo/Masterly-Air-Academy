@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -14,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { generateStrongPassword, copyToClipboard } from "@/lib/password";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -21,13 +22,14 @@ interface Application {
   id: string;
   application_number: string;
   student_name: string;
-  student_id: string;
+  student: string;
   status: string;
-  created_at: string;
+  submitted_at: string;
   reviewed_at: string | null;
   notes: string | null;
   interview_date: string | null;
   test_date: string | null;
+  documents: Record<string, string>[];
 }
 
 interface ApplicationStats {
@@ -67,6 +69,13 @@ function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
 // ── Component ─────────────────────────────────────────────
 
 export default function AdminApplicationsPage() {
@@ -92,6 +101,10 @@ export default function AdminApplicationsPage() {
     notes: "",
     interview_date: "",
     test_date: "",
+    activate_student: false,
+    student_email: "",
+    student_username: "",
+    student_password: "",
   });
 
   // ── Auth guard ──
@@ -106,7 +119,7 @@ export default function AdminApplicationsPage() {
     queryKey: ["admin-applications"],
     queryFn: async () => {
       const d = await api.get<any>("/applications/");
-      return (d as any) ?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -130,14 +143,22 @@ export default function AdminApplicationsPage() {
       notes: string;
       interview_date: string;
       test_date: string;
+      activate_student?: boolean;
+      student_email?: string;
+      student_username?: string;
+      student_password?: string;
     }) => {
       return api.post(`/applications/${id}/review/`, payload);
     },
-    onSuccess: () => {
-      showToast("success", "Application reviewed successfully");
+    onSuccess: (data: any, variables) => {
+      if (variables.activate_student) {
+        showToast("success", "Application accepted and student account created");
+      } else {
+        showToast("success", "Application reviewed successfully");
+      }
       setReviewOpen(false);
       setSelectedApp(null);
-      setReviewForm({ status: "", notes: "", interview_date: "", test_date: "" });
+      setReviewForm({ status: "", notes: "", interview_date: "", test_date: "", activate_student: false, student_email: "", student_username: "", student_password: "" });
       queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
       queryClient.invalidateQueries({ queryKey: ["admin-applications-stats"] });
     },
@@ -164,12 +185,18 @@ export default function AdminApplicationsPage() {
 
   // ── Open review modal ──
   const openReview = useCallback((app: Application) => {
+    const doc = app.documents?.[0] || {};
+    const email = doc.email || "";
     setSelectedApp(app);
     setReviewForm({
       status: app.status,
       notes: app.notes || "",
-      interview_date: app.interview_date || "",
-      test_date: app.test_date || "",
+      interview_date: toDateInputValue(app.interview_date),
+      test_date: toDateInputValue(app.test_date),
+      activate_student: false,
+      student_email: email,
+      student_username: email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_"),
+      student_password: "",
     });
     setReviewOpen(true);
   }, []);
@@ -201,11 +228,11 @@ export default function AdminApplicationsPage() {
         ),
       },
       {
-        key: "created_at",
+        key: "submitted_at",
         header: t("common.date", "Submitted"),
         render: (i) => (
           <span className="text-xs text-gray-500">
-            {i.created_at ? new Date(i.created_at).toLocaleDateString() : "—"}
+            {i.submitted_at ? new Date(i.submitted_at).toLocaleDateString() : "—"}
           </span>
         ),
       },
@@ -222,17 +249,25 @@ export default function AdminApplicationsPage() {
         key: "actions",
         header: t("common.actions", "Actions"),
         sortable: false,
-        render: (i) => (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              openReview(i);
-            }}
-            className="text-xs px-3 py-1.5 rounded bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 font-medium transition-colors"
-          >
-            Review
-          </button>
-        ),
+        render: (i) => {
+          const disabled = ["accepted", "rejected"].includes(i.status);
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openReview(i);
+              }}
+              disabled={disabled}
+              className={`text-xs px-3 py-1.5 rounded font-medium transition-colors ${
+                disabled
+                  ? "bg-gray-500/10 text-gray-500 cursor-not-allowed"
+                  : "bg-gold-500/20 text-gold-500 hover:bg-gold-500/30"
+              }`}
+            >
+              Review
+            </button>
+          );
+        },
       },
     ],
     [t, openReview]
@@ -255,7 +290,7 @@ export default function AdminApplicationsPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any).message || "Failed to load applications"}
+            message={error?.message || "Failed to load applications"}
             onRetry={() => refetch()}
           />
         )}
@@ -338,9 +373,24 @@ export default function AdminApplicationsPage() {
               <button
                 onClick={() => {
                   if (!selectedApp) return;
+                  if (
+                    reviewForm.status === "accepted" &&
+                    reviewForm.activate_student &&
+                    (!reviewForm.student_password || reviewForm.student_password.length < 8)
+                  ) {
+                    showToast("error", "A password of at least 8 characters is required");
+                    return;
+                  }
                   reviewMutation.mutate({
                     id: selectedApp.id,
-                    ...reviewForm,
+                    status: reviewForm.status,
+                    notes: reviewForm.notes,
+                    interview_date: reviewForm.interview_date,
+                    test_date: reviewForm.test_date,
+                    activate_student: reviewForm.activate_student,
+                    student_email: reviewForm.student_email,
+                    student_username: reviewForm.student_username,
+                    student_password: reviewForm.student_password,
                   });
                 }}
                 disabled={reviewMutation.isPending || !reviewForm.status}
@@ -348,6 +398,8 @@ export default function AdminApplicationsPage() {
               >
                 {reviewMutation.isPending
                   ? "Saving..."
+                  : reviewForm.status === "accepted" && reviewForm.activate_student
+                  ? "Accept & Create Account"
                   : t("common.save", "Save Review")}
               </button>
             </>
@@ -423,6 +475,104 @@ export default function AdminApplicationsPage() {
                 />
               </div>
             </div>
+            {reviewForm.status === "accepted" && (
+              <div className="border-t border-navy-700 pt-4 space-y-4">
+                <label className="flex items-center gap-3 p-3 bg-navy-900 border border-navy-700 rounded-lg cursor-pointer hover:border-gold-500/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={reviewForm.activate_student}
+                    onChange={(e) =>
+                      setReviewForm((f) => ({ ...f, activate_student: e.target.checked }))
+                    }
+                    className="w-4 h-4 accent-gold-500"
+                  />
+                  <div>
+                    <p className="text-sm text-white font-medium">Create Student Account</p>
+                    <p className="text-xs text-gray-500">Promote candidate to active student and set credentials</p>
+                  </div>
+                </label>
+
+                {reviewForm.activate_student && (
+                  <div className="space-y-4 bg-navy-900/60 border border-navy-700 rounded-lg p-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={reviewForm.student_email}
+                        onChange={(e) =>
+                          setReviewForm((f) => ({ ...f, student_email: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={reviewForm.student_username}
+                        onChange={(e) =>
+                          setReviewForm((f) => ({ ...f, student_username: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">
+                        Password <span className="text-red-400">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={reviewForm.student_password}
+                          onChange={(e) =>
+                            setReviewForm((f) => ({ ...f, student_password: e.target.value }))
+                          }
+                          placeholder="Min. 8 characters"
+                          className="flex-1 px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const pw = generateStrongPassword();
+                            setReviewForm((f) => ({ ...f, student_password: pw }));
+                            if (await copyToClipboard(pw)) {
+                              showToast("success", "Strong password generated and copied to clipboard");
+                            } else {
+                              showToast("success", "Strong password generated");
+                            }
+                          }}
+                          className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gold-400 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                          title="Generate strong password"
+                        >
+                          Generate
+                        </button>
+                        {reviewForm.student_password && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (await copyToClipboard(reviewForm.student_password)) {
+                                showToast("success", "Password copied to clipboard");
+                              } else {
+                                showToast("error", "Could not copy password");
+                              }
+                            }}
+                            className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gray-300 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                            title="Copy password"
+                          >
+                            Copy
+                          </button>
+                        )}
+                      </div>
+                      {reviewForm.student_password.length > 0 && reviewForm.student_password.length < 8 && (
+                        <p className="text-xs text-red-400 mt-1">
+                          Password must be at least 8 characters
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </ModalForm>
 
@@ -453,16 +603,85 @@ export default function AdminApplicationsPage() {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Submitted At</label>
-              <p className="text-white">{detailApp?.created_at ? new Date(detailApp.created_at).toLocaleDateString() : "—"}</p>
+              <p className="text-white">{detailApp?.submitted_at ? new Date(detailApp.submitted_at).toLocaleDateString() : "—"}</p>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Reviewed At</label>
               <p className="text-white">{detailApp?.reviewed_at ? new Date(detailApp.reviewed_at).toLocaleDateString() : "—"}</p>
             </div>
             <div>
+              <label className="block text-sm text-gray-400 mb-1">Interview Date</label>
+              <p className="text-white">{detailApp?.interview_date ? new Date(detailApp.interview_date).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" }) : "—"}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Test Date</label>
+              <p className="text-white">{detailApp?.test_date ? new Date(detailApp.test_date).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" }) : "—"}</p>
+            </div>
+            <div>
               <label className="block text-sm text-gray-400 mb-1">Notes</label>
               <p className="text-white">{detailApp?.notes || "—"}</p>
             </div>
+            {detailApp?.documents?.[0] && (
+              <div className="border-t border-navy-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Form Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {detailApp.documents[0].gender && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Gender</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].gender}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].date_of_birth && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Date of Birth</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].date_of_birth}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].nationality && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Nationality</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].nationality}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].email && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Email</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].email}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].phone && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Phone</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].phone}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].program && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Program</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].program}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].english_proficiency && (
+                    <div>
+                      <label className="block text-xs text-gray-500">English Proficiency</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].english_proficiency}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].education_level && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Education Level</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].education_level}</p>
+                    </div>
+                  )}
+                  {detailApp.documents[0].source && (
+                    <div>
+                      <label className="block text-xs text-gray-500">Source</label>
+                      <p className="text-sm text-white">{detailApp.documents[0].source}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </ModalForm>
       </main>

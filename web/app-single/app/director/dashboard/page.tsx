@@ -11,8 +11,23 @@ import { ErrorCard } from "@/components/error-card";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
+import { fmtCurrency } from "@/lib/format-utils";
 
 const DCOLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6"];
+
+const fetchAllInvoices = async (): Promise<any[]> => {
+  const all: any[] = [];
+  let page = 1;
+  for (;;) {
+    const d = await api.get<any>(`/invoices/?page=${page}`).catch(() => null);
+    if (!d) break;
+    const results = d.results || (Array.isArray(d) ? d : []);
+    all.push(...results);
+    if (!d.next || results.length === 0 || all.length >= 500) break;
+    page++;
+  }
+  return all;
+};
 
 export default function DirectorDashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -24,7 +39,7 @@ export default function DirectorDashboard() {
     queryKey: ['director-kpis'],
     queryFn: () => Promise.all([
       api.get<any>("/students/"),
-      api.get<any>("/invoices/"),
+      fetchAllInvoices(),
       api.get<any>("/courses/"),
       api.get<any>("/aircraft/"),
       api.get<any>("/flight-lessons/"),
@@ -44,7 +59,7 @@ export default function DirectorDashboard() {
   if (!isAuthenticated) return null;
 
   const [st, inv, co, ac, fl, au, fi, sim, rm] = data || [{}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}, {results:[]}];
-  const iList=inv.results||[]; const fList=fl.results||[]; const aList=ac.results||[]; const fiList=fi.results||[]; const simList=sim.results||[]; const rmList=rm.results||[];
+  const iList=Array.isArray(inv) ? inv : (inv.results||[]); const fList=fl.results||[]; const aList=ac.results||[]; const fiList=fi.results||[]; const simList=sim.results||[]; const rmList=rm.results||[];
   const paid=iList.filter((i:any)=>i.status==="paid").reduce((s:number,i:any)=>s+parseFloat(i.amount),0);
   const out=iList.filter((i:any)=>i.status==="issued"||i.status==="partially_paid").reduce((s:number,i:any)=>s+parseFloat(i.amount),0);
   const th=fList.reduce((s:number,f:any)=>s+(parseFloat(f.flight_duration)||0),0);
@@ -64,7 +79,7 @@ export default function DirectorDashboard() {
     />
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={()=>setError(null)}/>}{loading?<LoadingSkeleton type="card" rows={4}/>:<>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.students', 'Students')} value={kpis.students} c="text-blue-400"/><KpiCard label={t('director.courses', 'Courses')} value={kpis.courses} c="text-green-400"/><KpiCard label={t('director.aircraft', 'Aircraft')} value={kpis.aircraft} c="text-purple-400"/><KpiCard label={t('director.fleetHours', 'Flight Hours')} value={`${kpis.hours}h`} c="text-gold-400"/></div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><KpiCard label={t('director.revenue', 'Revenue')} value={`${kpis.revenue.toLocaleString()} DZD`} c="text-green-400"/><KpiCard label={t('finance.outstanding', 'Outstanding')} value={`${kpis.outstanding.toLocaleString()} DZD`} c="text-red-400"/><KpiCard label={t('director.completed', 'Completed')} value={kpis.completed} c="text-cyan-400"/><KpiCard label={t('director.audits', 'Audits')} value={kpis.audits} c="text-yellow-400"/></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><KpiCard label={t('director.revenue', 'Revenue')} value={fmtCurrency(kpis.revenue, "DZD")} c="text-green-400"/><KpiCard label={t('finance.outstanding', 'Outstanding')} value={fmtCurrency(kpis.outstanding, "DZD")} c="text-red-400"/><KpiCard label={t('director.completed', 'Completed')} value={kpis.completed} c="text-cyan-400"/><KpiCard label={t('director.audits', 'Audits')} value={kpis.audits} c="text-yellow-400"/></div>
       <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.resourceOverview', 'Resource Overview')}</h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.availableAircraft', 'Available Aircraft')} value={`${resourceAvail.aircraft} / ${resourceAvail.aircraftTotal}`} c="text-blue-400"/><KpiCard label={t('director.availableInstructors', 'Available Instructors')} value={`${resourceAvail.instructors} / ${resourceAvail.instructorsTotal}`} c="text-green-400"/><KpiCard label={t('director.simulatorsAvailable', 'Simulators Available')} value={`${resourceAvail.simulators} / ${resourceAvail.simulatorsTotal}`} c="text-purple-400"/><KpiCard label={t('director.roomsAvailable', 'Rooms Available')} value={`${resourceAvail.rooms} / ${resourceAvail.roomsTotal}`} c="text-gold-400"/></div>
       <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('director.fleetUtilization', 'Fleet Utilization')}</h3>

@@ -1,11 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -47,7 +46,6 @@ function truncate(str: string | null, len: number): string {
 export default function AdminFlightProgramsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   useAuthGuard(isAuthenticated, authLoading);
-  const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -71,7 +69,7 @@ export default function AdminFlightProgramsPage() {
     queryKey: ["admin-flight-programs"],
     queryFn: async () => {
       const d = await api.get<any>("/flight-programs/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -210,7 +208,7 @@ export default function AdminFlightProgramsPage() {
         }
       />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed to load"} onRetry={() => refetch()} />}
 
         <FilterBar
           filters={[
@@ -239,7 +237,7 @@ export default function AdminFlightProgramsPage() {
 
         {/* Detail Modal */}
         <ModalForm open={!!selected} onClose={() => setSelected(null)} title={selected?.code || ""} footer={
-          <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>
+          <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>
         }>
           {selected && (
             <div className="space-y-4">
@@ -254,7 +252,7 @@ export default function AdminFlightProgramsPage() {
 
         {/* Create Modal */}
         <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); resetCreateForm(); }} title="New Flight Program" footer={
-          <><button onClick={() => { setCreateOpen(false); resetCreateForm(); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <><button onClick={() => { setCreateOpen(false); resetCreateForm(); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => createMutation.mutate(buildPayload(createForm))} disabled={createMutation.isPending || !createForm.code || !createForm.title} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">
             {createMutation.isPending ? "Creating..." : "Create"}
           </button></>
@@ -293,7 +291,7 @@ export default function AdminFlightProgramsPage() {
 
         {/* Edit Modal */}
         <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Flight Program" footer={
-          <><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+          <><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
           <button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, payload: buildPayload(editForm) }); }} disabled={updateMutation.isPending || !editForm.code || !editForm.title} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">
             {updateMutation.isPending ? "Saving..." : "Save"}
           </button></>
@@ -337,7 +335,7 @@ export default function AdminFlightProgramsPage() {
               <h3 className="text-lg font-semibold text-white">Delete Program</h3>
               <p className="text-sm text-gray-400">Delete "{deleteTarget.code} - {deleteTarget.title}"?</p>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button>
                 <button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">
                   {deleteMutation.isPending ? "Deleting..." : "Delete"}
                 </button>

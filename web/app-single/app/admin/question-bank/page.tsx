@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -103,7 +103,7 @@ export default function AdminQuestionBankPage() {
     queryKey: ["admin-question-bank"],
     queryFn: async () => {
       const d = await api.get<any>("/question-bank/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -112,7 +112,7 @@ export default function AdminQuestionBankPage() {
     queryKey: ["admin-qb-subjects"],
     queryFn: async () => {
       const d = await api.get<any>("/subjects/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -121,7 +121,7 @@ export default function AdminQuestionBankPage() {
     queryKey: ["admin-qb-modules"],
     queryFn: async () => {
       const d = await api.get<any>("/modules/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -329,7 +329,7 @@ export default function AdminQuestionBankPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load questions"}
+            message={error?.message || "Failed to load questions"}
             onRetry={() => refetch()}
           />
         )}
@@ -481,7 +481,7 @@ export default function AdminQuestionBankPage() {
             </>
           }
         >
-          <QuestionFormFields form={createForm} onChange={setCreateForm} subjects={subjects as any} modules={modules as any} error={createError} />
+          <QuestionFormFields form={createForm} onChange={setCreateForm} subjects={subjects} modules={modules} error={createError} />
         </ModalForm>
 
         {/* Edit Modal */}
@@ -509,7 +509,7 @@ export default function AdminQuestionBankPage() {
             </>
           }
         >
-          <QuestionFormFields form={editForm} onChange={setEditForm} subjects={subjects as any} modules={modules as any} error={editError} />
+          <QuestionFormFields form={editForm} onChange={setEditForm} subjects={subjects} modules={modules} error={editError} />
         </ModalForm>
 
         {/* Delete Confirmation */}

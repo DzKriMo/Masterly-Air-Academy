@@ -1,11 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -52,7 +51,6 @@ function formatDateTime(dateStr: string | null | undefined): string {
 export default function AdminResourceBookingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   useAuthGuard(isAuthenticated, authLoading);
-  const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -70,7 +68,7 @@ export default function AdminResourceBookingsPage() {
 
   const { data: bookings, isLoading, error, refetch } = useQuery<Booking[]>({
     queryKey: ["admin-bookings"],
-    queryFn: async () => { const d = await api.get<any>("/resource-bookings/"); return (d as any)?.results || (d as any) || []; },
+    queryFn: async () => { const d = await api.get<any>("/resource-bookings/"); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
@@ -110,8 +108,8 @@ export default function AdminResourceBookingsPage() {
     {
       key: "actions", header: "", render: (b) => (
         <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => { setEditItem(b); setEditForm({ resource_type: b.resource_type, resource_id: b.resource_id, start_time: new Date(b.start_time).toISOString().slice(0, 16), end_time: new Date(b.end_time).toISOString().slice(0, 16), activity_type: b.activity_type || "", activity_id: b.activity_id || "", status: b.status, notes: b.notes || "" }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded">Edit</button>
-          <button onClick={() => setDeleteTarget(b)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">Delete</button>
+          <button onClick={() => { setEditItem(b); setEditForm({ resource_type: b.resource_type, resource_id: b.resource_id, start_time: new Date(b.start_time).toISOString().slice(0, 16), end_time: new Date(b.end_time).toISOString().slice(0, 16), activity_type: b.activity_type || "", activity_id: b.activity_id || "", status: b.status, notes: b.notes || "" }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded">{t('common.edit')}</button>
+          <button onClick={() => setDeleteTarget(b)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded">{t('common.delete')}</button>
         </div>
       ),
     },
@@ -119,13 +117,13 @@ export default function AdminResourceBookingsPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Resource Bookings" backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ New Booking</button>} />
+      <PageHeader title={t("admin.resourceBookings", "Resource Bookings")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} actions={<button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">+ New Booking</button>} />
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed to load"} onRetry={() => refetch()} />}
+        {error && <ErrorCard message={error?.message || "Failed to load"} onRetry={() => refetch()} />}
         <FilterBar filters={[{ key: "resource_type", label: "All Types", options: RESOURCE_TYPES.map((t) => ({ value: t, label: fmtStatus(t) })) }, { key: "status", label: "All Statuses", options: BOOKING_STATUSES.map((s) => ({ value: s, label: fmtStatus(s) })) }]} values={filterValues} onChange={(k, v) => setFilterValues((p) => ({ ...p, [k]: v }))} onClear={() => { setFilterValues({}); setSearchValue(""); }} searchValue={searchValue} onSearchChange={setSearchValue} searchPlaceholder="Search bookings..." />
         {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? <EmptyState message={bookings?.length === 0 ? "No bookings yet." : "No matches."} title={bookings?.length === 0 ? "No bookings yet" : "No matches"} action={bookings?.length === 0 ? { label: "New Booking", onClick: () => setCreateOpen(true) } : undefined} /> : <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(item) => setSelected(item as Booking)} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Booking Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
+        <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Booking Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
             <DetailField label="Resource Type" value={fmtStatus(selected.resource_type)} />
             <DetailField label="Resource ID" value={selected.resource_id} />
@@ -137,7 +135,7 @@ export default function AdminResourceBookingsPage() {
           </div>}
         </ModalForm>
 
-        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ resource_type: "aircraft", resource_id: "", start_time: "", end_time: "", activity_type: "", activity_id: "", status: "confirmed", notes: "" }); setCreateError(""); }} title="New Booking" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ resource_type: "aircraft", resource_id: "", start_time: "", end_time: "", activity_type: "", activity_id: "", status: "confirmed", notes: "" }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.resource_id || !createForm.start_time || !createForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
+        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ resource_type: "aircraft", resource_id: "", start_time: "", end_time: "", activity_type: "", activity_id: "", status: "confirmed", notes: "" }); setCreateError(""); }} title="New Booking" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ resource_type: "aircraft", resource_id: "", start_time: "", end_time: "", activity_type: "", activity_id: "", status: "confirmed", notes: "" }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.resource_id || !createForm.start_time || !createForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Creating..." : "Create"}</button></>}>
           <div className="space-y-4">
             {createError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>}
             <div className="grid grid-cols-2 gap-4">
@@ -157,7 +155,7 @@ export default function AdminResourceBookingsPage() {
           </div>
         </ModalForm>
 
-        <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Booking" footer={<><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: editForm }); }} disabled={updateMutation.isPending || !editForm.resource_id || !editForm.start_time || !editForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button></>}>
+        <ModalForm open={!!editItem} onClose={() => setEditItem(null)} title="Edit Booking" footer={<><button onClick={() => setEditItem(null)} disabled={updateMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => { if (editItem) updateMutation.mutate({ id: editItem.id, p: editForm }); }} disabled={updateMutation.isPending || !editForm.resource_id || !editForm.start_time || !editForm.end_time} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{updateMutation.isPending ? "Saving..." : "Save"}</button></>}>
           <div className="space-y-4">
             {editError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>}
             <div className="grid grid-cols-2 gap-4">
@@ -176,7 +174,7 @@ export default function AdminResourceBookingsPage() {
           </div>
         </ModalForm>
 
-        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete Booking</h3><p className="text-sm text-gray-400">Delete this booking?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
+        {deleteTarget && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}><div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}><h3 className="text-lg font-semibold text-white">Delete Booking</h3><p className="text-sm text-gray-400">Delete this booking?</p><div className="flex justify-end gap-3 pt-2"><button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button></div></div></div>}
       </main>
     </div>
   );

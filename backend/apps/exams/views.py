@@ -17,7 +17,7 @@ from .serializers import (
     ProgressCheckSerializer, SkillTestSerializer,
     PracticalEvaluationSerializer,
     ExamStartSerializer, ExamSubmitSerializer,
-    CertificateSerializer,
+    CertificateSerializer, StudentCompetencySerializer,
 )
 from .services import AutoGradingService, CertificateService
 
@@ -56,6 +56,13 @@ class ExamViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         exam = self.get_object()
+        if exam.status != 'active':
+            return Response({'error': 'This exam is not currently active'}, status=400)
+        now = timezone.now()
+        if exam.open_date and now < exam.open_date:
+            return Response({'error': 'This exam has not opened yet'}, status=400)
+        if exam.close_date and now > exam.close_date:
+            return Response({'error': 'This exam has closed'}, status=400)
         from apps.students.models import Student
         try:
             student = Student.objects.get(user=request.user)
@@ -245,12 +252,18 @@ class QuizViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):
         quiz = self.get_object()
+        if not quiz.is_open:
+            return Response({'error': 'This quiz is not open'}, status=400)
         answers = request.data.get('answers', {})
         from apps.students.models import Student
         try:
             student = Student.objects.get(user=request.user)
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
+
+        existing = QuizAttempt.objects.filter(quiz=quiz, student=student).count()
+        if existing >= quiz.max_attempts:
+            return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
 
         result = AutoGradingService.grade_quiz(quiz, answers)
         QuizAttempt.objects.create(
@@ -281,6 +294,7 @@ class CertificateViewSet(viewsets.ModelViewSet):
 
 class StudentCompetencyViewSet(viewsets.ModelViewSet):
     queryset = StudentCompetency.objects.select_related('student').all()
+    serializer_class = StudentCompetencySerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'exams.view'
     filterset_fields = ['student', 'program', 'status']
@@ -354,14 +368,16 @@ class SkillTestViewSet(viewsets.ModelViewSet):
         if not has_evaluate_perm and request.user.role not in ('system_admin',):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         skill_test = self.get_object()
-        skill_test.status = 'authorized'
-        skill_test.authorized_by = request.data.get('authorized_by', None)
-        if skill_test.authorized_by:
+        instructor_id = request.data.get('authorized_by')
+        instructor = None
+        if instructor_id:
             from apps.students.models import FlightInstructor
             try:
-                skill_test.authorized_by = FlightInstructor.objects.get(id=skill_test.authorized_by)
+                instructor = FlightInstructor.objects.get(id=instructor_id)
             except FlightInstructor.DoesNotExist:
-                pass
+                return Response({'error': 'Flight instructor not found'}, status=400)
+        skill_test.status = 'authorized'
+        skill_test.authorized_by = instructor
         skill_test.save()
 
         from apps.notifications.services import NotificationService

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -247,7 +247,7 @@ export default function AdminCommunicationPage() {
   return (
     <div className="min-h-screen bg-navy-900">
       {/* ─── Navbar ──────────────────────────────────── */}
-      <PageHeader title="Communication" backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} />
+      <PageHeader title={t("admin.communication", "Communication")} backHref="/admin/dashboard" backLabel={t("common.back", "Back to Dashboard")} />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* ─── Tabs ──────────────────────────────────── */}

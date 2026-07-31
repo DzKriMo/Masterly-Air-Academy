@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { getPortalLabel, usesDjangoAdmin } from "@/lib/portal-access";
+import { getPortalLabel } from "@/lib/portal-access";
 
 interface QuickLink {
   href: string;
@@ -76,24 +76,6 @@ export default function DashboardPage() {
           {t("dashboard.welcome")} {user.name?.split(" ")[0] || "User"}
         </h2>
 
-        {/* Stats cards | role appropriate */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          {getRoleCards(user.role, t).map((card, i) => (
-            <div
-              key={i}
-              className="bg-navy-800 rounded-xl p-6 border border-navy-700"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">{card.title}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{card.value}</p>
-                </div>
-                <span className="text-3xl">{card.icon}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Quick links */}
         <div className="bg-navy-800 rounded-xl p-6 border border-navy-700">
           <h3 className="text-lg font-semibold text-white mb-4">{t("dashboard.quickLinks")}</h3>
@@ -122,62 +104,6 @@ export default function DashboardPage() {
       </main>
     </div>
   );
-}
-
-/* ── Role-based cards ──────────────────────────── */
-
-function getRoleCards(role: string, t: (key: string) => string): { title: string; value: string; icon: string }[] {
-  switch (true) {
-    case role.startsWith("flight_instructor") || role.startsWith("chief_flight"):
-      return [
-        { title: t("dashboard.todaysFlights"), value: "|", icon: "✈️" },
-        { title: t("dashboard.myStudents"), value: "|", icon: "🎓" },
-        { title: t("dashboard.hoursThisMonth"), value: "|", icon: "⏱️" },
-        { title: t("dashboard.pendingReports"), value: "|", icon: "📝" },
-      ];
-    case role.startsWith("ground_instructor") || role.startsWith("chief_ground"):
-      return [
-        { title: t("dashboard.todaysCourses"), value: "|", icon: "📚" },
-        { title: t("dashboard.myStudents"), value: "|", icon: "🎓" },
-        { title: t("instructor.attendance"), value: "|", icon: "✓" },
-        { title: t("dashboard.pendingEvaluations"), value: "|", icon: "📝" },
-      ];
-    case role === "quality_manager" || role === "safety_manager" || role === "compliance_monitoring_manager":
-      return [
-        { title: t("dashboard.openNCRs"), value: "|", icon: "⚠️" },
-        { title: t("dashboard.auditsPlanned"), value: "|", icon: "🔍" },
-        { title: t("dashboard.capaDue"), value: "|", icon: "📋" },
-        { title: t("quality.safetyEvents"), value: "|", icon: "🛡️" },
-      ];
-    case role === "finance_responsible" || role === "accounting_agent":
-      return [
-        { title: t("finance.outstanding"), value: "|", icon: "💰" },
-        { title: t("dashboard.paidThisMonth"), value: "|", icon: "✅" },
-        { title: t("finance.overdue"), value: "|", icon: "⚠️" },
-        { title: t("dashboard.revenueMTD"), value: "|", icon: "📈" },
-      ];
-    case role === "director_general" || role === "head_of_training":
-      return [
-        { title: t("dashboard.activeStudents"), value: "|", icon: "🎓" },
-        { title: t("dashboard.flightHoursMTD"), value: "|", icon: "✈️" },
-        { title: t("dashboard.revenueMTD"), value: "|", icon: "💰" },
-        { title: t("dashboard.compliance"), value: "|", icon: "🛡️" },
-      ];
-    case role === "scheduler":
-      return [
-        { title: t("dashboard.todaysBookings"), value: "|", icon: "📅" },
-        { title: t("dashboard.aircraftAvailable"), value: "|", icon: "✈️" },
-        { title: t("dashboard.conflicts"), value: "|", icon: "⚠️" },
-        { title: t("dashboard.pendingRequests"), value: "|", icon: "📋" },
-      ];
-    default:
-      return [
-        { title: t("dashboard.overview"), value: "|", icon: "📊" },
-        { title: t("dashboard.tasks"), value: "|", icon: "📋" },
-        { title: t("student.messages"), value: "|", icon: "💬" },
-        { title: t("dashboard.activity"), value: "|", icon: "🔔" },
-      ];
-  }
 }
 
 /* ── Role-based quick links ────────────────────── */

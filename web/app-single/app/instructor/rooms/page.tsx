@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -52,7 +52,7 @@ export default function InstructorRoomsPage() {
     setLoading(true); setError(null);
     api.get<any>("/rooms/")
       .then(d => {
-        const list = ((d as any)?.results || d as any || []).map((r: any) => ({
+        const list = unwrapResults(d).map((r: any) => ({
           ...r,
           equipment: Array.isArray(r.equipment) ? r.equipment.join(", ") : r.equipment || "",
         }));

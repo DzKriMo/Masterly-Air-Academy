@@ -50,8 +50,12 @@ export default function StudentProfilePage() {
       const res = await api.put("/profile/", form);
       const d = res as unknown as { success: boolean; message: string };
       setMsg(d.success ? t('profile.passwordChanged', 'Password changed successfully.') : (d.message || t('common.failed', 'Failed')));
-      if (d.success) setForm({ current_password: "", password: "", password_confirmation: "" });
-    } catch { setMsg(t('common.connectionError', 'Connection error')); }
+      if (d.success) { setForm({ current_password: "", password: "", password_confirmation: "" }); showToast("success", t('profile.passwordChanged', 'Password changed successfully.')); }
+    } catch (err: any) {
+      const detail = err?.response?.data || err?.data || err?.message || '';
+      const msg = typeof detail === 'string' ? detail : detail?.current_password?.[0] || detail?.password?.[0] || t('common.connectionError', 'Connection error');
+      setMsg(msg);
+    }
   };
 
   const handleSaveContact = async (e: React.FormEvent) => {

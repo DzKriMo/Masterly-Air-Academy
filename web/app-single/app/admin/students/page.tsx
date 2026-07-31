@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -274,7 +274,7 @@ export default function AdminStudentsPage() {
         {/* Error */}
         {error && (
           <ErrorCard
-            message={(error as any).message || "Failed to load students"}
+            message={error?.message || "Failed to load students"}
             onRetry={() => refetch()}
           />
         )}

@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
+import { generateStrongPassword, copyToClipboard } from "@/lib/password";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -708,18 +709,52 @@ export default function AdminUsersPage() {
               <label className="block text-sm text-gray-400 mb-1">
                 {t("common.password", "Password")} <span className="text-red-400">*</span>
               </label>
-              <input
-                type="password"
-                value={createForm.password}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    password: e.target.value,
-                  }))
-                }
-                placeholder="Min. 8 characters"
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={createForm.password}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+                  placeholder="Min. 8 characters"
+                  className="flex-1 px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const pw = generateStrongPassword();
+                    setCreateForm((prev) => ({ ...prev, password: pw }));
+                    if (await copyToClipboard(pw)) {
+                      showToast("success", "Strong password generated and copied to clipboard");
+                    } else {
+                      showToast("success", "Strong password generated");
+                    }
+                  }}
+                  className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gold-400 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                  title="Generate strong password"
+                >
+                  Generate
+                </button>
+                {createForm.password && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (await copyToClipboard(createForm.password)) {
+                        showToast("success", "Password copied to clipboard");
+                      } else {
+                        showToast("error", "Could not copy password");
+                      }
+                    }}
+                    className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gray-300 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                    title="Copy password"
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
               {createForm.password.length > 0 && createForm.password.length < 8 && (
                 <p className="text-xs text-red-400 mt-1">
                   Password must be at least 8 characters
@@ -931,13 +966,48 @@ export default function AdminUsersPage() {
               <label className="block text-sm text-gray-400 mb-1">
                 New Password <span className="text-red-400">*</span>
               </label>
-              <input
-                type="password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                placeholder="Min. 8 characters"
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="flex-1 px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const pw = generateStrongPassword();
+                    setResetPassword(pw);
+                    setResetConfirm(pw);
+                    if (await copyToClipboard(pw)) {
+                      showToast("success", "Strong password generated and copied to clipboard");
+                    } else {
+                      showToast("success", "Strong password generated");
+                    }
+                  }}
+                  className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gold-400 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                  title="Generate strong password"
+                >
+                  Generate
+                </button>
+                {resetPassword && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (await copyToClipboard(resetPassword)) {
+                        showToast("success", "Password copied to clipboard");
+                      } else {
+                        showToast("error", "Could not copy password");
+                      }
+                    }}
+                    className="px-3 py-2 text-xs rounded-lg bg-navy-700 text-gray-300 hover:bg-navy-600 font-medium whitespace-nowrap transition-colors"
+                    title="Copy password"
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
               {resetPassword.length > 0 && resetPassword.length < 8 && (
                 <p className="text-xs text-red-400 mt-1">
                   Password must be at least 8 characters

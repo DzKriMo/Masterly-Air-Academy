@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -17,6 +18,7 @@ const PIE_COLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6", "#f59
 export default function AdminDashboard() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
+  useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +47,7 @@ export default function AdminDashboard() {
   // ── Fallback activity if audit-logs fails ────────────────────────
   const recentActivity = (() => {
     const raw = activityQuery.data;
-    const list = Array.isArray(raw) ? raw : (raw as any)?.results;
+    const list = Array.isArray(raw) ? raw : unwrapResults(raw) as any;
     if (list && Array.isArray(list)) {
       return list.slice(0, 10);
     }
@@ -65,7 +67,7 @@ export default function AdminDashboard() {
     if (recentActivity && recentActivity.length > 0) return null; // use real data
     if (!kpisQuery.data) return null;
     const [, usersResp] = kpisQuery.data;
-    const uList = (usersResp as any)?.results || [];
+    const uList = unwrapResults(usersResp);
     return uList.slice(0, 10).map((u: any) => ({
       id: u.id,
       action: `User ${u.email || u.username || "—"}`,
@@ -76,11 +78,6 @@ export default function AdminDashboard() {
 
   const displayActivity = recentActivity && recentActivity.length > 0 ? recentActivity : fallbackActivity;
 
-  // ── Auth guard ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push("/login");
-  }, [authLoading, isAuthenticated, router]);
-
   if (authLoading || !isAuthenticated) return null;
 
   // ── Destructure query results ────────────────────────────────────
@@ -89,8 +86,8 @@ export default function AdminDashboard() {
   if (qError && !error) setError((qError as any)?.message || "Failed to load dashboard data");
 
   const [kpis = {}, usersResp = { results: [] }, invoicesResp = { results: [] }, coursesResp = { results: [] }, flightsResp = { results: [] }, applicationsResp = { results: [] }] = kpisQuery.data || [];
-  const uList = (usersResp as any)?.results || [];
-  const iList = (invoicesResp as any)?.results || [];
+  const uList = unwrapResults(usersResp);
+  const iList = unwrapResults(invoicesResp);
 
   // ── Training KPIs ──────────────────────────────────────────────────
   const todayStr = new Date().toDateString();
@@ -109,8 +106,9 @@ export default function AdminDashboard() {
   // ── Compute KPIs ──────────────────────────────────────────────────
   const totalUsers = uList.length;
   const activeStudents = uList.filter((u: any) => u.role === "student" && u.is_active !== false).length;
-  const revenue = (kpis as any)?.revenue ?? 0;
-  const outstanding = (kpis as any)?.outstanding ?? 0;
+  const isTrainingAdmin = user?.role === "training_admin";
+  const revenue = (kpis as Record<string, number>)?.revenue ?? 0;
+  const outstanding = (kpis as Record<string, number>)?.outstanding ?? 0;
 
   // ── Compute chart data ────────────────────────────────────────────
   const roleCounts: Record<string, number> = {};
@@ -203,26 +201,30 @@ export default function AdminDashboard() {
                 }
                 accent="border-l-4 border-l-green-500"
               />
-              <KpiCard
-                label={t("admin.revenue", "Revenue This Month")}
-                value={fmtCurrency(revenue)}
-                icon={
-                  <svg className="w-5 h-5 text-gold-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                }
-                accent="border-l-4 border-l-gold-500"
-              />
-              <KpiCard
-                label={t("admin.outstanding", "Outstanding")}
-                value={fmtCurrency(outstanding)}
-                icon={
-                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                }
-                accent="border-l-4 border-l-red-500"
-              />
+              {!isTrainingAdmin && (
+                <KpiCard
+                  label={t("admin.revenue", "Revenue This Month")}
+                  value={fmtCurrency(revenue)}
+                  icon={
+                    <svg className="w-5 h-5 text-gold-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  accent="border-l-4 border-l-gold-500"
+                />
+              )}
+              {!isTrainingAdmin && (
+                <KpiCard
+                  label={t("admin.outstanding", "Outstanding")}
+                  value={fmtCurrency(outstanding)}
+                  icon={
+                    <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  accent="border-l-4 border-l-red-500"
+                />
+              )}
             </div>
 
             {/* ═══ TRAINING KPIs ═══════════════════════════════════ */}
@@ -313,45 +315,47 @@ export default function AdminDashboard() {
                 )}
               </ChartCard>
 
-              <ChartCard title={t("admin.invoiceStatus", "Invoice Status")}>
-                {charts.invoices.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">{t("common.noData", "No invoice data")}</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie
-                        data={charts.invoices}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={40}
-                        label={({ name, value, percent }: any) =>
-                          `${name.replace(/_/g, " ")}: ${value} (${(percent * 100).toFixed(0)}%)`
-                        }
-                        labelLine={false}
-                      >
-                        {charts.invoices.map((_: any, i: number) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: "#1e293b",
-                          border: "1px solid #334155",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                        formatter={(value: number, name: string) => [
-                          `${value} invoices`,
-                          name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </ChartCard>
+              {!isTrainingAdmin && (
+                <ChartCard title={t("admin.invoiceStatus", "Invoice Status")}>
+                  {charts.invoices.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-8">{t("common.noData", "No invoice data")}</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie
+                          data={charts.invoices}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={40}
+                          label={({ name, value, percent }: any) =>
+                            `${name.replace(/_/g, " ")}: ${value} (${(percent * 100).toFixed(0)}%)`
+                          }
+                          labelLine={false}
+                        >
+                          {charts.invoices.map((_: any, i: number) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            background: "#1e293b",
+                            border: "1px solid #334155",
+                            borderRadius: "8px",
+                            color: "#fff",
+                          }}
+                          formatter={(value: number, name: string) => [
+                            `${value} invoices`,
+                            name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+              )}
             </div>
 
             {/* ═══ QUICK ACTIONS ═══════════════════════════════════ */}
@@ -368,12 +372,14 @@ export default function AdminDashboard() {
                 desc={t("admin.applicationsDesc", "Review applications")}
                 color="border-l-amber-500"
               />
-              <QuickActionCard
-                href="/admin/invoices"
-                label={t("admin.invoices", "Invoices")}
-                desc={t("admin.invoicesDesc", "Manage invoices")}
-                color="border-l-green-500"
-              />
+              {!isTrainingAdmin && (
+                <QuickActionCard
+                  href="/admin/invoices"
+                  label={t("admin.invoices", "Invoices")}
+                  desc={t("admin.invoicesDesc", "Manage invoices")}
+                  color="border-l-green-500"
+                />
+              )}
               <QuickActionCard
                 href="/admin/students"
                 label={t("admin.students", "Students")}
@@ -438,7 +444,7 @@ export default function AdminDashboard() {
               </div>
               {(() => {
                 const raw = inquiriesQuery.data;
-                const list = Array.isArray(raw) ? raw : (raw as any)?.results || [];
+                const list = Array.isArray(raw) ? raw : unwrapResults(raw) as any || [];
                 const inquiries = list
                   .filter((n: any) => n.type === "contact_form" || n.type === "application")
                   .slice(0, 5);

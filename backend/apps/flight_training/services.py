@@ -171,6 +171,8 @@ class FlightLogService:
 
         return {
             'student_id': str(student_id),
+            'student_name': student.full_name if student else None,
+            'student_number': student.student_number if student else None,
             'total_flight_hours': round(total_hours, 1),
             'total_lessons': total_lessons,
             'program': program_code,

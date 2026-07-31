@@ -7,7 +7,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ['id', 'application_number', 'student', 'student_name', 'status', 'submitted_at', 'reviewed_at', 'notes']
+        fields = ['id', 'application_number', 'student', 'student_name', 'status', 'submitted_at', 'reviewed_at', 'notes', 'interview_date', 'test_date', 'documents']
 
     def get_student_name(self, obj):
         return obj.student.full_name
@@ -18,6 +18,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     total_paid = serializers.SerializerMethodField()
     balance = serializers.SerializerMethodField()
     invoice_number = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
 
     class Meta:
         model = Invoice
@@ -37,6 +38,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    student = serializers.PrimaryKeyRelatedField(read_only=True)
+    invoice = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Payment

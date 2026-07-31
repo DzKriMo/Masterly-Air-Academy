@@ -33,6 +33,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Deployment tarballs
+*.tar
+
 # Documentation (excluded from repo)
 docs/
 *.aux

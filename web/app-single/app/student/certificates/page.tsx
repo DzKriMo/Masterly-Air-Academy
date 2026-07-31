@@ -18,7 +18,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
-interface Cert { id: string; certificate_number: string; type: string; title: string; program: string; issue_date: string; expiry_date: string | null; status: string; }
+interface Cert { id: string; certificate_number: string; type: string; title: string; program: string; issue_date: string; expiry_date: string | null; status: string; file_url?: string; }
 
 export default function StudentCertificatesPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -149,9 +149,16 @@ export default function StudentCertificatesPage() {
             onClose={() => setSelectedCert(null)}
             title={selectedCert?.title || t("certificate.details", "Certificate Details")}
             footer={
-              <button onClick={() => setSelectedCert(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
-                {t("close", "Close")}
-              </button>
+              <div className="flex gap-3">
+                <button onClick={() => setSelectedCert(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                  {t("close", "Close")}
+                </button>
+                {selectedCert?.status === "issued" && (
+                  <button onClick={() => { downloadPDF(selectedCert.id); }} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 rounded-lg text-sm font-bold transition-colors">
+                    {t("certificate.downloadPdf", "Download PDF")}
+                  </button>
+                )}
+              </div>
             }
           >
             {selectedCert && (

@@ -7,6 +7,20 @@ DOMAIN_ALIASES = {
     'invoices': 'invoicing',
 }
 
+# Per-action enforcement: which write-level permission is required for each
+# standard DRF write action. `manage` always satisfies any write action.
+WRITE_ACTION_PERMISSIONS = {
+    'create': ('create', 'manage'),
+    'update': ('update', 'manage'),
+    'partial_update': ('update', 'manage'),
+    'destroy': ('delete', 'manage'),
+}
+
+
+def _perm_held(all_perms, perm):
+    """Check whether a permission codename is held (exact or app-prefixed match)."""
+    return perm in all_perms or any(p.endswith(f'.{perm}') for p in all_perms)
+
 
 class HasRolePermission(BasePermission):
     """
@@ -29,8 +43,17 @@ class HasRolePermission(BasePermission):
 
         all_perms = request.user.get_all_permissions()
 
+        # Per-action enforcement: standard write actions require a write-level
+        # permission in the resource domain (e.g. exams.create, exams.manage).
+        # `manage` implies create/update/delete. Custom @action methods and read
+        # actions keep the `required_permission` behaviour below.
+        action = getattr(view, 'action', None)
+        if action in WRITE_ACTION_PERMISSIONS:
+            if not self._has_write_permission(all_perms, required, WRITE_ACTION_PERMISSIONS[action]):
+                return False
+
         # Exact match
-        if required in all_perms or any(p.endswith(f'.{required}') for p in all_perms):
+        if _perm_held(all_perms, required):
             return True
 
         if '.' in required:
@@ -44,7 +67,7 @@ class HasRolePermission(BasePermission):
                 implied = [f'{domain}.view_own', f'{domain}.evaluate', f'{domain}.manage',
                            f'{resolved_domain}.view_own', f'{resolved_domain}.evaluate', f'{resolved_domain}.manage']
                 for perm in implied:
-                    if perm in all_perms or any(p.endswith(f'.{perm}') for p in all_perms):
+                    if _perm_held(all_perms, perm):
                         return True
 
             # export is implied by any permission in the domain (view, view_own, evaluate, manage)
@@ -53,9 +76,21 @@ class HasRolePermission(BasePermission):
                 for act in implied_actions:
                     for dom in [domain, resolved_domain]:
                         candidate = f'{dom}.{act}'
-                        if candidate in all_perms or any(p.endswith(f'.{candidate}') for p in all_perms):
+                        if _perm_held(all_perms, candidate):
                             return True
 
+        return False
+
+    def _has_write_permission(self, all_perms, required, required_actions):
+        """Check that the user holds a write-level permission in the domain."""
+        domain, sep, _ = required.partition('.')
+        if not sep:
+            return False
+        resolved_domain = DOMAIN_ALIASES.get(domain, domain)
+        for action_name in required_actions:
+            for dom in (domain, resolved_domain):
+                if _perm_held(all_perms, f'{dom}.{action_name}'):
+                    return True
         return False
 
 

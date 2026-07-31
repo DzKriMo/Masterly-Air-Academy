@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -76,7 +76,7 @@ export default function AdminAttendancePage() {
     queryKey: ["admin-attendance"],
     queryFn: async () => {
       const d = await api.get<any>("/attendance/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -85,7 +85,7 @@ export default function AdminAttendancePage() {
     queryKey: ["admin-att-students"],
     queryFn: async () => {
       const d = await api.get<any>("/students/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -94,7 +94,7 @@ export default function AdminAttendancePage() {
     queryKey: ["admin-att-courses"],
     queryFn: async () => {
       const d = await api.get<any>("/courses/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -241,7 +241,7 @@ export default function AdminAttendancePage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load attendance records"}
+            message={error?.message || "Failed to load attendance records"}
             onRetry={() => refetch()}
           />
         )}

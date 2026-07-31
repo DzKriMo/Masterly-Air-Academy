@@ -33,6 +33,32 @@ export function toDatetimeLocal(dateStr: string | null | undefined): string {
   }
 }
 
+export const fmtCurrency = (
+  amount: string | number | null | undefined,
+  currency = "DZD"
+): string => {
+  if (amount === null || amount === undefined || amount === "") return "—";
+  const n = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(n)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+};
+
+export const fmtDate = (value?: string | null): string => {
+  if (!value) return "—";
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString();
+  } catch {
+    return "—";
+  }
+};
+
 export const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
 
 export const EXAM_TYPES = ["quiz", "progress_test", "module_exam", "mock_exam", "final_exam"];

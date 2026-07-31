@@ -1,169 +1,459 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { PageHeader } from "@/components/page-header";
 import { api } from "@/lib/api";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
-import { DataTable, Column } from "@/components/data-table";
+import { DataTable } from "@/components/data-table";
+import type { Column } from "@/components/data-table";
+import { FilterBar } from "@/components/filter-bar";
+import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { PageHeader } from "@/components/page-header";
 
-interface Message {
-  id: string; sender: string; sender_name: string; receiver: string; receiver_name: string;
-  subject: string | null; body: string; is_read: boolean; created_at: string;
+interface Msg {
+  id: string;
+  sender: string;
+  sender_name: string;
+  receiver: string;
+  receiver_name: string;
+  subject: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
 }
 
-const INIT_FORM = { receiver: "", subject: "", body: "" };
-
-function fmtDate(d: string | null | undefined) {
-  if (!d) return "—";
-  try { return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return "—"; }
+interface UserOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
+
+type Tab = "inbox" | "sent";
 
 export default function AdminMessagesPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  useAuthGuard(isAuthenticated, authLoading);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
 
-  const [searchValue, setSearchValue] = useState("");
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
-  const [selected, setSelected] = useState<Message | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState(INIT_FORM);
-  const [createError, setCreateError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  const [received, setReceived] = useState<Msg[]>([]);
+  const [sent, setSent] = useState<Msg[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("inbox");
 
-  const { data: records, isLoading, error, refetch } = useQuery<Message[]>({
-    queryKey: ["admin-messages"],
-    queryFn: async () => {
-      const d = await api.get<any>("/messages/");
-      const results = (d as any)?.results || (d as any) || [];
-      return results.map((msg: any) => ({
-        id: msg.id, sender: msg.sender, sender_name: msg.sender_name || "Unknown",
-        receiver: msg.receiver, receiver_name: msg.receiver_name || "Unknown",
-        subject: msg.subject, body: msg.body, is_read: msg.is_read,
-        created_at: msg.created_at,
-      }));
-    },
-    enabled: isAuthenticated,
+  const [receivedPage, setReceivedPage] = useState(1);
+  const [sentPage, setSentPage] = useState(1);
+  const [hasMoreRecv, setHasMoreRecv] = useState(false);
+  const [hasMoreSent, setHasMoreSent] = useState(false);
+
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [recipients, setRecipients] = useState<UserOption[]>([]);
+  const [recipientId, setRecipientId] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  const [viewMsg, setViewMsg] = useState<Msg | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useAuthGuard(isAuthenticated, isLoading, "/login");
+
+  const openView = (msg: Msg) => {
+    setViewMsg(msg);
+    if (activeTab === 'inbox' && !msg.is_read) {
+      api.post(`/messages/${msg.id}/mark_read/`).catch(() => {});
+      setReceived(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
+    }
+  };
+
+  const loadRecipients = useCallback(() => {
+    if (!isAuthenticated) return;
+    api.get("/users/")
+      .then((d: any) => {
+        const allUsers = d.results || [];
+        setRecipients(allUsers.filter((u: any) => u.id !== user?.id));
+      })
+      .catch(() => {});
+  }, [isAuthenticated, user?.id]);
+
+  const loadMessages = useCallback(() => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      api.get("/messages/?page=1").catch(() => ({ results: [], next: null })),
+      api.get("/messages/sent/?page=1").catch(() => ({ results: [], next: null })),
+    ]).then(([recvData, sentData]: any) => {
+      setReceived(recvData.results || recvData || []);
+      setSent(sentData.results || sentData || []);
+      setHasMoreRecv(!!recvData.next);
+      setHasMoreSent(!!sentData.next);
+      setReceivedPage(1);
+      setSentPage(1);
+      setError(null);
+    }).catch(err => {
+      console.error("Failed to load messages:", err);
+      setError(t('student.messagesLoadError', "Failed to load messages. Please try again."));
+    }).finally(() => setLoading(false));
+  }, [isAuthenticated, t]);
+
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+
+  const loadMoreMessages = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const isInbox = activeTab === "inbox";
+      const nextPage = isInbox ? receivedPage + 1 : sentPage + 1;
+      const path = isInbox ? `/messages/?page=${nextPage}` : `/messages/sent/?page=${nextPage}`;
+      const d = await api.get(path);
+      const results = d?.results || (Array.isArray(d) ? d : []);
+      if (isInbox) {
+        setReceived(prev => [...prev, ...results]);
+        setHasMoreRecv(!!d.next);
+        setReceivedPage(nextPage);
+      } else {
+        setSent(prev => [...prev, ...results]);
+        setHasMoreSent(!!d.next);
+        setSentPage(nextPage);
+      }
+    } catch {
+      setError(t('student.messagesLoadError', "Failed to load messages. Please try again."));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!recipientId || !subject.trim() || !body.trim()) {
+      showToast("error", t('student.fillRequired', 'Please fill all required fields.'));
+      return;
+    }
+    setSending(true);
+    try {
+      await api.post("/messages/", { receiver: recipientId, subject: subject.trim(), body: body.trim() });
+      showToast("success", t('student.messageSent', 'Message sent successfully.'));
+      setComposeOpen(false);
+      setRecipientId("");
+      setSubject("");
+      setBody("");
+      loadMessages();
+    } catch {
+      showToast("error", t('student.sendFailed', 'Failed to send message.'));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyBody.trim()) {
+      showToast("error", t('student.fillRequired', 'Please enter a message.'));
+      return;
+    }
+    setSendingReply(true);
+    try {
+      await api.post("/messages/", { receiver: replyTo!.sender, subject: `Re: ${replyTo!.subject}`, body: replyBody.trim() });
+      showToast("success", t('student.replySent', 'Reply sent successfully.'));
+      setReplyOpen(false);
+      setReplyBody("");
+      setReplyTo(null);
+      loadMessages();
+    } catch {
+      showToast("error", t('student.sendFailed', 'Failed to send reply.'));
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!viewMsg) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/messages/${viewMsg.id}/`);
+      showToast("success", t('student.messageDeleted', 'Message deleted.'));
+      setReceived(prev => prev.filter(m => m.id !== viewMsg.id));
+      setSent(prev => prev.filter(m => m.id !== viewMsg.id));
+      setViewMsg(null);
+    } catch {
+      showToast("error", t('student.deleteFailed', 'Failed to delete message.'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openCompose = () => {
+    loadRecipients();
+    setComposeOpen(true);
+  };
+
+  const openReply = (msg: Msg) => {
+    loadRecipients();
+    setReplyTo(msg);
+    setRecipientId(msg.sender);
+    setReplyOpen(true);
+  };
+
+  const filterOptions: FilterOption[] = [
+    { key: "is_read", label: t('student.allMessages', 'All Messages'), options: [
+      { value: "unread", label: t('student.unread', 'Unread') },
+      { value: "read", label: t('student.read', 'Read') },
+    ]},
+  ];
+
+  const currentMessages = activeTab === "inbox" ? received : sent;
+  const filteredMessages = currentMessages.filter(m => {
+    if (filters.is_read === "unread" && m.is_read) return false;
+    if (filters.is_read === "read" && !m.is_read) return false;
+    if (activeTab === "inbox") {
+      if (search && !(m.subject || "").toLowerCase().includes(search.toLowerCase()) && !(m.sender_name || "").toLowerCase().includes(search.toLowerCase()) && !(m.body || "").toLowerCase().includes(search.toLowerCase())) return false;
+    } else {
+      if (search && !(m.subject || "").toLowerCase().includes(search.toLowerCase()) && !(m.receiver_name || "").toLowerCase().includes(search.toLowerCase()) && !(m.body || "").toLowerCase().includes(search.toLowerCase())) return false;
+    }
+    return true;
   });
 
-  const { data: users = [] } = useQuery<any[]>({
-    queryKey: ["admin-msg-users"],
-    queryFn: async () => { const d = await api.get<any>("/users/"); return (d as any)?.results || (d as any) || []; },
-    enabled: isAuthenticated,
-  });
+  const unreadCount = received.filter(m => !m.is_read).length;
 
-  const buildPayload = (f: typeof INIT_FORM) => ({ receiver: f.receiver, subject: f.subject || null, body: f.body });
-
-  const createMutation = useMutation({
-    mutationFn: (p: ReturnType<typeof buildPayload>) => api.post("/messages/", p),
-    onSuccess: () => { showToast("success", "Message sent"); setCreateOpen(false); setCreateForm(INIT_FORM); queryClient.invalidateQueries({ queryKey: ["admin-messages"] }); },
-    onError: (err: any) => { const msg = err?.data ? Object.values(err.data).flat().join(", ") : err.message; setCreateError(msg || "Failed to send"); },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/messages/${id}/`),
-    onSuccess: () => { showToast("success", "Message deleted"); setDeleteTarget(null); queryClient.invalidateQueries({ queryKey: ["admin-messages"] }); },
-    onError: (err: any) => { showToast("error", err.message || "Failed"); },
-  });
-
-  const markReadMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/messages/${id}/mark_read/`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-messages"] }); },
-  });
-
-  const filtered = useMemo(() => {
-    if (!records) return [];
-    let r = records;
-    if (filterValues.read !== undefined && filterValues.read !== "") r = r.filter((a) => String(a.is_read) === filterValues.read);
-    if (searchValue) { const q = searchValue.toLowerCase(); r = r.filter((a) => (a.subject || "").toLowerCase().includes(q) || a.sender_name.toLowerCase().includes(q) || a.receiver_name.toLowerCase().includes(q)); }
-    return r;
-  }, [records, filterValues, searchValue]);
-
-  const columns: Column<Message>[] = useMemo(() => [
-    { key: "subject", header: "Subject", render: (a) => (
+  const inboxColumns: Column<Msg>[] = [
+    { key: "sender_name", header: t('student.from', 'From'), render: (item) => (
+      <span className={`text-sm ${!item.is_read ? "text-white font-medium" : "text-gray-400"}`}>{item.sender_name}</span>
+    )},
+    { key: "subject", header: t('student.subject', 'Subject'), render: (item) => (
+      <span className={`text-sm ${!item.is_read ? "text-white font-medium" : "text-gray-300"}`}>{item.subject}</span>
+    )},
+    { key: "body", header: t('student.messageLabel', 'Message'), render: (item) => (
+      <span className="text-xs text-gray-500">{item.body.length > 80 ? `${item.body.slice(0, 80)}...` : item.body}</span>
+    )},
+    { key: "created_at", header: t('common.date'), render: (item) => (
+      <span className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()}</span>
+    )},
+    { key: "actions", header: "", sortable: false, render: (item) => (
       <div className="flex items-center gap-2">
-        {!a.is_read && <span className="w-2 h-2 rounded-full bg-gold-500" />}
-        <span className={`text-sm ${a.is_read ? "text-gray-400" : "font-semibold text-white"}`}>{a.subject || "(no subject)"}</span>
+        {!item.is_read && <span className="inline-block w-2 h-2 bg-gold-500 rounded-full" />}
+        <button onClick={(e) => { e.stopPropagation(); openReply(item); }} className="px-2 py-1 text-xs text-gold-500 border border-gold-500/30 rounded hover:bg-gold-500/10 transition-colors">
+          {t('student.reply', 'Reply')}
+        </button>
       </div>
     )},
-    { key: "sender_name", header: "From", render: (a) => <span className="text-sm text-gray-300">{a.sender_name}</span> },
-    { key: "receiver_name", header: "To", render: (a) => <span className="text-sm text-gray-300">{a.receiver_name}</span> },
-    { key: "created_at", header: "Date", render: (a) => <span className="text-sm text-gray-400">{fmtDate(a.created_at)}</span> },
-    { key: "actions", header: "", render: (a) => (
-      <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => { if (!a.is_read) markReadMutation.mutate(a.id); setSelected(a); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">View</button>
-        <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">Delete</button>
-      </div>
+  ];
+
+  const sentColumns: Column<Msg>[] = [
+    { key: "receiver_name", header: t('student.to', 'To'), render: (item) => (
+      <span className="text-sm text-white font-medium">{item.receiver_name}</span>
     )},
-  ], []);
+    { key: "subject", header: t('student.subject', 'Subject'), render: (item) => (
+      <span className="text-sm text-gray-300">{item.subject}</span>
+    )},
+    { key: "body", header: t('student.messageLabel', 'Message'), render: (item) => (
+      <span className="text-xs text-gray-500">{item.body.length > 80 ? `${item.body.slice(0, 80)}...` : item.body}</span>
+    )},
+    { key: "created_at", header: t('common.date'), render: (item) => (
+      <span className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()}</span>
+    )},
+    { key: "is_read", header: t('common.status'), render: (item) => (
+      <span className={`text-xs px-2 py-0.5 rounded ${item.is_read ? "bg-green-500/10 text-green-400" : "bg-gray-500/10 text-gray-400"}`}>
+        {item.is_read ? t('common.read', 'Read') : t('common.sent', 'Sent')}
+      </span>
+    )},
+  ];
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <PageHeader title="Messages" backHref="/admin/dashboard" backLabel={t("common.back", "Back")} actions={
-        <button onClick={() => setCreateOpen(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">+ New Message</button>
-      } />
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {error && <ErrorCard message={(error as any)?.message || "Failed"} onRetry={() => refetch()} />}
-        {isLoading ? <LoadingSkeleton type="table" rows={8} /> : filtered.length === 0 ? (
-          <EmptyState message={records?.length === 0 ? "No messages yet." : "No matches."} title={records?.length === 0 ? "No messages" : "No matches"} action={records?.length === 0 ? { label: "New Message", onClick: () => setCreateOpen(true) } : undefined} />
-        ) : <DataTable columns={columns} data={filtered} keyField="id" />}
+      <PageHeader
+        title={t("admin.messages", "Messages")}
+        backHref="/admin/dashboard"
+        backLabel={t("common.back", "Back")}
+        maxWidth="max-w-4xl"
+        actions={
+          <button onClick={openCompose} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors">
+            {t('student.compose', 'Compose')}
+          </button>
+        }
+      />
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {error && <ErrorCard message={error} onRetry={loadMessages} />}
 
-        <ModalForm open={!!selected} onClose={() => setSelected(null)} title={selected?.subject || "Message"} footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button>}>
-          {selected && <div className="space-y-4">
-            <DetailField label="From" value={selected.sender_name} />
-            <DetailField label="To" value={selected.receiver_name} />
-            <DetailField label="Subject" value={selected.subject || "(no subject)"} />
-            <DetailField label="Date" value={fmtDate(selected.created_at)} />
-            <div><p className="text-xs text-gray-500 mb-0.5">Body</p>
-              <div className="p-3 bg-navy-950 border border-navy-700 rounded-lg text-sm text-gray-200 whitespace-pre-wrap">{selected.body}</div>
-            </div>
-            <DetailField label="Read" value={selected.is_read ? "Yes" : "No"} />
-          </div>}
-        </ModalForm>
-
-        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} title="New Message" footer={<>
-          <button onClick={() => { setCreateOpen(false); setCreateForm(INIT_FORM); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
-          <button onClick={() => createMutation.mutate(buildPayload(createForm))} disabled={createMutation.isPending || !createForm.receiver || !createForm.body} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Sending..." : "Send"}</button>
-        </>}>
-          <div className="space-y-4">
-            {createError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>}
-            <div><label className="block text-sm text-gray-400 mb-1">To <span className="text-red-400">*</span></label>
-              <select value={createForm.receiver} onChange={(e) => setCreateForm((f) => ({ ...f, receiver: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
-                <option value="">Select user...</option>{users.map((u: any) => <option key={u.id} value={u.id}>{u.email}</option>)}
-              </select></div>
-            <div><label className="block text-sm text-gray-400 mb-1">Subject</label>
-              <input type="text" value={createForm.subject} onChange={(e) => setCreateForm((f) => ({ ...f, subject: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" placeholder="Message subject..." /></div>
-            <div><label className="block text-sm text-gray-400 mb-1">Body <span className="text-red-400">*</span></label>
-              <textarea rows={5} value={createForm.body} onChange={(e) => setCreateForm((f) => ({ ...f, body: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" placeholder="Message body..." /></div>
+        {unreadCount > 0 && !loading && (
+          <div className="mb-4 flex items-center gap-2 bg-gold-500/10 border border-gold-500/30 rounded-lg px-4 py-2.5 w-fit">
+            <span className="inline-block w-2 h-2 bg-gold-500 rounded-full" />
+            <span className="text-sm text-gold-400 font-medium">
+              {unreadCount} {unreadCount === 1 ? t('student.unreadMsg', 'unread message') : t('student.unreadMsgs', 'unread messages')}
+            </span>
           </div>
-        </ModalForm>
+        )}
 
-        {deleteTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold text-white">Delete Message</h3>
-              <p className="text-sm text-gray-400">Remove "{deleteTarget.subject || "(no subject)"}"?</p>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">Cancel</button>
-                <button onClick={() => deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50">{deleteMutation.isPending ? "Deleting..." : "Delete"}</button>
+        {loading ? <LoadingSkeleton type="table" rows={5} /> : (
+          <>
+            <div className="flex gap-1 mb-4 bg-navy-800 rounded-lg p-1 border border-navy-700 w-fit">
+              <button onClick={() => setActiveTab("inbox")}
+                className={`px-4 py-2 text-sm rounded-md transition-colors ${activeTab === "inbox" ? "bg-gold-500 text-navy-900 font-semibold" : "text-gray-400 hover:text-white"}`}>
+                {t('student.inbox', 'Inbox')} ({received.length})
+              </button>
+              <button onClick={() => setActiveTab("sent")}
+                className={`px-4 py-2 text-sm rounded-md transition-colors ${activeTab === "sent" ? "bg-gold-500 text-navy-900 font-semibold" : "text-gray-400 hover:text-white"}`}>
+                {t('student.sent', 'Sent')} ({sent.length})
+              </button>
+            </div>
+
+            {currentMessages.length === 0 ? (
+              <EmptyState message={activeTab === "inbox"
+                ? t('student.noMessages', 'No messages yet.')
+                : t('student.noSent', 'No sent messages yet.')}
+              />
+            ) : (
+              <>
+                <FilterBar
+                  filters={activeTab === "inbox" ? filterOptions : []}
+                  values={filters}
+                  onChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
+                  onClear={() => { setFilters({}); setSearch(""); }}
+                  searchPlaceholder={activeTab === "inbox"
+                    ? t('student.searchMessages', 'Search messages...')
+                    : t('student.searchSent', 'Search sent messages...')}
+                  searchValue={search}
+                  onSearchChange={setSearch}
+                />
+                <DataTable
+                  columns={activeTab === "inbox" ? inboxColumns : sentColumns}
+                  data={filteredMessages as any}
+                  keyField="id"
+                  onRowClick={(msg) => openView(msg as Msg)}
+                  emptyMessage={t('student.noMessagesFilter', 'No messages match your filters.')}
+                />
+                {(activeTab === "inbox" ? hasMoreRecv : hasMoreSent) && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={loadMoreMessages}
+                      disabled={loadingMore}
+                      className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
+                    >
+                      {loadingMore ? t('common.loading', 'Loading...') : 'Load more'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </main>
+
+      {/* Compose Modal */}
+      <ModalForm open={composeOpen} onClose={() => { setComposeOpen(false); setRecipientId(""); setSubject(""); setBody(""); }} title={t('student.composeMessage', 'Compose Message')}
+        footer={
+          <>
+            <button onClick={() => { setComposeOpen(false); setRecipientId(""); setSubject(""); setBody(""); }} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white transition-colors">
+              {t('common.cancel', 'Cancel')}
+            </button>
+            <button onClick={handleSend} disabled={sending} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 rounded-lg font-semibold hover:bg-gold-400 transition-colors disabled:opacity-50">
+              {sending ? t('common.sending', 'Sending...') : t('common.send', 'Send')}
+            </button>
+          </>
+        }>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('student.recipient', 'Recipient')} *</label>
+            <select value={recipientId} onChange={e => setRecipientId(e.target.value)}
+              className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500">
+              <option value="">{t('student.selectRecipient', 'Select a recipient...')}</option>
+              {recipients.map(r => (
+                <option key={r.id} value={r.id}>{r.name} ({r.role})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('student.subject', 'Subject')} *</label>
+            <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
+              className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('student.messageLabel', 'Message')} *</label>
+            <textarea value={body} onChange={e => setBody(e.target.value)} rows={6}
+              className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500 resize-none" />
+          </div>
+        </div>
+      </ModalForm>
+
+      {/* Reply Modal */}
+      <ModalForm open={replyOpen} onClose={() => { setReplyOpen(false); setReplyBody(""); setReplyTo(null); }}
+        title={replyTo ? `${t('student.replyTo', 'Reply to')} ${replyTo.sender_name}` : t('student.reply', 'Reply')}
+        footer={
+          <>
+            <button onClick={() => { setReplyOpen(false); setReplyBody(""); setReplyTo(null); }} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white transition-colors">
+              {t('common.cancel', 'Cancel')}
+            </button>
+            <button onClick={handleReply} disabled={sendingReply} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 rounded-lg font-semibold hover:bg-gold-400 transition-colors disabled:opacity-50">
+              {sendingReply ? t('common.sending', 'Sending...') : t('common.send', 'Send')}
+            </button>
+          </>
+        }>
+        <div className="space-y-4">
+          {replyTo && (
+            <div className="bg-navy-900/50 border border-navy-700 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">{t('student.originalMessage', 'Original message')}:</p>
+              <p className="text-sm text-gray-300 font-medium">{replyTo.subject}</p>
+              <p className="text-xs text-gray-500 mt-1">{replyTo.body.slice(0, 200)}</p>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('student.messageLabel', 'Message')} *</label>
+            <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)} rows={5}
+              className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-sm text-white focus:outline-none focus:border-gold-500 resize-none" />
+          </div>
+        </div>
+      </ModalForm>
+
+      {/* View Message Modal */}
+      <ModalForm
+        open={!!viewMsg}
+        onClose={() => setViewMsg(null)}
+        title={viewMsg?.subject || ''}
+        footer={
+          viewMsg && activeTab === 'inbox' ? (
+            <div className="flex gap-2 w-full justify-end">
+              <button onClick={() => { setViewMsg(null); setReplyTo(viewMsg); setRecipientId(viewMsg.sender); setReplyOpen(true); }} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+                {t('student.reply', 'Reply')}
+              </button>
+              <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50">
+                {deleting ? t('common.deleting', 'Deleting...') : t('common.delete', 'Delete')}
+              </button>
+              <button onClick={() => setViewMsg(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white transition-colors">
+                {t('common.close', 'Close')}
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        {viewMsg && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <span className="text-gray-500">{activeTab === 'inbox' ? t('student.from', 'From') : t('student.to', 'To')}: </span>
+                <span className="text-white font-medium">{activeTab === 'inbox' ? viewMsg.sender_name : viewMsg.receiver_name}</span>
               </div>
+              <span className="text-xs text-gray-600">{new Date(viewMsg.created_at).toLocaleString()}</span>
+            </div>
+            <div className="bg-navy-900 border border-navy-700 rounded-lg p-4">
+              <p className="text-sm text-gray-300 whitespace-pre-wrap break-words">{viewMsg.body}</p>
             </div>
           </div>
         )}
-      </main>
+      </ModalForm>
     </div>
   );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs text-gray-500 mb-0.5">{label}</p><p className="text-sm text-white">{value}</p></div>;
 }

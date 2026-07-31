@@ -42,7 +42,7 @@ export default function CGIDashboard() {
 
   const { data: alertsData } = useQuery({
     queryKey: ['cgi-alerts'],
-    queryFn: () => api.get<any>("/notifications/?limit=5").then(r => (r as unknown as any).results || []),
+    queryFn: () => api.get<any>("/notifications/").then(r => (r as unknown as any).results || []),
     enabled: isAuthenticated,
   });
   const alerts: any[] = alertsData || [];
@@ -55,7 +55,6 @@ export default function CGIDashboard() {
   const total = attempts.length;
   const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
   const avgScore = total > 0 ? Math.round(attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / total) : 0;
-  const atRisk = 0;
 
   const statusData = Object.entries(
     courses.reduce((acc: any, c: any) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {})
@@ -84,7 +83,6 @@ export default function CGIDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <Stat title={t('instructor.cgi.avgScore', 'Average Score')} value={total > 0 ? `${avgScore}%` : "—"} />
               <Stat title={t('instructor.cgi.examsTaken', 'Exams Taken')} value={total} />
-              <Stat title={t('instructor.cgi.studentsAtRisk')} value={atRisk || "—"} />
             </div>
 
             {/* Alerts */}

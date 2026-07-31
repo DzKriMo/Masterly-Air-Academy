@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
@@ -17,12 +16,13 @@ import { useToast } from "@/components/toast";
 interface Msg { id: string; sender: string; sender_name: string; receiver: string; receiver_name: string; subject: string; body: string; is_read: boolean; created_at: string; }
 
 export default function InstructorMessagesPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [received, setReceived] = useState<Msg[]>([]);
   const [sent, setSent] = useState<Msg[]>([]);
+  const [inboxPage, setInboxPage] = useState(1);
+  const [inboxHasMore, setInboxHasMore] = useState(false);
   const [tab, setTab] = useState("inbox");
   const [showCompose, setShowCompose] = useState(false);
   const [form, setForm] = useState({ receiver: "", subject: "", body: "" });
@@ -41,22 +41,38 @@ export default function InstructorMessagesPage() {
 
   useAuthGuard(isAuthenticated, authLoading);
 
-  const fetchMessages = () => {
+  const fetchMessages = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
-    api.get<any>("/messages/")
-      .then(data => { setReceived((data as unknown as any).results || []); setError(null); })
-      .catch(err => { console.error("Failed to load messages:", err); setError(t("instructor.failedToLoadMessages", "Failed to load messages. Please try again.")); });
-    api.get<any>("/messages/sent/")
-      .then(data => { setSent((data as unknown as any).results || (data as unknown as any) || []); })
-      .catch(() => { setSent([]); });
-    api.get<any>("/students/")
-      .then(data => { setUsers((data as unknown as any).results || (data as unknown as any) || []); })
-      .catch(() => {});
-    setLoading(false);
-  };
+    setError(null);
+    Promise.all([
+      api.get<any>("/messages/?page=1").catch(() => ({ results: [] })),
+      api.get<any>("/messages/sent/").catch(() => []),
+      api.get<any>("/students/").catch(() => ({ results: [] })),
+    ]).then(([recvData, sentData, studentsData]) => {
+      setReceived((recvData as any)?.results || []);
+      setInboxHasMore(!!(recvData as any)?.next);
+      setInboxPage(1);
+      setSent(Array.isArray(sentData) ? sentData : (sentData as any)?.results || []);
+      setUsers((studentsData as any)?.results || (studentsData as any) || []);
+    }).catch(err => {
+      console.error("Failed to load messages:", err);
+      setError(t("instructor.failedToLoadMessages", "Failed to load messages. Please try again."));
+    }).finally(() => setLoading(false));
+  }, [isAuthenticated, t]);
 
-  useEffect(() => { fetchMessages(); }, [isAuthenticated]);
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
+
+  const loadMoreInbox = useCallback(() => {
+    if (!isAuthenticated) return;
+    api.get<any>(`/messages/?page=${inboxPage + 1}`)
+      .then(data => {
+        setReceived(prev => [...prev, ...((data as any)?.results || [])]);
+        setInboxHasMore(!!(data as any)?.next);
+        setInboxPage(p => p + 1);
+      })
+      .catch(() => {});
+  }, [isAuthenticated, inboxPage]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +296,13 @@ export default function InstructorMessagesPage() {
           />
         ) : (
           <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(msg) => openView(msg as Msg)} />
+        )}
+        {tab === "inbox" && inboxHasMore && (
+          <div className="mt-4 text-center">
+            <button onClick={loadMoreInbox} className="px-4 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10 transition-colors">
+              {t('common.loadMore', 'Load more')}
+            </button>
+          </div>
         )}
       </main>
     </div>

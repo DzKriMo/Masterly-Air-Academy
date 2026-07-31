@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api } from "@/lib/api";
+import { api, unwrapResults } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -127,7 +127,7 @@ export default function AdminCoursesPage() {
     queryKey: ["admin-courses"],
     queryFn: async () => {
       const d = await api.get<any>("/courses/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -136,7 +136,7 @@ export default function AdminCoursesPage() {
     queryKey: ["admin-courses-subjects"],
     queryFn: async () => {
       const d = await api.get<any>("/subjects/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -145,7 +145,7 @@ export default function AdminCoursesPage() {
     queryKey: ["admin-courses-instructors"],
     queryFn: async () => {
       const d = await api.get<any>("/ground-instructors/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -154,7 +154,7 @@ export default function AdminCoursesPage() {
     queryKey: ["admin-courses-academic-years"],
     queryFn: async () => {
       const d = await api.get<any>("/academic-years/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -163,7 +163,7 @@ export default function AdminCoursesPage() {
     queryKey: ["admin-courses-rooms"],
     queryFn: async () => {
       const d = await api.get<any>("/rooms/");
-      return (d as any)?.results || (d as any) || [];
+      return unwrapResults(d);
     },
     enabled: isAuthenticated,
   });
@@ -385,7 +385,7 @@ export default function AdminCoursesPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {error && (
           <ErrorCard
-            message={(error as any)?.message || "Failed to load courses"}
+            message={error?.message || "Failed to load courses"}
             onRetry={() => refetch()}
           />
         )}

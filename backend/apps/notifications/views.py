@@ -24,7 +24,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'count': count})
 
-    @action(detail=True, methods=['put'])
+    @action(detail=True, methods=['put', 'post'])
     def mark_read(self, request, pk=None):
         notif = self.get_object()
         notif.is_read = True
