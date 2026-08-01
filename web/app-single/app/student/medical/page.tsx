@@ -39,7 +39,11 @@ export default function MedicalPage() {
   const viewFile = async (cert: MedicalCert) => {
     if (!cert.file_url) return;
     if (cert.file_url.startsWith("http")) {
-      window.open(cert.file_url, "_blank", "noopener,noreferrer");
+      const a = document.createElement("a");
+      a.href = cert.file_url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.click();
       return;
     }
     try {
@@ -50,7 +54,10 @@ export default function MedicalPage() {
       if (!r.ok) return;
       const b = await r.blob();
       const u = window.URL.createObjectURL(b);
-      window.open(u, "_blank");
+      const a = document.createElement("a");
+      a.href = u;
+      a.download = cert.file_url.split("/").pop() || `medical-${cert.id}`;
+      a.click();
       setTimeout(() => window.URL.revokeObjectURL(u), 30000);
     } catch {}
   };
