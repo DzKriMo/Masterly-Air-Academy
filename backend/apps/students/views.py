@@ -343,6 +343,14 @@ class MedicalCertificateViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No file provided'}, status=400)
         from django.core.files.storage import default_storage
         path = default_storage.save(f'medical/{file.name}', file)
+        cert_id = request.data.get('certificate_id')
+        if cert_id:
+            cert = self.get_queryset().filter(pk=cert_id).first()
+            if cert is None:
+                return Response({'error': 'Certificate not found'}, status=404)
+            cert.file_url = path
+            cert.save(update_fields=['file_url'])
+            return Response({'file_url': path, 'certificate': MedicalCertificateSerializer(cert).data}, status=201)
         return Response({'file_url': path}, status=201)
 
     @action(detail=True, methods=['get'], url_path='download')

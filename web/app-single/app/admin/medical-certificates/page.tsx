@@ -103,12 +103,13 @@ export default function AdminMedicalCertificatesPage() {
     }
   };
 
-  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>, apply: (url: string) => void) => {
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>, apply: (url: string) => void, certId?: string) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
+    if (certId) formData.append("certificate_id", certId);
     setUploading(true);
     try {
       const token = api.getAccessToken();
@@ -120,8 +121,16 @@ export default function AdminMedicalCertificatesPage() {
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
-      apply(data.file_url);
-      showToast("success", "File uploaded");
+      const body = data && typeof data === "object" && data.success === true && "data" in data ? data.data : data;
+      if (body?.file_url) {
+        apply(body.file_url);
+        showToast("success", "File uploaded");
+        if (certId) {
+          queryClient.invalidateQueries({ queryKey: ["admin-mc"] });
+        }
+      } else {
+        showToast("error", "Upload response missing file URL");
+      }
     } catch {
       showToast("error", "File upload failed");
     } finally {
@@ -166,11 +175,22 @@ export default function AdminMedicalCertificatesPage() {
 
         <ModalForm open={!!selected} onClose={() => setSelected(null)} title="Certificate Details" footer={<button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close')}</button>}>
           {selected && <div className="space-y-4">
+            <DetailField label="Student" value={(() => { const s = students.find((x: any) => x.id === selected.student); return s?.full_name || `${s?.first_name || ""} ${s?.last_name || ""}`.trim() || selected.student; })()} />
             <DetailField label="Status" value={selected.status} />
             <DetailField label="Issue Date" value={fmtDate(selected.issue_date)} />
             <DetailField label="Expiry Date" value={fmtDate(selected.expiry_date)} />
             <DetailField label="Issuer" value={selected.issuer || "—"} />
-            {selected.file_url && <div><button onClick={() => downloadFile(selected)} className="text-sm text-gold-500 hover:underline">View File</button></div>}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">File</label>
+              {selected.file_url ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500 truncate">{selected.file_url}</p>
+                  <button onClick={() => downloadFile(selected)} className="px-3 py-1.5 text-xs bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.view', 'View File')}</button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">—</p>
+              )}
+            </div>
           </div>}
         </ModalForm>
 
@@ -231,7 +251,7 @@ export default function AdminMedicalCertificatesPage() {
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg"
-                  onChange={(e) => handleFilePick(e, (url) => setEditForm((f) => ({ ...f, file_url: url })))}
+                  onChange={(e) => handleFilePick(e, (url) => setEditForm((f) => ({ ...f, file_url: url })), editItem?.id)}
                   className="block w-full text-xs text-gray-400 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:cursor-pointer hover:file:bg-gold-400"
                 />
                 {uploading && <span className="text-xs text-gray-500 animate-pulse shrink-0">Uploading...</span>}

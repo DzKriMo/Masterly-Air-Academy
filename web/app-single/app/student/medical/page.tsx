@@ -36,6 +36,25 @@ export default function MedicalPage() {
     return d;
   };
 
+  const viewFile = async (cert: MedicalCert) => {
+    if (!cert.file_url) return;
+    if (cert.file_url.startsWith("http")) {
+      window.open(cert.file_url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    try {
+      const token = api.getAccessToken();
+      const r = await fetch(`/api/medical-certificates/${cert.id}/download/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) return;
+      const b = await r.blob();
+      const u = window.URL.createObjectURL(b);
+      window.open(u, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(u), 30000);
+    } catch {}
+  };
+
   return (
     <div className="flex-1 min-w-0">
       <PageHeader title={t("student.medical", "Medical Certificates")} backHref="/student/dashboard" maxWidth="max-w-5xl" />
@@ -66,10 +85,10 @@ export default function MedicalPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     {cert.file_url && (
-                      <a href={cert.file_url} target="_blank" rel="noopener noreferrer"
+                      <button onClick={() => viewFile(cert)}
                         className="shrink-0 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
-                        {t('common.download', 'Download')}
-                      </a>
+                        {t('common.view', 'View')}
+                      </button>
                     )}
                     <div className="flex-1 bg-navy-900 rounded-full h-2 overflow-hidden">
                       <div
