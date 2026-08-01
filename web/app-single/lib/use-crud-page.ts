@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
@@ -23,7 +23,7 @@ export type CrudOptions = CrudOption[] | ((lookups: CrudLookups) => CrudOption[]
 export interface CrudField {
   name: string;
   label: string;
-  type: "text" | "select" | "textarea" | "datetime" | "time" | "checkbox";
+  type: "text" | "select" | "textarea" | "datetime" | "date" | "time" | "checkbox";
   span?: "full" | "half";
   required?: boolean;
   requiredForSubmit?: boolean;
@@ -61,10 +61,10 @@ export interface CrudPageConfig<T> {
   queryKey: string[];
   endpoint: string;
 
-  fields: CrudField[] | ((mode: "create" | "edit") => CrudField[]);
-  initialCreate: CrudForm;
-  buildForm: (item: T) => CrudForm;
-  buildPayload: (form: CrudForm) => any;
+  fields?: CrudField[] | ((mode: "create" | "edit") => CrudField[]);
+  initialCreate?: CrudForm;
+  buildForm?: (item: T) => CrudForm;
+  buildPayload?: (form: CrudForm) => any;
   createPayload?: (form: CrudForm) => any;
   updatePayload?: (form: CrudForm) => any;
 
@@ -79,6 +79,7 @@ export interface CrudPageConfig<T> {
   detailFields?: (item: T) => { label: string; value: string }[];
   detailTitle?: string;
   showDetailModal?: boolean;
+  detailExtra?: (item: T) => React.ReactNode;
 
   createTitle?: string;
   editTitle?: string;
@@ -104,6 +105,7 @@ export interface CrudPageConfig<T> {
   toasts?: { create?: CrudToast; update?: CrudToast; delete?: CrudToast };
 
   lookup?: CrudLookup;
+  lookups?: CrudLookup[];
 
   allowCreate?: boolean;
   allowEdit?: boolean;
@@ -163,10 +165,11 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
   const [searchValue, setSearchValue] = useState("");
   const [selected, setSelected] = useState<T | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState<CrudForm>(config.initialCreate);
+  const initialCreate = config.initialCreate ?? {};
+  const [createForm, setCreateForm] = useState<CrudForm>(initialCreate);
   const [createError, setCreateError] = useState("");
   const [editItem, setEditItem] = useState<T | null>(null);
-  const [editForm, setEditForm] = useState<CrudForm>(config.initialCreate);
+  const [editForm, setEditForm] = useState<CrudForm>(initialCreate);
   const [editError, setEditError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<T | null>(null);
 
@@ -177,16 +180,22 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
   });
   const records = query.data;
 
-  const lookupQuery = useQuery<any[]>({
-    queryKey: config.lookup?.queryKey ?? ["__crud_no_lookup__"],
-    queryFn: async () => { const d = await api.get<any>(config.lookup!.endpoint); return unwrapResults<any>(d); },
-    enabled: isAuthenticated && !!config.lookup,
+  const lookupDefs = config.lookups ?? (config.lookup ? [config.lookup] : []);
+  const lookupResults = useQueries({
+    queries: lookupDefs.map((l) => ({
+      queryKey: l.queryKey,
+      queryFn: async () => { const d = await api.get<any>(l.endpoint); return unwrapResults<any>(d); },
+      enabled: isAuthenticated,
+    })),
   });
 
-  const lookups = useMemo<CrudLookups>(
-    () => (config.lookup ? { [config.lookup.key]: lookupQuery.data ?? [] } : {}),
-    [config.lookup, lookupQuery.data]
-  );
+  const lookups = useMemo<CrudLookups>(() => {
+    const m: CrudLookups = {};
+    lookupDefs.forEach((l, i) => {
+      m[l.key] = lookupResults[i]?.data ?? [];
+    });
+    return m;
+  }, [lookupDefs, lookupResults]);
 
   const resolveToast = useCallback(
     (toastCfg?: CrudToast): string => {
@@ -213,7 +222,7 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
     onSuccess: () => {
       showToast("success", resolveToast(config.toasts?.create));
       setCreateOpen(false);
-      setCreateForm(config.initialCreate);
+      setCreateForm(initialCreate);
       setCreateError("");
       invalidate();
     },
@@ -263,14 +272,14 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
 
   const closeCreate = useCallback(() => {
     setCreateOpen(false);
-    setCreateForm(config.initialCreate);
+    setCreateForm(initialCreate);
     setCreateError("");
-  }, [config.initialCreate]);
+  }, [initialCreate]);
 
   const startEdit = useCallback(
     (item: T) => {
       setEditItem(item);
-      setEditForm(config.buildForm(item));
+      setEditForm(config.buildForm ? config.buildForm(item) : {});
       setEditError("");
     },
     [config.buildForm]

@@ -158,11 +158,11 @@ export function CrudPage<T extends { id: string }>(config: CrudPageConfig<T>) {
   const showFilterBar = config.showFilterBar !== false;
 
   const createFields = useMemo<CrudField[]>(
-    () => (typeof config.fields === "function" ? config.fields("create") : config.fields),
+    () => (typeof config.fields === "function" ? config.fields("create") : config.fields ?? []),
     [config.fields]
   );
   const editFields = useMemo<CrudField[]>(
-    () => (typeof config.fields === "function" ? config.fields("edit") : config.fields),
+    () => (typeof config.fields === "function" ? config.fields("edit") : config.fields ?? []),
     [config.fields]
   );
 
