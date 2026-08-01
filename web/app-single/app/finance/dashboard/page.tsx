@@ -30,7 +30,7 @@ const fetchAllInvoices = async (): Promise<Invoice[]> => {
   return all;
 };
 
-interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; balance: string; due_at: string | null; }
+interface Invoice { id: string; invoice_number: string; student_name: string; amount: string; currency: string; status: string; total_paid: string; balance: string; due_at: string | null; }
 
 interface ReportsData {
   revenue_by_month: {month: number; revenue: number}[];
@@ -63,9 +63,9 @@ export default function FinanceDashboard() {
   }, [isAuthenticated]);
 
   const totalIssued = invoices.filter(i => i.status !== 'draft').reduce((s, i) => s + parseFloat(i.amount), 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + parseFloat(i.amount), 0);
-  const outstanding = invoices.filter(i => i.status === 'issued' || i.status === 'partially_paid').reduce((s, i) => s + parseFloat(i.amount), 0);
-  const overdue = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + parseFloat(i.amount), 0);
+  const totalPaid = invoices.filter(i => i.status !== 'draft' && i.status !== 'cancelled').reduce((s, i) => s + parseFloat(i.total_paid ?? '0'), 0);
+  const outstanding = invoices.filter(i => i.status === 'issued' || i.status === 'partially_paid').reduce((s, i) => s + parseFloat(i.balance ?? i.amount), 0);
+  const overdue = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + parseFloat(i.balance ?? i.amount), 0);
 
   const collectionRate = reports?.collection_rate ?? (totalIssued > 0 ? Math.round((totalPaid / totalIssued) * 1000) / 10 : 0);
   const outstandingAgeData = reports?.outstanding_by_age ?? [];

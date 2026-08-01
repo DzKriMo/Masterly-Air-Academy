@@ -19,9 +19,17 @@ class DashboardKPIView(APIView):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'dashboard.view'
     def get(self, request):
+        from django.db.models import Sum
         fl = FlightLesson.objects.all()
         inv = Invoice.objects.all()
-        return Response({"students": Student.objects.count(), "courses": Course.objects.count(), "aircraft": Aircraft.objects.count(), "flights": fl.count(), "flight_hours": round(sum(float(f.flight_duration or 0) for f in fl), 1), "revenue": round(sum(float(i.amount) for i in inv.filter(status="paid")), 2), "outstanding": round(sum(float(i.amount) for i in inv.filter(status__in=["issued","partially_paid"])), 2), "audits": Audit.objects.filter(status="planned").count(), "ncrs": NonConformity.objects.filter(status="open").count()})
+        total_collected = Payment.objects.aggregate(s=Sum('amount'))['s'] or 0
+        outstanding_qs = inv.exclude(status__in=['draft', 'cancelled', 'paid']).annotate(
+            paid_total=Sum('payments__amount')
+        )
+        outstanding = round(sum(
+            (float(i.amount) - float(i.paid_total or 0)) for i in outstanding_qs
+        ), 2)
+        return Response({"students": Student.objects.count(), "courses": Course.objects.count(), "aircraft": Aircraft.objects.count(), "flights": fl.count(), "flight_hours": round(sum(float(f.flight_duration or 0) for f in fl), 1), "revenue": round(float(total_collected), 2), "outstanding": outstanding, "audits": Audit.objects.filter(status="planned").count(), "ncrs": NonConformity.objects.filter(status="open").count()})
 
 
 class StudentDashboardView(APIView):
@@ -201,27 +209,33 @@ def finance_reports(request):
     year = int(request.query_params.get('year', timezone.now().year))
 
     invoices_qs = Invoice.objects.filter(created_at__year=year)
-    paid_invoices = invoices_qs.filter(status='paid')
     all_invoices = invoices_qs.filter(status__in=['issued', 'paid', 'partially_paid', 'overdue'])
+    invoiced = all_invoices.annotate(paid_total=Sum('payments__amount'))
 
-    # Revenue by month
+    def balance_of(inv):
+        return max(float(inv.amount) - float(inv.paid_total or 0), 0)
+
+    # Revenue by month (money actually collected via payments)
+    payments_year = Payment.objects.filter(paid_at__year=year)
     revenue_by_month = []
     for m in range(1, 13):
-        month_paid = paid_invoices.filter(created_at__month=m)
-        rev = round(sum(float(i.amount) for i in month_paid), 2)
+        rev = round(sum(
+            float(p.amount) for p in payments_year.filter(paid_at__month=m)
+        ), 2)
         revenue_by_month.append({'month': m, 'revenue': rev})
 
-    # Revenue by program
+    # Revenue by program (money actually collected via payments)
     revenue_by_program = []
     for prog_code, prog_label in TrainingProgram.choices:
-        prog_invoices = paid_invoices.filter(student__program=prog_code)
-        rev = round(sum(float(i.amount) for i in prog_invoices), 2)
+        rev = round(sum(
+            float(p.amount) for p in payments_year.filter(student__program=prog_code)
+        ), 2)
         if rev > 0:
             revenue_by_program.append({'program': prog_code, 'program_name': prog_label, 'revenue': rev})
 
-    # Outstanding by age
+    # Outstanding by age (remaining balances)
     now = timezone.now()
-    outstanding_invoices = all_invoices.exclude(status='paid')
+    outstanding_invoices = [inv for inv in invoiced if balance_of(inv) > 0]
     buckets = {
         '0_30': 0, '31_60': 0, '61_90': 0, '90_plus': 0,
     }
@@ -239,7 +253,7 @@ def finance_reports(request):
                 name = '90_plus'
         else:
             name = '0_30'
-        buckets[name] = round(buckets[name] + float(inv.amount), 2)
+        buckets[name] = round(buckets[name] + balance_of(inv), 2)
 
     outstanding_by_age = [
         {'label': '0-30 days', 'total': buckets['0_30']},
@@ -248,23 +262,26 @@ def finance_reports(request):
         {'label': '90+ days', 'total': buckets['90_plus']},
     ]
 
-    # Top debtors (top 10)
+    # Top debtors (top 10, by remaining balance)
     debtor_totals = {}
-    for inv in all_invoices.exclude(status='paid'):
+    for inv in invoiced:
+        bal = balance_of(inv)
+        if bal <= 0:
+            continue
         name = inv.student.full_name
         sid = str(inv.student.id)
         if sid not in debtor_totals:
             debtor_totals[sid] = {'student_id': sid, 'student_name': name, 'total_outstanding': 0}
         debtor_totals[sid]['total_outstanding'] = round(
-            debtor_totals[sid]['total_outstanding'] + float(inv.amount), 2
+            debtor_totals[sid]['total_outstanding'] + bal, 2
         )
     top_debtors = sorted(
         debtor_totals.values(), key=lambda x: x['total_outstanding'], reverse=True
     )[:10]
 
-    # Collection rate
-    total_issued = sum(float(i.amount) for i in all_invoices)
-    total_collected = sum(float(i.amount) for i in paid_invoices)
+    # Collection rate (collected / invoiced)
+    total_issued = sum(float(inv.amount) for inv in invoiced)
+    total_collected = sum(float(inv.paid_total or 0) for inv in invoiced)
     collection_rate = round(
         (total_collected / total_issued * 100) if total_issued > 0 else 0, 1
     )
@@ -300,7 +317,12 @@ def financial_report(request):
     from django.db.models import Count, Sum
     total_invoiced = Invoice.objects.aggregate(s=Sum('amount'))['s'] or 0
     total_paid = Payment.objects.aggregate(s=Sum('amount'))['s'] or 0
-    overdue = Invoice.objects.filter(status='overdue').aggregate(s=Sum('amount'))['s'] or 0
+    invoiced = Invoice.objects.filter(status__in=['issued', 'partially_paid', 'overdue']).annotate(
+        paid_total=Sum('payments__amount')
+    )
+    overdue = round(sum(
+        max(float(i.amount) - float(i.paid_total or 0), 0) for i in invoiced.filter(status='overdue')
+    ), 2)
     by_status = list(Invoice.objects.values('status').annotate(count=Count('id'), total=Sum('amount')))
     return Response({
         'total_invoiced': round(float(total_invoiced), 2), 'total_paid': round(float(total_paid), 2),
