@@ -55,12 +55,16 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     email = serializers.CharField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True, allow_null=True)
-    qualifications = serializers.JSONField(read_only=True)
     student_count = serializers.SerializerMethodField()
 
     class Meta:
         model = FlightInstructor
-        fields = ['id', 'name', 'email', 'phone', 'license_number', 'qualifications', 'status', 'total_flight_hours', 'instruction_hours', 'student_count']
+        fields = [
+            'id', 'name', 'email', 'phone', 'first_name', 'last_name',
+            'license_number', 'qualifications', 'status',
+            'total_flight_hours', 'instruction_hours', 'student_count',
+        ]
+        read_only_fields = ['id', 'name', 'email', 'phone', 'student_count']
 
     def get_name(self, obj):
         return f'{obj.first_name} {obj.last_name}'

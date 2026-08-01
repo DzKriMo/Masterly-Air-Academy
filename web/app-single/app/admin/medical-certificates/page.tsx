@@ -45,6 +45,7 @@ export default function AdminMedicalCertificatesPage() {
   const [editForm, setEditForm] = useState(INIT_FORM);
   const [editError, setEditError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<MC | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: records, isLoading, error, refetch } = useQuery<MC[]>({
     queryKey: ["admin-mc"],
@@ -81,6 +82,53 @@ export default function AdminMedicalCertificatesPage() {
     onError: (err: any) => { showToast("error", err.message || "Failed"); },
   });
 
+  const downloadFile = async (mc: MC) => {
+    if (!mc.file_url) { showToast("error", "No file attached"); return; }
+    if (mc.file_url.startsWith("http")) { window.open(mc.file_url, "_blank", "noopener,noreferrer"); return; }
+    try {
+      const token = api.getAccessToken();
+      const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/medical-certificates/${mc.id}/download/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) { showToast("error", "Download failed"); return; }
+      const b = await r.blob();
+      const u = window.URL.createObjectURL(b);
+      const a = document.createElement("a");
+      a.href = u;
+      a.download = mc.file_url.split("/").pop() || `medical-${mc.id}`;
+      a.click();
+      window.URL.revokeObjectURL(u);
+    } catch {
+      showToast("error", "Download failed");
+    }
+  };
+
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>, apply: (url: string) => void) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    try {
+      const token = api.getAccessToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/medical-certificates/upload/`, {
+        method: "POST",
+        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      apply(data.file_url);
+      showToast("success", "File uploaded");
+    } catch {
+      showToast("error", "File upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     if (!records) return [];
     let r = records;
@@ -96,11 +144,14 @@ export default function AdminMedicalCertificatesPage() {
     { key: "issuer", header: "Issuer", render: (a) => <span className="text-sm text-gray-400">{a.issuer || "—"}</span> },
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+        {a.file_url && (
+          <button onClick={() => downloadFile(a)} className="px-2 py-1 text-xs text-blue-400 hover:bg-blue-500/10 rounded transition-colors">{t('common.download', 'Download')}</button>
+        )}
         <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, issue_date: a.issue_date, expiry_date: a.expiry_date, issuer: a.issuer || "", file_url: a.file_url || "", status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">{t('common.edit')}</button>
         <button onClick={() => setDeleteTarget(a)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors">{t('common.delete')}</button>
       </div>
     )},
-  ], []);
+  ], [downloadFile]);
 
   return (
     <div className="min-h-screen bg-navy-900">
@@ -119,7 +170,7 @@ export default function AdminMedicalCertificatesPage() {
             <DetailField label="Issue Date" value={fmtDate(selected.issue_date)} />
             <DetailField label="Expiry Date" value={fmtDate(selected.expiry_date)} />
             <DetailField label="Issuer" value={selected.issuer || "—"} />
-            {selected.file_url && <div><a href={selected.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-gold-500 hover:underline">View File</a></div>}
+            {selected.file_url && <div><button onClick={() => downloadFile(selected)} className="text-sm text-gold-500 hover:underline">View File</button></div>}
           </div>}
         </ModalForm>
 
@@ -138,7 +189,20 @@ export default function AdminMedicalCertificatesPage() {
               <div><label className="block text-sm text-gray-400 mb-1">Expiry Date <span className="text-red-400">*</span></label><input type="date" value={createForm.expiry_date} onChange={(e) => setCreateForm((f) => ({ ...f, expiry_date: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Issuer</label><input type="text" value={createForm.issuer} onChange={(e) => setCreateForm((f) => ({ ...f, issuer: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" /></div>
-            <div><label className="block text-sm text-gray-400 mb-1">File URL</label><input type="url" value={createForm.file_url} onChange={(e) => setCreateForm((f) => ({ ...f, file_url: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" /></div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Upload File</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={(e) => handleFilePick(e, (url) => setCreateForm((f) => ({ ...f, file_url: url })))}
+                  className="block w-full text-xs text-gray-400 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:cursor-pointer hover:file:bg-gold-400"
+                />
+                {uploading && <span className="text-xs text-gray-500 animate-pulse shrink-0">Uploading...</span>}
+              </div>
+              {createForm.file_url && <p className="text-xs text-gold-400 mt-1 truncate">{createForm.file_url}</p>}
+            </div>
+            <div><label className="block text-sm text-gray-400 mb-1">File URL (optional, alternative to upload)</label><input type="url" value={createForm.file_url} onChange={(e) => setCreateForm((f) => ({ ...f, file_url: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Status</label>
               <select value={createForm.status} onChange={(e) => setCreateForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
                 <option value="valid">Valid</option><option value="expired">Expired</option><option value="pending">Pending</option>
@@ -161,7 +225,20 @@ export default function AdminMedicalCertificatesPage() {
               <div><label className="block text-sm text-gray-400 mb-1">Expiry Date</label><input type="date" value={editForm.expiry_date} onChange={(e) => setEditForm((f) => ({ ...f, expiry_date: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Issuer</label><input type="text" value={editForm.issuer} onChange={(e) => setEditForm((f) => ({ ...f, issuer: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
-            <div><label className="block text-sm text-gray-400 mb-1">File URL</label><input type="url" value={editForm.file_url} onChange={(e) => setEditForm((f) => ({ ...f, file_url: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Upload File</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={(e) => handleFilePick(e, (url) => setEditForm((f) => ({ ...f, file_url: url })))}
+                  className="block w-full text-xs text-gray-400 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:cursor-pointer hover:file:bg-gold-400"
+                />
+                {uploading && <span className="text-xs text-gray-500 animate-pulse shrink-0">Uploading...</span>}
+              </div>
+              {editForm.file_url && <p className="text-xs text-gold-400 mt-1 truncate">{editForm.file_url}</p>}
+            </div>
+            <div><label className="block text-sm text-gray-400 mb-1">File URL (optional, alternative to upload)</label><input type="url" value={editForm.file_url} onChange={(e) => setEditForm((f) => ({ ...f, file_url: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Status</label>
               <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
                 <option value="valid">Valid</option><option value="expired">Expired</option><option value="pending">Pending</option>

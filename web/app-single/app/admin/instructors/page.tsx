@@ -6,7 +6,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
 import { api, unwrapResults } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -43,7 +43,29 @@ const STATUS_COLORS: Record<string, string> = {
   suspended: "bg-red-500/10 text-red-400",
 };
 
-const STATUSES = ["active", "inactive", "on_leave", "suspended"];
+const STATUSES = ["active", "suspended", "pending", "archived"];
+
+interface EditForm {
+  first_name: string;
+  last_name: string;
+  email: string;
+  license_number: string;
+  qualifications: string;
+  status: string;
+  total_flight_hours: string;
+  instruction_hours: string;
+}
+
+const INIT_EDIT: EditForm = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  license_number: "",
+  qualifications: "",
+  status: "active",
+  total_flight_hours: "0",
+  instruction_hours: "0",
+};
 
 // ── Component ─────────────────────────────────────────────
 
@@ -52,13 +74,20 @@ export default function AdminInstructorsPage() {
   useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
-  useToast();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   // ── Tabs ──
   const [activeTab, setActiveTab] = useState<"ground" | "flight">("ground");
 
   // ── Detail modal ──
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
+
+  // ── Edit / delete state ──
+  const [editInstructor, setEditInstructor] = useState<Instructor | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>(INIT_EDIT);
+  const [editError, setEditError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Instructor | null>(null);
 
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
@@ -90,6 +119,79 @@ export default function AdminInstructorsPage() {
   const isLoading = currentQuery.isLoading;
   const error = currentQuery.error;
   const refetch = currentQuery.refetch;
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-ground-instructors"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-flight-instructors"] });
+  };
+
+  const openEdit = (i: Instructor) => {
+    const quals = Array.isArray(i.qualifications)
+      ? i.qualifications.join(", ")
+      : typeof i.qualifications === "string"
+      ? i.qualifications
+      : "";
+    const [first = "", ...rest] = (i.name || "").split(" ");
+    setEditInstructor(i);
+    setEditForm({
+      first_name: first,
+      last_name: rest.join(" "),
+      email: i.email || "",
+      license_number: i.license_number || "",
+      qualifications: quals,
+      status: i.status || "active",
+      total_flight_hours: i.total_flight_hours != null ? String(i.total_flight_hours) : "0",
+      instruction_hours: i.instruction_hours != null ? String(i.instruction_hours) : "0",
+    });
+    setEditError("");
+  };
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) => {
+      const base = activeTab === "ground" ? "ground-instructors" : "flight-instructors";
+      return api.patch(`/${base}/${id}/`, payload);
+    },
+    onSuccess: () => {
+      showToast("success", "Instructor updated");
+      setEditInstructor(null);
+      invalidateAll();
+    },
+    onError: (err: any) => {
+      const msg = err?.data ? Object.values(err.data).flat().join(", ") : err.message;
+      setEditError(msg || "Failed to update instructor");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, tab }: { id: string; tab: "ground" | "flight" }) =>
+      api.delete(`/${tab === "ground" ? "ground-instructors" : "flight-instructors"}/${id}/`),
+    onSuccess: () => {
+      showToast("success", "Instructor removed");
+      setDeleteTarget(null);
+      invalidateAll();
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to delete instructor");
+    },
+  });
+
+  const saveEdit = () => {
+    if (!editInstructor) return;
+    const payload: Record<string, unknown> = {
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+      status: editForm.status,
+    };
+    if (activeTab === "ground") {
+      payload.email = editForm.email;
+    } else {
+      payload.license_number = editForm.license_number;
+      payload.qualifications = editForm.qualifications.split(",").map((s: string) => s.trim()).filter(Boolean);
+      payload.total_flight_hours = parseFloat(editForm.total_flight_hours) || 0;
+      payload.instruction_hours = parseFloat(editForm.instruction_hours) || 0;
+    }
+    updateMutation.mutate({ id: editInstructor.id, payload });
+  };
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -159,15 +261,26 @@ export default function AdminInstructorsPage() {
         header: t("common.actions", "Actions"),
         sortable: false,
         render: (i) => (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedInstructor(i as Instructor);
-            }}
-            className="text-xs px-3 py-1.5 rounded bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 font-medium transition-colors"
-          >
-            {t("common.view", "View")}
-          </button>
+          <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedInstructor(i as Instructor)}
+              className="text-xs px-2 py-1 rounded bg-navy-700 text-gray-300 hover:bg-navy-600 font-medium transition-colors"
+            >
+              {t("common.view", "View")}
+            </button>
+            <button
+              onClick={() => openEdit(i as Instructor)}
+              className="text-xs px-2 py-1 rounded bg-gold-500/20 text-gold-500 hover:bg-gold-500/30 font-medium transition-colors"
+            >
+              {t("common.edit", "Edit")}
+            </button>
+            <button
+              onClick={() => setDeleteTarget(i as Instructor)}
+              className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 font-medium transition-colors"
+            >
+              {t("common.delete", "Delete")}
+            </button>
+          </div>
         ),
       },
     ],
@@ -345,6 +458,164 @@ export default function AdminInstructorsPage() {
           </div>
         )}
       </ModalForm>
+
+      {/* Edit Instructor Modal */}
+      <ModalForm
+        open={!!editInstructor}
+        onClose={() => setEditInstructor(null)}
+        title={`Edit ${activeTab === "ground" ? "Ground" : "Flight"} Instructor: ${editInstructor?.name || ""}`}
+        footer={
+          <>
+            <button
+              onClick={() => setEditInstructor(null)}
+              disabled={updateMutation.isPending}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50"
+            >
+              {t("common.cancel", "Cancel")}
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={updateMutation.isPending}
+              className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {editError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">First Name</label>
+              <input
+                type="text"
+                value={editForm.first_name}
+                onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Last Name</label>
+              <input
+                type="text"
+                value={editForm.last_name}
+                onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          {activeTab === "ground" ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Email</label>
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">License #</label>
+                <input
+                  type="text"
+                  value={editForm.license_number}
+                  onChange={(e) => setEditForm((f) => ({ ...f, license_number: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Total Flight Hours</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editForm.total_flight_hours}
+                  onChange={(e) => setEditForm((f) => ({ ...f, total_flight_hours: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Instruction Hours</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editForm.instruction_hours}
+                  onChange={(e) => setEditForm((f) => ({ ...f, instruction_hours: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              {activeTab === "ground" ? "Status" : "Qualifications (comma-separated)"}
+            </label>
+            {activeTab === "ground" ? (
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={editForm.qualifications}
+                onChange={(e) => setEditForm((f) => ({ ...f, qualifications: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                placeholder="CFI, CFII, ..."
+              />
+            )}
+          </div>
+        </div>
+      </ModalForm>
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white">Delete Instructor</h3>
+            <p className="text-sm text-gray-400">
+              Remove {deleteTarget.name}? Their account will be deactivated and they will no longer be able to sign in.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate({ id: deleteTarget.id, tab: activeTab })}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

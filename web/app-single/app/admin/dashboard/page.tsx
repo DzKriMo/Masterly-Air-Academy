@@ -37,46 +37,12 @@ export default function AdminDashboard() {
     enabled: isAuthenticated,
   });
 
-  // ── Recent activity from audit-logs ──────────────────────────────
-  const activityQuery = useQuery({
-    queryKey: ["admin-activity"],
-    queryFn: () => api.get<any>("/audit-logs/?limit=10").catch(() => null),
-    enabled: isAuthenticated,
-  });
-
-  // ── Fallback activity if audit-logs fails ────────────────────────
-  const recentActivity = (() => {
-    const raw = activityQuery.data;
-    const list = Array.isArray(raw) ? raw : unwrapResults(raw) as any;
-    if (list && Array.isArray(list)) {
-      return list.slice(0, 10);
-    }
-    // Blank until /users/ data is available for fallback
-    return null;
-  })();
-
   // ── Contact/Application inquiries ──────────────────────────────
   const inquiriesQuery = useQuery({
     queryKey: ["admin-inquiries"],
     queryFn: () => api.get<any>("/notifications/?limit=20").catch(() => null),
     enabled: isAuthenticated,
   });
-
-  // Compute fallback activity from the last 10 users
-  const fallbackActivity = (() => {
-    if (recentActivity && recentActivity.length > 0) return null; // use real data
-    if (!kpisQuery.data) return null;
-    const [, usersResp] = kpisQuery.data;
-    const uList = unwrapResults(usersResp);
-    return uList.slice(0, 10).map((u: any) => ({
-      id: u.id,
-      action: `User ${u.email || u.username || "—"}`,
-      user: u.role || "unknown",
-      timestamp: u.last_login_at || u.created_at || undefined,
-    }));
-  })();
-
-  const displayActivity = recentActivity && recentActivity.length > 0 ? recentActivity : fallbackActivity;
 
   if (authLoading || !isAuthenticated) return null;
 
@@ -111,28 +77,16 @@ export default function AdminDashboard() {
   const outstanding = (kpis as Record<string, number>)?.outstanding ?? 0;
 
   // ── Compute chart data ────────────────────────────────────────────
-  const roleCounts: Record<string, number> = {};
-  uList.forEach((u: any) => {
-    const r = u.role || "unknown";
-    roleCounts[r] = (roleCounts[r] || 0) + 1;
-  });
-
   const invCounts: Record<string, number> = {};
   iList.forEach((i: any) => {
     invCounts[i.status] = (invCounts[i.status] || 0) + 1;
   });
 
-  const charts = {
-    roles: Object.entries(roleCounts).map(([name, value]) => ({ name, value })),
-    invoices: Object.entries(invCounts).map(([name, value]) => ({ name, value })),
-  };
+  const invoiceChart = Object.entries(invCounts).map(([name, value]) => ({ name, value }));
 
   // ── Format helpers ────────────────────────────────────────────────
   const fmtCurrency = (n: number) =>
     new Intl.NumberFormat("en-DZ", { style: "currency", currency: "DZD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-
-  const fmtRole = (role?: string) =>
-    (role || '').replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -277,53 +231,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* ═══ CHARTS ROW ══════════════════════════════════════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <ChartCard title={t("admin.usersByRole", "Users by Role")}>
-                {charts.roles.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">{t("common.noData", "No user data")}</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie
-                        data={charts.roles}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={40}
-                        label={({ name, value, percent }: any) =>
-                          `${fmtRole(name)}: ${value} (${(percent * 100).toFixed(0)}%)`
-                        }
-                        labelLine={false}
-                      >
-                        {charts.roles.map((_: any, i: number) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: "#1e293b",
-                          border: "1px solid #334155",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                        formatter={(value: number, name: string) => [`${value} users`, fmtRole(name)]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </ChartCard>
-
-              {!isTrainingAdmin && (
+            {!isTrainingAdmin && (
+              <div className="mb-8">
                 <ChartCard title={t("admin.invoiceStatus", "Invoice Status")}>
-                  {charts.invoices.length === 0 ? (
+                  {invoiceChart.length === 0 ? (
                     <p className="text-gray-500 text-sm text-center py-8">{t("common.noData", "No invoice data")}</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
                         <Pie
-                          data={charts.invoices}
+                          data={invoiceChart}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -335,7 +252,7 @@ export default function AdminDashboard() {
                           }
                           labelLine={false}
                         >
-                          {charts.invoices.map((_: any, i: number) => (
+                          {invoiceChart.map((_: any, i: number) => (
                             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                           ))}
                         </Pie>
@@ -355,8 +272,8 @@ export default function AdminDashboard() {
                     </ResponsiveContainer>
                   )}
                 </ChartCard>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* ═══ QUICK ACTIONS ═══════════════════════════════════ */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -388,50 +305,6 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* ═══ RECENT ACTIVITY ═════════════════════════════════ */}
-            <div className="bg-navy-800 border border-navy-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-                  {t("dashboard.activity", "Recent Activity")}
-                </h3>
-                {activityQuery.isLoading && (
-                  <span className="text-xs text-gray-500 animate-pulse">{t("common.loading", "Loading...")}</span>
-                )}
-              </div>
-              {activityQuery.isLoading && !displayActivity ? (
-                <LoadingSkeleton type="table" rows={4} />
-              ) : !displayActivity || displayActivity.length === 0 ? (
-                <EmptyState message={t("common.noData", "No recent activity")} />
-              ) : (
-                <div className="space-y-1">
-                  {displayActivity.map((act: any) => (
-                    <div
-                      key={act.id}
-                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-navy-700/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-gold-500/60 shrink-0" />
-                        <div>
-                          <p className="text-sm text-white">{act.action || act.event || "—"}</p>
-                          <p className="text-xs text-gray-500">{act.user_email || act.user || act.actor || act.role || "System"}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500 shrink-0 ml-4">
-                        {(act.created_at || act.timestamp)
-                          ? new Date(act.created_at || act.timestamp).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* ═══ RECENT INQUIRIES ══════════════════════════════════ */}
             <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 mt-6">
               <div className="flex items-center justify-between mb-4">
@@ -444,9 +317,28 @@ export default function AdminDashboard() {
               </div>
               {(() => {
                 const raw = inquiriesQuery.data;
-                const list = Array.isArray(raw) ? raw : unwrapResults(raw) as any || [];
-                const inquiries = list
-                  .filter((n: any) => n.type === "contact_form" || n.type === "application")
+                const notifs = (Array.isArray(raw) ? raw : unwrapResults(raw) as any) || [];
+                const contacts = notifs
+                  .filter((n: any) => n.type === "contact_form")
+                  .map((n: any) => ({
+                    id: `notif-${n.id}`,
+                    type: "contact",
+                    title: n.title,
+                    email: n.data?.email || n.data?.name || "—",
+                    created_at: n.created_at,
+                  }));
+                const apps = safeList(applicationsResp).map((a: any) => ({
+                  id: `app-${a.id}`,
+                  type: "application",
+                  title: a.student_name || a.application_number,
+                  email: a.documents?.[0]?.email || "—",
+                  created_at: a.submitted_at,
+                }));
+                const inquiries = [...contacts, ...apps]
+                  .sort(
+                    (x: any, y: any) =>
+                      new Date(y.created_at || 0).getTime() - new Date(x.created_at || 0).getTime()
+                  )
                   .slice(0, 5);
                 if (inquiriesQuery.isLoading && !inquiries.length) {
                   return <LoadingSkeleton type="table" rows={3} />;
@@ -469,9 +361,7 @@ export default function AdminDashboard() {
                           />
                           <div className="min-w-0">
                             <p className="text-sm text-white truncate">{n.title}</p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {n.data?.email || n.data?.name || "—"}
-                            </p>
+                            <p className="text-xs text-gray-500 truncate">{n.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0 ml-4">

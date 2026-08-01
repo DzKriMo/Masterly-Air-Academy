@@ -1,3 +1,4 @@
+import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -83,7 +84,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
             student = app.student
             student.status = 'active'
-            student.save(update_fields=['status'])
+            student_fields = ['status']
+            if student.student_number.startswith(('APP-', 'AP-')):
+                student.student_number = f"STU-{timezone.now().year}-{uuid.uuid4().hex[:6].upper()}"
+                student_fields.append('student_number')
+            student.save(update_fields=student_fields)
 
         return Response(ApplicationSerializer(app).data)
 

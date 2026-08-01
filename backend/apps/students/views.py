@@ -336,6 +336,33 @@ class MedicalCertificateViewSet(viewsets.ModelViewSet):
             return qs.filter(student__main_instructor__user=self.request.user)
         return qs
 
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'medical/{file.name}', file)
+        return Response({'file_url': path}, status=201)
+
+    @action(detail=True, methods=['get'], url_path='download')
+    def download(self, request, pk=None):
+        cert = self.get_object()
+        if not cert.file_url:
+            return Response({'error': 'No file attached'}, status=404)
+        if cert.file_url.startswith(('http://', 'https://')):
+            return Response({'file_url': cert.file_url})
+        from django.core.files.storage import default_storage
+        from django.http import StreamingHttpResponse
+        try:
+            f = default_storage.open(cert.file_url, 'rb')
+            filename = cert.file_url.rsplit('/', 1)[-1]
+            response = StreamingHttpResponse(f, content_type='application/octet-stream')
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception:
+            return Response({'error': 'File not found'}, status=404)
+
 
 class AdminProfileViewSet(viewsets.ModelViewSet):
     queryset = AdminProfile.objects.all()
@@ -344,37 +371,97 @@ class AdminProfileViewSet(viewsets.ModelViewSet):
     required_permission = 'accounts.manage'
 
 
-class FlightInstructorViewSet(viewsets.ReadOnlyModelViewSet):
+class FlightInstructorViewSet(viewsets.ModelViewSet):
     queryset = FlightInstructor.objects.all()
     serializer_class = FlightInstructorSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'students.view'
     search_fields = ['first_name', 'last_name']
 
+    def destroy(self, request, pk=None):
+        instructor = self.get_object()
+        if instructor.user_id:
+            user = instructor.user
+            user.is_active = False
+            user.status = 'suspended'
+            user.save(update_fields=['is_active', 'status'])
+        instructor.status = 'suspended'
+        instructor.save(update_fields=['status'])
+        return Response(status=204)
+
 
 class GroundInstructorViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'students.view'
 
-    def list(self, request):
+    def get_queryset(self):
         from django.contrib.auth import get_user_model
-        from .serializers import GroundInstructorSerializer
         User = get_user_model()
-        instructors = User.objects.filter(
+        return User.objects.filter(
             role__in=['ground_instructor', 'chief_ground_instructor']
-        ).values('id', 'email', 'status', 'first_name', 'last_name')
-        data = []
-        for u in instructors:
-            data.append({
-                'id': str(u['id']),
-                'name': f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or u['email'],
-                'email': u['email'],
-                'phone': '',
-                'license_number': '',
-                'qualifications': [],
-                'status': u.get('status', 'active'),
-                'total_flight_hours': 0,
-                'instruction_hours': 0,
-                'student_count': 0,
-            })
+        ).order_by('first_name', 'last_name')
+
+    def _serialize(self, user):
+        return {
+            'id': str(user.id),
+            'name': f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email,
+            'email': user.email,
+            'phone': '',
+            'license_number': '',
+            'qualifications': [],
+            'status': user.status,
+            'total_flight_hours': 0,
+            'instruction_hours': 0,
+            'student_count': 0,
+        }
+
+    def list(self, request):
+        from .serializers import GroundInstructorSerializer
+        data = [self._serialize(u) for u in self.get_queryset()]
         return Response(GroundInstructorSerializer(data, many=True).data)
+
+    def _update_fields(self, user, data):
+        update_fields = []
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        status_val = data.get('status')
+        if first_name is not None:
+            user.first_name = first_name
+            update_fields.append('first_name')
+        if last_name is not None:
+            user.last_name = last_name
+            update_fields.append('last_name')
+        if email is not None:
+            user.email = email
+            update_fields.append('email')
+        if status_val is not None:
+            user.status = status_val
+            update_fields.append('status')
+        if update_fields:
+            user.save(update_fields=update_fields)
+        return user
+
+    def update(self, request, pk=None):
+        from django.shortcuts import get_object_or_404
+        user = get_object_or_404(self.get_queryset(), pk=pk)
+        # PUT semantics: apply all provided values (falling back to current)
+        for field, value in request.data.items():
+            if field in ('first_name', 'last_name', 'email', 'status'):
+                setattr(user, field, value)
+        user.save()
+        return Response(self._serialize(user))
+
+    def partial_update(self, request, pk=None):
+        from django.shortcuts import get_object_or_404
+        user = get_object_or_404(self.get_queryset(), pk=pk)
+        self._update_fields(user, request.data)
+        return Response(self._serialize(user))
+
+    def destroy(self, request, pk=None):
+        from django.shortcuts import get_object_or_404
+        user = get_object_or_404(self.get_queryset(), pk=pk)
+        user.is_active = False
+        user.status = 'suspended'
+        user.save(update_fields=['is_active', 'status'])
+        return Response(status=204)
