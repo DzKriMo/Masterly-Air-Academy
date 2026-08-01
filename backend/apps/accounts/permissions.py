@@ -62,6 +62,10 @@ class HasRolePermission(BasePermission):
             # Resolve domain aliases (e.g. flights → flight_training)
             resolved_domain = DOMAIN_ALIASES.get(domain, domain)
 
+            # `manage` implies every permission in the domain (create/update/delete/view/evaluate/...)
+            if _perm_held(all_perms, f'{domain}.manage') or _perm_held(all_perms, f'{resolved_domain}.manage'):
+                return True
+
             # view_own, evaluate, manage all satisfy view (queryset scoping handles restriction)
             if action in ('view', 'manage'):
                 implied = [f'{domain}.view_own', f'{domain}.evaluate', f'{domain}.manage',
