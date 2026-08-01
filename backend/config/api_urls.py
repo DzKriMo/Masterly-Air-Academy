@@ -36,7 +36,7 @@ from apps.quality_safety.views import (
 )
 from apps.students.views import (
     StudentViewSet, MedicalCertificateViewSet, AdminProfileViewSet,
-    FlightInstructorViewSet, GroundInstructorViewSet,
+    FlightInstructorViewSet, GroundInstructorViewSet, PromotionViewSet,
 )
 from apps.notifications.views import NotificationViewSet, MessageViewSet, notification_broadcast
 from apps.core.views import SystemSettingViewSet, AuditLogViewSet, search_view, trigger_backup
@@ -87,6 +87,7 @@ router.register(r'capas', CAPAViewSet)
 router.register(r'risk-assessments', RiskAssessmentViewSet)
 router.register(r'safety-events', SafetyEventViewSet)
 router.register(r'students', StudentViewSet)
+router.register(r'promotions', PromotionViewSet)
 router.register(r'contracts', ContractViewSet)
 router.register(r'quality-documents', QualityDocumentViewSet, basename='qdoc')
 router.register(r'maintenance-records', MaintenanceRecordViewSet, basename='maint')

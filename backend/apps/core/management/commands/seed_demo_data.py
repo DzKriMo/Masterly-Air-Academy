@@ -66,7 +66,20 @@ class Command(BaseCommand):
             if g: u.groups.add(g)
 
         # ── Students ──────────────────────────────────────
-        from apps.students.models import Student
+        from apps.students.models import Student, Promotion
+
+        def _get_promotion(program):
+            promo, _ = Promotion.objects.get_or_create(
+                code=f'{program}-2025-A',
+                defaults={
+                    'program': program,
+                    'name': f'{program} 2025 Alpha',
+                    'start_date': date(2025, 9, 1),
+                    'status': 'in_progress',
+                },
+            )
+            return promo
+
         students_data = [
             {'first_name': 'Mohamed', 'last_name': 'Amine', 'program': 'PPL', 'student_number': 'STU-001', 'email': 'm.amine@student.maa.dz'},
             {'first_name': 'Sarah', 'last_name': 'Boumaza', 'program': 'CPL', 'student_number': 'STU-002', 'email': 's.boumaza@student.maa.dz'},
@@ -102,7 +115,7 @@ class Command(BaseCommand):
                     'phone': '+213600000000',
                     'enrollment_date': today - timedelta(days=90),
                     'program': d['program'],
-                    'academic_year': ay,
+                    'promotion': _get_promotion(d['program']),
                     'status': 'active',
                 },
             )
@@ -264,7 +277,6 @@ class Command(BaseCommand):
                     'description_en': f'Comprehensive course on {sd["title"].lower()}.',
                     'total_hours': sd['hours'],
                     'program': sd['program'],
-                    'academic_year': ay,
                     'status': 'active',
                 },
             )
@@ -325,18 +337,19 @@ class Command(BaseCommand):
         room2, _ = Room.objects.get_or_create(name='Classroom B', defaults={'capacity': 15, 'location': 'First Floor', 'status': 'available'})
 
         # ── Courses (past + present) ──────────────────────
+        promo_ppl = _get_promotion('PPL')
         course1, _ = Course.objects.get_or_create(
-            subject=nav, instructor=gi, academic_year=ay, title='Navigation Basics',
+            subject=nav, instructor=gi, promotion=promo_ppl, title='Navigation Basics',
             scheduled_date=today - timedelta(days=30), start_time='09:00', end_time='11:00',
             defaults={'room': room1, 'status': 'completed'},
         )
         course2, _ = Course.objects.get_or_create(
-            subject=met, instructor=gi, academic_year=ay, title='Weather Fundamentals',
+            subject=met, instructor=gi, promotion=promo_ppl, title='Weather Fundamentals',
             scheduled_date=today - timedelta(days=28), start_time='10:00', end_time='12:00',
             defaults={'room': room2, 'status': 'completed'},
         )
         course3, _ = Course.objects.get_or_create(
-            subject=nav, instructor=gi, academic_year=ay, title='Advanced Navigation',
+            subject=nav, instructor=gi, promotion=promo_ppl, title='Advanced Navigation',
             scheduled_date=today + timedelta(days=7), start_time='09:00', end_time='12:00',
             defaults={'room': room1, 'status': 'scheduled'},
         )

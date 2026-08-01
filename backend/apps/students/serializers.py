@@ -1,5 +1,17 @@
 from rest_framework import serializers
-from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile
+from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile, Promotion
+
+
+class PromotionSerializer(serializers.ModelSerializer):
+    student_count = serializers.IntegerField(read_only=True)
+    program_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Promotion
+        fields = ['id', 'code', 'program', 'program_name', 'name', 'start_date', 'end_date', 'status', 'main_instructor', 'student_count', 'created_at', 'updated_at']
+
+    def get_program_name(self, obj):
+        return obj.get_program_display()
 
 
 class StudentListSerializer(serializers.ModelSerializer):
@@ -12,6 +24,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     emergency_contact = serializers.SerializerMethodField()
     emergency_phone = serializers.SerializerMethodField()
     notes = serializers.SerializerMethodField()
+    promotion_code = serializers.CharField(read_only=True)
 
     class Meta:
         model = Student
@@ -19,6 +32,7 @@ class StudentListSerializer(serializers.ModelSerializer):
             'id', 'user_id', 'student_number', 'first_name', 'last_name',
             'full_name', 'email', 'phone', 'address', 'date_of_birth',
             'nationality', 'program', 'status', 'enrollment_date',
+            'promotion', 'promotion_code',
             'instructor_name', 'medical_certificate', 'medical_expiry',
             'emergency_contact', 'emergency_phone', 'notes',
         ]

@@ -45,6 +45,7 @@ export default function StudentDashboard() {
   // New dashboard fields
   const studentNumber = dashData.student_number || "";
   const program = dashData.program || "";
+  const promotionCode = dashData.promotion_code || "";
   const passedCount = attempts.filter((a: any) => a.is_passed === true).length;
   const failedCount = attempts.filter((a: any) => a.is_passed === false).length;
   const recentNotifications = dashData.recent_notifications ?? dashData.notifications ?? [];
@@ -91,6 +92,11 @@ export default function StudentDashboard() {
           {program && (
             <span className={`text-xs px-2.5 py-1 rounded-full border font-semibold ${programBadgeColor(program)}`}>
               {program}
+            </span>
+          )}
+          {promotionCode && (
+            <span className="text-xs px-2.5 py-1 rounded-full border font-mono bg-navy-800 text-gold-400 border-navy-600">
+              {promotionCode}
             </span>
           )}
         </div>

@@ -27,6 +27,7 @@ PERMISSION_DOMAINS = {
     'safety': ['view', 'create', 'update', 'delete', 'manage'],
     'audit_logs': ['view'],
     'academic_years': ['view', 'create', 'update', 'delete', 'manage'],
+    'promotions': ['view', 'create', 'update', 'delete', 'manage'],
     'settings': ['view', 'manage'],
 }
 
@@ -46,7 +47,7 @@ ROLE_DEFINITIONS = {
             'fleet': ['view'], 'schedule': ['view'],
             'finance': ['view', 'view_reports'], 'invoicing': ['view'],
             'quality': ['view'], 'safety': ['view'],
-            'academic_years': ['view'], 'settings': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'], 'settings': ['view'],
             'audit_logs': ['view'],
         },
     },
@@ -63,7 +64,7 @@ ROLE_DEFINITIONS = {
             'applications': ['view', 'approve'],
             'fleet': ['view'],
             'schedule': ['manage'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'chief_ground_instructor': {
@@ -76,7 +77,7 @@ ROLE_DEFINITIONS = {
             'attendance': ['view', 'create', 'update'],
             'documents': ['view'],
             'schedule': ['view', 'update'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'ground_instructor': {
@@ -88,7 +89,7 @@ ROLE_DEFINITIONS = {
             'exams': ['view', 'grade'],
             'attendance': ['view', 'create', 'update'],
             'schedule': ['view_own'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'chief_flight_instructor': {
@@ -103,7 +104,7 @@ ROLE_DEFINITIONS = {
             'documents': ['view'],
             'fleet': ['view', 'update'],
             'schedule': ['view', 'update'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'flight_instructor': {
@@ -117,7 +118,7 @@ ROLE_DEFINITIONS = {
             'attendance': ['view', 'create', 'update'],
             'fleet': ['view'],
             'schedule': ['view_own'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'admin_responsible': {
@@ -127,7 +128,7 @@ ROLE_DEFINITIONS = {
             'students': ['manage'], 'candidates': ['manage'],
             'documents': ['manage'],
             'applications': ['manage'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
             'audit_logs': ['view'],
         },
     },
@@ -139,7 +140,7 @@ ROLE_DEFINITIONS = {
             'candidates': ['view', 'create', 'update'],
             'documents': ['view', 'create', 'update'],
             'applications': ['view', 'create', 'update'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'finance_responsible': {
@@ -150,7 +151,7 @@ ROLE_DEFINITIONS = {
             'finance': ['manage'],
             'invoicing': ['view', 'create', 'update', 'manage'],
             'documents': ['view'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
             'audit_logs': ['view'],
         },
     },
@@ -161,7 +162,7 @@ ROLE_DEFINITIONS = {
             'students': ['view'],
             'finance': ['view', 'create', 'update'],
             'invoicing': ['view', 'create', 'update'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'admissions_responsible': {
@@ -172,7 +173,7 @@ ROLE_DEFINITIONS = {
             'applications': ['manage'],
             'students': ['view'],
             'documents': ['view', 'manage'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'quality_manager': {
@@ -185,7 +186,7 @@ ROLE_DEFINITIONS = {
             'documents': ['view', 'create'],
             'ground_training': ['view'], 'flight_training': ['view'],
             'exams': ['view'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
             'audit_logs': ['view'],
         },
     },
@@ -223,7 +224,7 @@ ROLE_DEFINITIONS = {
             'applications': ['manage'],
             'fleet': ['view'],
             'schedule': ['manage'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'scheduler': {
@@ -234,7 +235,7 @@ ROLE_DEFINITIONS = {
             'fleet': ['view', 'update'],
             'students': ['view'],
             'ground_training': ['view'], 'flight_training': ['view'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
         },
     },
     'student': {
@@ -248,7 +249,7 @@ ROLE_DEFINITIONS = {
             'attendance': ['view_own'],
             'documents': ['view_own'],
             'schedule': ['view_own'],
-            'academic_years': ['view'],
+            'academic_years': ['view'], 'promotions': ['view'],
             'invoicing': ['view_own'],
             'finance': ['view_own'],
         },
@@ -351,3 +352,4 @@ class Command(BaseCommand):
                     f'\n{assigned} users assigned to their role groups'
                 )
             )
+

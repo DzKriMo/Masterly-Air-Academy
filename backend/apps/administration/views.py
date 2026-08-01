@@ -85,8 +85,26 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             student = app.student
             student.status = 'active'
             student_fields = ['status']
+            if not student.promotion_id:
+                from apps.students.models import Promotion
+                promo = Promotion.objects.filter(program=student.program, status='in_progress').order_by('-start_date').first()
+                if not promo:
+                    from apps.students.models import PromotionStatus
+                    year = timezone.now().year
+                    base = f'{student.program}-{year}-'
+                    letter_index = Promotion.objects.filter(code__startswith=base).count()
+                    letter = chr(ord('A') + letter_index)
+                    promo = Promotion.objects.create(
+                        code=f'{base}{letter}',
+                        program=student.program,
+                        name=f'{student.program} {year} {letter}',
+                        start_date=timezone.now().date(),
+                        status=PromotionStatus.IN_PROGRESS,
+                    )
+                student.promotion = promo
+                student_fields.append('promotion')
             if student.student_number.startswith(('APP-', 'AP-')):
-                student.student_number = f"STU-{timezone.now().year}-{uuid.uuid4().hex[:6].upper()}"
+                student.student_number = student.generate_student_number()
                 student_fields.append('student_number')
             student.save(update_fields=student_fields)
 

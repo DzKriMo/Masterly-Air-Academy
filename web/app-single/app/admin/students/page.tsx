@@ -33,6 +33,8 @@ interface Student {
   program: string;
   status: string;
   enrollment_date: string;
+  promotion?: string;
+  promotion_code?: string;
   instructor_name: string;
   nationality: string;
   medical_certificate: string;
@@ -146,6 +148,16 @@ export default function AdminStudentsPage() {
     enabled: isAuthenticated,
   });
 
+  // ── Promotions query ──
+  const { data: promotions = [] } = useQuery<any[]>({
+    queryKey: ["admin-students-promotions"],
+    queryFn: async () => {
+      const d = await api.get<any>("/promotions/");
+      return (d as any)?.results || (d as any) || [];
+    },
+    enabled: isAuthenticated,
+  });
+
   // ── Filtered data ──
   const filtered = useMemo(() => {
     if (!students) return [];
@@ -154,6 +166,8 @@ export default function AdminStudentsPage() {
       r = r.filter((i) => i.program === filterValues.program);
     if (filterValues.status)
       r = r.filter((i) => i.status === filterValues.status);
+    if (filterValues.promotion)
+      r = r.filter((i) => i.promotion === filterValues.promotion);
     if (searchValue) {
       const q = searchValue.toLowerCase();
       r = r.filter(
@@ -185,6 +199,15 @@ export default function AdminStudentsPage() {
       },
       { key: "full_name", header: t("common.name", "Name") },
       { key: "program", header: "Program" },
+      {
+        key: "promotion_code",
+        header: "Promotion",
+        render: (s) => (
+          <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono">
+            {s.promotion_code || "—"}
+          </span>
+        ),
+      },
       {
         key: "status",
         header: t("common.status", "Status"),
@@ -316,6 +339,14 @@ export default function AdminStudentsPage() {
               options: PROGRAMS.map((p) => ({
                 value: p,
                 label: p,
+              })),
+            },
+            {
+              key: "promotion",
+              label: "All Promotions",
+              options: promotions.map((p: any) => ({
+                value: p.id,
+                label: p.code || p.name,
               })),
             },
             {
@@ -459,6 +490,10 @@ export default function AdminStudentsPage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <DetailField label="Program" value={selectedStudent.program} />
+                  <DetailField
+                    label="Promotion"
+                    value={selectedStudent.promotion_code || "—"}
+                  />
                   <DetailField
                     label="Status"
                     value={

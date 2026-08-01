@@ -1,16 +1,35 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
-from .models import Student, MedicalCertificate, GroundInstructor, FlightInstructor, AdminProfile
+from .models import Student, MedicalCertificate, GroundInstructor, FlightInstructor, AdminProfile, Promotion
+
+
+@admin.register(Promotion)
+class PromotionAdmin(ModelAdmin):
+    list_display = ['code', 'name', 'program', 'status', 'start_date', 'end_date', 'student_count']
+    list_filter = ['program', 'status']
+    search_fields = ['code', 'name']
+    autocomplete_fields = ['main_instructor']
+    fieldsets = (
+        (None, {
+            'fields': ('code', 'name', 'program', 'status'),
+        }),
+        ('Dates', {
+            'fields': ('start_date', 'end_date'),
+        }),
+        ('Assignment', {
+            'fields': ('main_instructor',),
+        }),
+    )
 
 
 @admin.register(Student)
 class StudentAdmin(ModelAdmin):
-    list_display = ['student_number', 'first_name', 'last_name', 'program', 'status', 'enrollment_date']
-    list_filter = ['program', 'status', 'academic_year']
+    list_display = ['student_number', 'first_name', 'last_name', 'program', 'promotion', 'status', 'enrollment_date']
+    list_filter = ['program', 'status', 'promotion']
     search_fields = ['first_name', 'last_name', 'student_number']
     ordering = ['last_name', 'first_name']
     readonly_fields = ['id', 'created_at', 'updated_at']
-    autocomplete_fields = ['user', 'main_instructor', 'academic_year']
+    autocomplete_fields = ['user', 'main_instructor', 'promotion']
     fieldsets = (
         ('Personal Info', {
             'fields': ('user', 'first_name', 'last_name', 'date_of_birth', 'nationality'),
@@ -19,7 +38,7 @@ class StudentAdmin(ModelAdmin):
             'fields': ('phone', 'address'),
         }),
         ('Academic', {
-            'fields': ('student_number', 'program', 'academic_year', 'enrollment_date', 'status'),
+            'fields': ('student_number', 'program', 'promotion', 'enrollment_date', 'status'),
         }),
         ('Assignment', {
             'fields': ('main_instructor',),

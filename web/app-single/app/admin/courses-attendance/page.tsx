@@ -49,19 +49,20 @@ function CoursesTab() {
       filterFields={[
         { key: "status", label: "All Statuses", options: COURSE_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
         { key: "subject", label: "All Subjects", options: (lk) => (lk.subjects || []).map((s: any) => ({ value: s.id, label: s.title_en || s.code })) },
+        { key: "promotion", label: "All Promotions", options: (lk) => (lk.promotions || []).map((p: any) => ({ value: p.id, label: p.code || p.name })) },
       ]}
       lookups={[
         { key: "subjects", queryKey: ["admin-courses-subjects"], endpoint: "/subjects/" },
         { key: "instructors", queryKey: ["admin-courses-instructors"], endpoint: "/ground-instructors/" },
         { key: "rooms", queryKey: ["admin-courses-rooms"], endpoint: "/rooms/" },
-        { key: "years", queryKey: ["admin-courses-years"], endpoint: "/academic-years/" },
+        { key: "promotions", queryKey: ["admin-courses-promotions"], endpoint: "/promotions/" },
       ]}
-      initialCreate={{ subject: "", instructor: "", title: "", scheduled_date: "", start_time: "", end_time: "", room: "", status: "scheduled", notes: "", academic_year: "" }}
-      buildForm={(c) => ({ subject: c.subject || "", instructor: c.instructor || "", title: c.title, scheduled_date: c.scheduled_date || todayLocal(), start_time: c.start_time || "", end_time: c.end_time || "", room: c.room || "", status: c.status, notes: c.notes || "", academic_year: c.academic_year || "" })}
+      initialCreate={{ subject: "", instructor: "", title: "", scheduled_date: "", start_time: "", end_time: "", room: "", status: "scheduled", notes: "", promotion: "" }}
+      buildForm={(c) => ({ subject: c.subject || "", instructor: c.instructor || "", title: c.title, scheduled_date: c.scheduled_date || todayLocal(), start_time: c.start_time || "", end_time: c.end_time || "", room: c.room || "", status: c.status, notes: c.notes || "", promotion: c.promotion || "" })}
       buildPayload={(f) => ({
         subject: f.subject || null,
         instructor: f.instructor || null,
-        academic_year: f.academic_year || null,
+        promotion: f.promotion || null,
         title: f.title,
         scheduled_date: f.scheduled_date,
         start_time: f.start_time,
@@ -79,12 +80,13 @@ function CoursesTab() {
         { name: "end_time", label: "End Time", type: "time", required: true, span: "half" },
         { name: "room", label: "Room", type: "select", placeholder: "No room", options: (lk) => (lk.rooms || []).map((r: any) => ({ value: r.id, label: r.name || r.room_number })) },
         { name: "status", label: "Status", type: "select", options: COURSE_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
-        { name: "academic_year", label: "Academic Year", type: "select", placeholder: "Auto-assign", options: (lk) => (lk.years || []).map((y: any) => ({ value: y.id, label: y.name || y.label })) },
+        { name: "promotion", label: "Promotion", type: "select", placeholder: "Auto-assign", options: (lk) => (lk.promotions || []).map((p: any) => ({ value: p.id, label: p.code || p.name })) },
         { name: "notes", label: "Notes", type: "textarea", rows: 3 },
       ]}
       columns={[
         { key: "title", header: "Title", render: (c) => <span className="text-sm font-semibold text-white">{c.title}</span> },
         { key: "subject_code", header: "Subject", render: (c) => <span className="text-sm text-gray-300">{c.subject_code || "—"}</span> },
+        { key: "promotion_code", header: "Promotion", render: (c) => <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono">{c.promotion_code || "—"}</span> },
         { key: "instructor_name", header: "Instructor", render: (c) => <span className="text-sm text-gray-300">{c.instructor_name || "—"}</span> },
         { key: "scheduled_date", header: "Date", render: (c) => <span className="text-sm text-gray-400">{formatDate(c.scheduled_date)}</span> },
         { key: "start_time", header: "Time", render: (c) => <span className="text-sm text-gray-400">{formatTime(c.start_time)} – {formatTime(c.end_time)}</span> },
@@ -96,6 +98,7 @@ function CoursesTab() {
       detailFields={(c) => [
         { label: "Title", value: c.title },
         { label: "Subject", value: c.subject_code || "—" },
+        { label: "Promotion", value: c.promotion_code || "—" },
         { label: "Instructor", value: c.instructor_name || "—" },
         { label: "Date", value: formatDate(c.scheduled_date) },
         { label: "Time", value: `${formatTime(c.start_time)} – ${formatTime(c.end_time)}` },
@@ -113,7 +116,8 @@ interface Course {
   subject_code?: string;
   instructor: string | null;
   instructor_name?: string;
-  academic_year: string | null;
+  promotion: string | null;
+  promotion_code?: string;
   title: string;
   scheduled_date: string;
   start_time: string;

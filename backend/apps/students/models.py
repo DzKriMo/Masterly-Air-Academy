@@ -11,6 +11,42 @@ class TrainingProgram(models.TextChoices):
     MCC = 'MCC', 'Multi-Crew Cooperation'
 
 
+class PromotionStatus(models.TextChoices):
+    IN_PROGRESS = 'in_progress', 'In Progress'
+    GRADUATED = 'graduated', 'Graduated'
+    ARCHIVED = 'archived', 'Archived'
+
+
+class Promotion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=20, unique=True)
+    program = models.CharField(max_length=10, choices=TrainingProgram.choices)
+    name = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=PromotionStatus.choices, default=PromotionStatus.IN_PROGRESS)
+    main_instructor = models.ForeignKey('FlightInstructor', on_delete=models.SET_NULL, null=True, blank=True, related_name='promotions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'promotions'
+        ordering = ['-start_date']
+        verbose_name = 'Promotion'
+        verbose_name_plural = 'Promotions'
+        indexes = [
+            models.Index(fields=['program']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'{self.code} - {self.name}'
+
+    @property
+    def student_count(self):
+        return self.students.count()
+
+
 class Student(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='student_profile')
@@ -25,7 +61,7 @@ class Student(models.Model):
     enrollment_date = models.DateField()
     status = models.CharField(max_length=20, default='active')
     program = models.CharField(max_length=10, choices=TrainingProgram.choices)
-    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.SET_NULL, null=True, blank=True)
+    promotion = models.ForeignKey(Promotion, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     main_instructor = models.ForeignKey('FlightInstructor', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_students')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -47,6 +83,30 @@ class Student(models.Model):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+
+    @property
+    def promotion_code(self):
+        return self.promotion.code if self.promotion_id else ''
+
+    def generate_student_number(self):
+        from django.utils import timezone
+        if self.promotion_id:
+            prefix = f"STU-{self.promotion.code}-"
+        else:
+            prefix = f"STU-{self.enrollment_date.year}-"
+        seq = 1
+        last = Student.objects.filter(student_number__startswith=prefix).order_by('student_number').last()
+        if last:
+            try:
+                seq = int(last.student_number[len(prefix):]) + 1
+            except (ValueError, TypeError):
+                seq = Student.objects.filter(student_number__startswith=prefix).count() + 1
+        return f"{prefix}{seq:03d}"
+
+    def save(self, *args, **kwargs):
+        if not self.student_number or self.student_number.startswith(('APP-', 'AP-')):
+            self.student_number = self.generate_student_number()
+        super().save(*args, **kwargs)
 
 
 class MedicalCertificate(models.Model):

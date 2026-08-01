@@ -106,12 +106,15 @@ def user_admin(db):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def academic_year(db):
-    from apps.core.models import AcademicYear
-    return AcademicYear.objects.create(
-        name='2025-2026',
+def promotion(db):
+    from apps.students.models import Promotion
+    return Promotion.objects.create(
+        code='PPL-2025-A',
+        program='PPL',
+        name='PPL 2025 Alpha',
         start_date=datetime.date(2025, 9, 1),
         end_date=datetime.date(2026, 8, 31),
+        status='in_progress',
     )
 
 
@@ -120,11 +123,11 @@ def academic_year(db):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def student_profile(db, user_student, academic_year):
+def student_profile(db, user_student, promotion):
     from apps.students.models import Student
     return Student.objects.create(
         user=user_student,
-        student_number='STU-001',
+        student_number='STU-PPL-2025-A-001',
         first_name='John',
         last_name='Doe',
         date_of_birth=datetime.date(2000, 1, 15),
@@ -134,12 +137,12 @@ def student_profile(db, user_student, academic_year):
         enrollment_date=datetime.date(2025, 9, 1),
         status='active',
         program='PPL',
-        academic_year=academic_year,
+        promotion=promotion,
     )
 
 
 @pytest.fixture
-def second_student_profile(db, academic_year):
+def second_student_profile(db, promotion):
     """A second student unlinked from the default user_student."""
     from apps.students.models import Student
     from django.contrib.auth import get_user_model
@@ -151,14 +154,14 @@ def second_student_profile(db, academic_year):
     )
     return Student.objects.create(
         user=other_user,
-        student_number='STU-002',
+        student_number='STU-PPL-2025-A-002',
         first_name='Alice',
         last_name='Wonder',
         date_of_birth=datetime.date(1999, 5, 20),
         enrollment_date=datetime.date(2025, 9, 1),
         status='active',
         program='CPL',
-        academic_year=academic_year,
+        promotion=promotion,
     )
 
 

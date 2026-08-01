@@ -44,13 +44,13 @@ class AttendanceInline(TabularInline):
 @admin.register(Subject)
 class SubjectAdmin(ModelAdmin):
     list_display = ['code', 'title_en', 'program', 'total_hours', 'status']
-    list_filter = ['program', 'status', 'academic_year']
+    list_filter = ['program', 'status']
     search_fields = ['code', 'title_en', 'title_fr', 'title_ar']
     ordering = ['code']
     inlines = [ModuleInline]
     fieldsets = (
         ('Identification', {
-            'fields': ('code', 'program', 'academic_year', 'status'),
+            'fields': ('code', 'program', 'status'),
         }),
         ('English', {
             'fields': ('title_en', 'description_en'),
@@ -133,12 +133,12 @@ class RoomAdmin(ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(ModelAdmin):
-    list_display = ['title', 'subject', 'instructor', 'scheduled_date', 'start_time', 'end_time', 'room', 'status']
-    list_filter = ['status', 'academic_year', 'subject']
+    list_display = ['title', 'subject', 'promotion', 'instructor', 'scheduled_date', 'start_time', 'end_time', 'room', 'status']
+    list_filter = ['status', 'promotion', 'subject']
     search_fields = ['title', 'subject__title_en', 'instructor__first_name', 'instructor__last_name']
     date_hierarchy = 'scheduled_date'
     inlines = [CourseEnrollmentInline, AttendanceInline]
-    autocomplete_fields = ['subject', 'instructor', 'room', 'academic_year']
+    autocomplete_fields = ['subject', 'instructor', 'room', 'promotion']
     fieldsets = (
         (None, {
             'fields': ('title', 'title_fr', 'title_ar'),
@@ -147,7 +147,7 @@ class CourseAdmin(ModelAdmin):
             'fields': ('scheduled_date', 'start_time', 'end_time'),
         }),
         ('Assignments', {
-            'fields': ('subject', 'instructor', 'room', 'academic_year'),
+            'fields': ('subject', 'instructor', 'room', 'promotion'),
         }),
         ('Status', {
             'fields': ('status', 'notes'),

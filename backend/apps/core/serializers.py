@@ -43,6 +43,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'Room': ('ground_training', 'Room', 'name'),
             'Simulator': ('flight_training', 'Simulator', 'name'),
             'Application': ('administration', 'Application', 'application_number'),
+            'Promotion': ('students', 'Promotion', 'code'),
             'AcademicYear': ('core', 'AcademicYear', 'name'),
             'SystemSetting': ('core', 'SystemSetting', 'key'),
         }

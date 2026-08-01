@@ -77,7 +77,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
     ).all()
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
-    filterset_fields = ['program', 'status', 'academic_year']
+    filterset_fields = ['program', 'status']
     search_fields = ['code', 'title_en', 'title_fr']
     ordering_fields = ['code', 'total_hours', 'created_at']
 
@@ -154,7 +154,7 @@ class RoomViewSet(viewsets.ModelViewSet):
 class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
-    filterset_fields = ['status', 'subject', 'academic_year', 'instructor']
+    filterset_fields = ['status', 'subject', 'promotion', 'instructor']
     search_fields = ['title', 'subject__title_en']
     ordering_fields = ['scheduled_date', 'start_time']
 

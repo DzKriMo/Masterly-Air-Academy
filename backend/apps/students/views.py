@@ -2,9 +2,10 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Count
 from apps.accounts.permissions import HasRolePermission
-from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile
-from .serializers import StudentListSerializer, MedicalCertificateSerializer, FlightInstructorSerializer, AdminProfileSerializer
+from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile, Promotion
+from .serializers import StudentListSerializer, MedicalCertificateSerializer, FlightInstructorSerializer, AdminProfileSerializer, PromotionSerializer
 
 
 class StudentViewSet(viewsets.ModelViewSet):
@@ -13,7 +14,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'students.view'
     search_fields = ['first_name', 'last_name', 'student_number']
-    filterset_fields = ['program', 'status']
+    filterset_fields = ['program', 'status', 'promotion']
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -473,3 +474,12 @@ class GroundInstructorViewSet(viewsets.ViewSet):
         user.status = 'suspended'
         user.save(update_fields=['is_active', 'status'])
         return Response(status=204)
+
+
+class PromotionViewSet(viewsets.ModelViewSet):
+    queryset = Promotion.objects.all()
+    serializer_class = PromotionSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'students.view'
+    filterset_fields = ['program', 'status']
+    search_fields = ['code', 'name']

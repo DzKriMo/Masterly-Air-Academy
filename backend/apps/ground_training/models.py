@@ -15,7 +15,6 @@ class Subject(models.Model):
     objectives = models.TextField(blank=True, null=True)
     total_hours = models.IntegerField()
     program = models.CharField(max_length=10, choices=TrainingProgram.choices)
-    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='active')
     bibliography = models.JSONField(default=list, blank=True)  # list of {title, author, url}
     required_documents = models.JSONField(default=list, blank=True)  # list of doc names
@@ -125,7 +124,7 @@ class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='courses')
     instructor = models.ForeignKey('students.GroundInstructor', on_delete=models.CASCADE, related_name='courses')
-    academic_year = models.ForeignKey('core.AcademicYear', on_delete=models.CASCADE)
+    promotion = models.ForeignKey('students.Promotion', on_delete=models.CASCADE, null=True, blank=True)
     title = models.CharField(max_length=255)
     title_ar = models.CharField(max_length=255, blank=True, null=True)
     title_fr = models.CharField(max_length=255, blank=True, null=True)

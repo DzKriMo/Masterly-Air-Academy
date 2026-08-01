@@ -50,7 +50,7 @@ class SubjectSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'title_en', 'title_fr', 'title_ar',
             'description_en', 'description_fr', 'description_ar',
-            'total_hours', 'program', 'academic_year', 'status',
+            'total_hours', 'program', 'status',
             'bibliography', 'required_documents', 'prerequisites',
             'modules', 'created_at', 'updated_at',
         ]
@@ -81,13 +81,14 @@ class CourseSerializer(serializers.ModelSerializer):
     subject_code = serializers.CharField(source='subject.code', read_only=True)
     instructor_name = serializers.SerializerMethodField()
     room_name = serializers.CharField(source='room.name', read_only=True)
+    promotion_code = serializers.CharField(source='promotion.code', read_only=True)
     enrollment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields = [
             'id', 'subject', 'subject_code', 'instructor', 'instructor_name',
-            'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time',
+            'promotion', 'promotion_code', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time',
             'room', 'room_name', 'status', 'notes', 'enrollment_count',
             'created_at', 'updated_at',
         ]
@@ -103,13 +104,13 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class CourseCreateSerializer(serializers.ModelSerializer):
-    """Used for creating courses — auto-assigns instructor and academic_year."""
+    """Used for creating courses — auto-assigns instructor and promotion."""
     class Meta:
         model = Course
-        fields = ['subject', 'instructor', 'academic_year', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes', 'status']
+        fields = ['subject', 'instructor', 'promotion', 'title', 'title_ar', 'title_fr', 'scheduled_date', 'start_time', 'end_time', 'room', 'notes', 'status']
         extra_kwargs = {
             'instructor': {'required': False},
-            'academic_year': {'required': False},
+            'promotion': {'required': False},
         }
 
     def validate(self, data):
@@ -127,12 +128,12 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             )
             data['instructor'] = gi
 
-        if not data.get('academic_year'):
-            from apps.core.models import AcademicYear
-            ay = AcademicYear.objects.filter(is_active=True).first()
-            if not ay:
-                raise serializers.ValidationError({'academic_year': 'No active academic year configured.'})
-            data['academic_year'] = ay
+        if not data.get('promotion'):
+            from apps.students.models import Promotion
+            promo = Promotion.objects.filter(status='in_progress').order_by('-start_date').first()
+            if not promo:
+                raise serializers.ValidationError({'promotion': 'No active promotion configured.'})
+            data['promotion'] = promo
 
         # Convert empty strings to None for optional FK fields
         if not data.get('room'):
@@ -151,8 +152,8 @@ class CourseCreateSerializer(serializers.ModelSerializer):
 
         if not data.get('instructor'):
             raise serializers.ValidationError({'instructor': 'This field is required.'})
-        if not data.get('academic_year'):
-            raise serializers.ValidationError({'academic_year': 'This field is required.'})
+        if not data.get('promotion'):
+            raise serializers.ValidationError({'promotion': 'This field is required.'})
 
         return data
 

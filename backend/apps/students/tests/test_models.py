@@ -19,10 +19,10 @@ class TestStudentModel:
         saved = Student.objects.get(id=student_profile.id)
         assert saved.first_name == 'John'
         assert saved.last_name == 'Doe'
-        assert saved.student_number == 'STU-001'
+        assert saved.student_number == 'STU-PPL-2025-A-001'
         assert saved.program == 'PPL'
         assert saved.status == 'active'
-        assert str(saved) == 'John Doe (STU-001)'
+        assert str(saved) == 'John Doe (STU-PPL-2025-A-001)'
 
     def test_student_full_name(self, student_profile):
         """The full_name property joins first and last name."""
@@ -36,7 +36,7 @@ class TestStudentModel:
         student_profile.refresh_from_db()
         assert student_profile.full_name == 'Jonathan Doe'
 
-    def test_student_unique_number(self, student_profile, academic_year):
+    def test_student_unique_number(self, student_profile, promotion):
         """Creating a second student with the same student_number is rejected."""
         from apps.students.models import Student
         from django.contrib.auth import get_user_model
@@ -49,14 +49,14 @@ class TestStudentModel:
         with pytest.raises(IntegrityError):
             Student.objects.create(
                 user=other_user,
-                student_number='STU-001',  # Same as existing
+                student_number='STU-PPL-2025-A-001',  # Same as existing
                 first_name='Jane',
                 last_name='Doe',
                 date_of_birth='2000-01-01',
                 enrollment_date='2025-09-01',
                 status='active',
                 program='CPL',
-                academic_year=academic_year,
+                promotion=promotion,
             )
 
     def test_student_default_status(self, student_profile):
@@ -73,7 +73,7 @@ class TestStudentModel:
 
     def test_student_str_representation(self, student_profile):
         """String representation shows name and student number."""
-        assert str(student_profile) == 'John Doe (STU-001)'
+        assert str(student_profile) == 'John Doe (STU-PPL-2025-A-001)'
 
     def test_student_cascade_delete(self, student_profile, user_student):
         """Deleting the user also deletes the student profile."""

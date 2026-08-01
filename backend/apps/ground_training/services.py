@@ -133,11 +133,11 @@ class AttendanceService:
         return created
 
     @staticmethod
-    def get_student_attendance_rate(student, academic_year=None):
+    def get_student_attendance_rate(student, promotion=None):
         from .models import AttendanceRecord
         qs = AttendanceRecord.objects.filter(student=student)
-        if academic_year:
-            qs = qs.filter(course__academic_year=academic_year)
+        if promotion:
+            qs = qs.filter(course__promotion=promotion)
 
         total = qs.count()
         if total == 0:

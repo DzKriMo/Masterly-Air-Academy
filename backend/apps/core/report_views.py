@@ -169,6 +169,7 @@ class StudentDashboardView(APIView):
         return Response({
             'student_number': student.student_number,
             'program': student.program,
+            'promotion_code': student.promotion_code,
             'total_flight_hours': total_flight_hours,
             'total_lessons_completed': total_lessons_completed,
             'theory_progress': theory_progress,
