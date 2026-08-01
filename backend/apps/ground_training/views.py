@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -71,7 +72,9 @@ class ModuleExerciseViewSet(viewsets.ModelViewSet):
 
 
 class SubjectViewSet(viewsets.ModelViewSet):
-    queryset = Subject.objects.prefetch_related('modules__lessons').all()
+    queryset = Subject.objects.prefetch_related('modules__lessons').annotate(
+        module_count=Count('modules', distinct=True)
+    ).all()
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
     filterset_fields = ['program', 'status', 'academic_year']
@@ -156,7 +159,9 @@ class CourseViewSet(viewsets.ModelViewSet):
     ordering_fields = ['scheduled_date', 'start_time']
 
     def get_queryset(self):
-        qs = Course.objects.select_related('subject', 'instructor', 'room').all()
+        qs = Course.objects.select_related('subject', 'instructor', 'room').annotate(
+            enrollment_count=Count('enrollments', distinct=True)
+        ).all()
         if self.request.user.role == 'student':
             return qs.filter(enrollments__student__user=self.request.user)
         if self.request.user.role == 'ground_instructor':
@@ -204,15 +209,24 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def materials(self, request, pk=None):
         course = self.get_object()
-        modules = course.subject.modules.all()
+        modules = course.subject.modules.prefetch_related('lessons', 'documents', 'exercises').all()
         materials = []
         for m in modules:
             materials.append({
                 'module_id': str(m.id),
                 'module_title': m.title,
-                'lessons': list(m.lessons.values('id', 'lesson_no', 'title', 'content')),
-                'documents': list(m.documents.values('name', 'file_url', 'type')),
-                'exercises': list(m.exercises.values('id', 'title', 'instructions', 'due_date')),
+                'lessons': [
+                    {'id': str(l.id), 'lesson_no': l.lesson_no, 'title': l.title, 'content': l.content}
+                    for l in m.lessons.all()
+                ],
+                'documents': [
+                    {'name': d.name, 'file_url': d.file_url, 'type': d.type}
+                    for d in m.documents.all()
+                ],
+                'exercises': [
+                    {'id': str(e.id), 'title': e.title, 'instructions': e.instructions, 'due_date': e.due_date}
+                    for e in m.exercises.all()
+                ],
             })
         return Response({'course_id': str(course.id), 'modules': materials})
 

@@ -270,6 +270,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div key={section.id} className="mb-1">
                 <button
                   onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
                   className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${
                     sectionBadge > 0
                       ? "text-gold-400"
@@ -346,7 +347,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-navy-800/95 backdrop-blur border-b border-navy-700 h-14 flex items-center gap-3" style={{ padding: "env(safe-area-inset-top) 16px 0" }}>
-        <button onClick={() => setSidebarOpen(true)} className="flex items-center justify-center w-[50px] h-[50px] -ml-1 text-gray-400 active:text-white rounded-lg transition-colors">
+        <button onClick={() => setSidebarOpen(true)} aria-label="Open navigation menu" className="flex items-center justify-center w-[50px] h-[50px] -ml-1 text-gray-400 active:text-white rounded-lg transition-colors">
           <Menu className="w-6 h-6" />
         </button>
         <span className="text-white font-semibold text-sm truncate flex-1">{user?.name || "Admin"}</span>

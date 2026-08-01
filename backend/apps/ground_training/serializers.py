@@ -65,6 +65,9 @@ class SubjectListSerializer(serializers.ModelSerializer):
         fields = ['id', 'code', 'title_en', 'title_fr', 'title_ar', 'total_hours', 'program', 'status', 'bibliography', 'required_documents', 'prerequisites', 'module_count']
 
     def get_module_count(self, obj):
+        count = getattr(obj, 'module_count', None)
+        if count is not None:
+            return count
         return obj.modules.count()
 
 
@@ -93,6 +96,9 @@ class CourseSerializer(serializers.ModelSerializer):
         return f'{obj.instructor.first_name} {obj.instructor.last_name}'
 
     def get_enrollment_count(self, obj):
+        count = getattr(obj, 'enrollment_count', None)
+        if count is not None:
+            return count
         return obj.enrollments.count()
 
 
@@ -251,7 +257,7 @@ class TimeEntrySerializer(serializers.ModelSerializer):
         read_only_fields = ['instructor']
 
     def get_instructor_name(self, obj):
-        return obj.instructor.name or obj.instructor.email
+        return obj.instructor.get_full_name() or obj.instructor.email
 
     def get_total_hours(self, obj):
         if obj.clock_in and obj.clock_out:

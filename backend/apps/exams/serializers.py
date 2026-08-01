@@ -91,7 +91,9 @@ class ExamSerializer(serializers.ModelSerializer):
         fields = ['id', 'code', 'title', 'title_ar', 'title_fr', 'subject', 'program', 'type', 'duration', 'question_count', 'question_ids', 'passing_grade', 'max_attempts', 'status', 'open_date', 'close_date']
 
     def get_question_count(self, obj):
-        fixed = obj.questions.count()
+        fixed = getattr(obj, 'fixed_question_count', None)
+        if fixed is None:
+            fixed = obj.questions.count()
         if fixed:
             return fixed
         return obj.question_count or 0

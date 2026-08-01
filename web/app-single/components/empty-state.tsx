@@ -1,13 +1,16 @@
 'use client';
 
+import { useTranslation } from '@/lib/use-translation';
+
 interface EmptyStateProps {
   icon?: React.ReactNode;
   title?: string;
-  message: string;
+  message?: string;
   action?: { label: string; onClick: () => void };
 }
 
 export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
+  const { t } = useTranslation();
   return (
     <div className="bg-navy-800 border border-navy-700 rounded-xl p-10 text-center">
       {icon || (
@@ -16,7 +19,7 @@ export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
         </svg>
       )}
       {title && <h3 className="text-white font-semibold mb-1">{title}</h3>}
-      <p className="text-gray-500 text-sm">{message}</p>
+      <p className="text-gray-500 text-sm">{message ?? t('common.empty', 'No data available')}</p>
       {action && (
         <button onClick={action.onClick} className="mt-4 px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors">
           {action.label}

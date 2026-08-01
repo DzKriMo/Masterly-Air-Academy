@@ -29,11 +29,12 @@ export function LocaleProvider({ children, initialLocale }: { children: React.Re
     const fromPath = localeFromPath();
     const resolved = fromCookie !== "en" ? fromCookie : fromPath;
     if (resolved !== locale) setLocale(resolved);
-    const interval = setInterval(() => {
+    const syncFromCookie = () => {
       const current = getCookie("locale");
       setLocale(prev => prev !== current ? current : prev);
-    }, 500);
-    return () => clearInterval(interval);
+    };
+    window.addEventListener("localechange", syncFromCookie);
+    return () => window.removeEventListener("localechange", syncFromCookie);
   }, []);
 
   useEffect(() => {

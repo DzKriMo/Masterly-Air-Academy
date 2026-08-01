@@ -413,12 +413,12 @@ export default function AdminDashboard() {
                         <span className="w-2 h-2 rounded-full bg-gold-500/60 shrink-0" />
                         <div>
                           <p className="text-sm text-white">{act.action || act.event || "—"}</p>
-                          <p className="text-xs text-gray-500">{act.user || act.actor || act.role || "System"}</p>
+                          <p className="text-xs text-gray-500">{act.user_email || act.user || act.actor || act.role || "System"}</p>
                         </div>
                       </div>
                       <span className="text-xs text-gray-500 shrink-0 ml-4">
-                        {act.timestamp
-                          ? new Date(act.timestamp).toLocaleDateString(undefined, {
+                        {(act.created_at || act.timestamp)
+                          ? new Date(act.created_at || act.timestamp).toLocaleDateString(undefined, {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",

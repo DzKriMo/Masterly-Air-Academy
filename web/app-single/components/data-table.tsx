@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 export interface Column<T> {
   key: string;
@@ -54,7 +54,11 @@ export function DataTable<T>({
     setPage(0);
   };
 
-  if (data.length === 0) {
+  useEffect(() => {
+    setPage(0);
+  }, [data.length]);
+
+  if (sorted.length === 0) {
     return <p className="text-gray-500 text-sm py-8 text-center">{emptyMessage}</p>;
   }
 
@@ -109,6 +113,7 @@ export function DataTable<T>({
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
+              aria-label="Previous page"
               className="px-3 py-1 text-xs rounded border border-navy-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Prev
@@ -117,6 +122,7 @@ export function DataTable<T>({
               <button
                 key={i}
                 onClick={() => setPage(i)}
+                aria-label={`Go to page ${i + 1}`}
                 className={`px-3 py-1 text-xs rounded border ${
                   i === page
                     ? 'bg-gold-500 border-gold-500 text-navy-900 font-semibold'
@@ -129,6 +135,7 @@ export function DataTable<T>({
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
+              aria-label="Next page"
               className="px-3 py-1 text-xs rounded border border-navy-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Next

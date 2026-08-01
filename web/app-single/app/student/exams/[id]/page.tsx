@@ -73,18 +73,38 @@ export default function TakeExamPage() {
   useEffect(() => { attemptIdRef.current = attemptId; }, [attemptId]);
   useEffect(() => { examIdRef.current = examId; }, [examId]);
 
+  // Restore answers saved from a failed submit so a reload/retry can pick up where it left off
+  useEffect(() => {
+    if (!isAuthenticated || !examId) return;
+    try {
+      const saved = sessionStorage.getItem(`exam-${examId}-answers`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          setAnswers(parsed);
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }, [isAuthenticated, examId]);
+
   const doSubmit = async () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
-    setSubmitted(true);
     try {
       const res = await api.post(`/exams/${examIdRef.current}/submit/`, {
         attempt_id: attemptIdRef.current,
         answers: answersRef.current,
       });
+      try { sessionStorage.removeItem(`exam-${examIdRef.current}-answers`); } catch (e) { /* ignore */ }
       setResult(res as unknown as Result);
+      setSubmitted(true);
     } catch (err) {
       console.error("Failed to submit exam:", err);
+      submittedRef.current = false;
+      setError(t("exam.submitFailed", "Failed to submit exam. Please try again."));
+      try {
+        sessionStorage.setItem(`exam-${examIdRef.current}-answers`, JSON.stringify(answersRef.current));
+      } catch (e) { /* ignore */ }
     }
   };
 
@@ -104,7 +124,7 @@ export default function TakeExamPage() {
         showToast("warning", t("exam.tabSwitchWarning"));
       } else {
         setAutoSubmitted(true);
-        showToast("error", t("exam.autoSubmittedCheat"));
+        showToast("error", t("exam.autoSubmitted"));
         doSubmit();
       }
     };

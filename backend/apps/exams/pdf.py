@@ -59,8 +59,13 @@ def _generate_qr_data_url(url: str) -> str:
         return base64.b64encode(buf.getvalue()).decode()
 
 
-def generate_certificate_pdf(certificate):
-    """Generate a beautifully formatted PDF certificate with logo, QR code, and decorated border."""
+def _render_certificate(certificate):
+    """Render the certificate PDF, returning the raw PDF bytes.
+
+    Shared by the certificate download view and certificate issuance so the
+    template lives in a single place.
+    """
+    from weasyprint import HTML
 
     logo_b64 = _logo_base64()
     verify_url = f"{settings.SITE_URL}/verify-certificate?number={certificate.certificate_number}"
@@ -123,9 +128,13 @@ def generate_certificate_pdf(certificate):
 </div></div>
 </body></html>"""
 
+    return HTML(string=html).write_pdf()
+
+
+def generate_certificate_pdf(certificate):
+    """Generate a beautifully formatted PDF certificate with logo, QR code, and decorated border."""
     try:
-        from weasyprint import HTML
-        pdf = HTML(string=html).write_pdf()
+        pdf = _render_certificate(certificate)
         response = HttpResponse(pdf, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="certificate-{certificate.certificate_number}.pdf"'
         return response

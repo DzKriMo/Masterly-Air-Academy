@@ -27,10 +27,18 @@ export function toDatetimeLocal(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   try {
     const d = new Date(dateStr);
-    return d.toISOString().slice(0, 16);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch {
     return "";
   }
+}
+
+export function todayLocal(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export const fmtCurrency = (

@@ -7,6 +7,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
+import { todayLocal } from "@/lib/format-utils";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -36,7 +37,7 @@ export default function AttendancePage() {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayLocal());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

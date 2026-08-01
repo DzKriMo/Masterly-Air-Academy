@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -15,7 +16,9 @@ from .services import DeadlineMonitorService
 
 
 class AuditViewSet(viewsets.ModelViewSet):
-    queryset = Audit.objects.select_related('lead_auditor').prefetch_related('non_conformities').all()
+    queryset = Audit.objects.select_related('lead_auditor').prefetch_related('non_conformities').annotate(
+        ncr_count=Count('non_conformities', distinct=True)
+    ).all()
     serializer_class = AuditSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'quality.view'
@@ -99,7 +102,9 @@ class AuditViewSet(viewsets.ModelViewSet):
 
 
 class NonConformityViewSet(viewsets.ModelViewSet):
-    queryset = NonConformity.objects.select_related('audit', 'responsible').prefetch_related('capas').all()
+    queryset = NonConformity.objects.select_related('audit', 'responsible').prefetch_related('capas').annotate(
+        capa_count=Count('capas', distinct=True)
+    ).all()
     serializer_class = NonConformitySerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'quality.view'
@@ -205,8 +210,13 @@ class RiskAssessmentViewSet(viewsets.ModelViewSet):
         assessments = self.get_queryset()
         matrix = [[0] * 5 for _ in range(5)]
         for ra in assessments:
-            if ra.probability and ra.severity:
-                matrix[ra.probability - 1][ra.severity - 1] += 1
+            prob = ra.probability
+            sev = ra.severity
+            if not prob or not sev:
+                continue
+            prob = min(max(prob, 1), 5)
+            sev = min(max(sev, 1), 5)
+            matrix[prob - 1][sev - 1] += 1
         return Response({'matrix': matrix, 'total': assessments.count()})
 
 
@@ -293,29 +303,29 @@ class QualityDashboardView(APIView):
             return qs
 
         # ── Baseline KPIs (always computed) ──
-        total_audits = Audit.objects.count()
-        completed_audits = Audit.objects.filter(status='completed').count()
+        total_audits = date_filter(Audit.objects.all()).count()
+        completed_audits = date_filter(Audit.objects.filter(status='completed')).count()
         audit_completion_rate = (
             round((completed_audits / total_audits) * 100, 1)
             if total_audits > 0 else 0.0
         )
 
-        open_ncr_count = NonConformity.objects.filter(status='open').count()
+        open_ncr_count = date_filter(NonConformity.objects.filter(status='open')).count()
 
-        overdue_capa_count = CAPA.objects.filter(
+        overdue_capa_count = date_filter(CAPA.objects.filter(
             status__in=['open', 'in_progress'],
             due_date__lt=now,
-        ).count()
+        )).count()
 
         safety_events_this_month = SafetyEvent.objects.filter(
             created_at__gte=first_of_month,
         ).count()
 
         risk_distribution = {
-            'low': RiskAssessment.objects.filter(risk_level__lte=3).count(),
-            'medium': RiskAssessment.objects.filter(risk_level__gte=4, risk_level__lte=6).count(),
-            'high': RiskAssessment.objects.filter(risk_level__gte=7, risk_level__lte=12).count(),
-            'critical': RiskAssessment.objects.filter(risk_level__gte=13).count(),
+            'low': date_filter(RiskAssessment.objects.filter(risk_level__lte=3)).count(),
+            'medium': date_filter(RiskAssessment.objects.filter(risk_level__gte=4, risk_level__lte=6)).count(),
+            'high': date_filter(RiskAssessment.objects.filter(risk_level__gte=7, risk_level__lte=12)).count(),
+            'critical': date_filter(RiskAssessment.objects.filter(risk_level__gte=13)).count(),
         }
 
         upcoming_deadlines = DeadlineMonitorService.get_upcoming_deadlines(days_ahead=30)
@@ -323,18 +333,21 @@ class QualityDashboardView(APIView):
         # ── Safety Events by Month (last 12 or custom range) ──
         safety_qs = date_filter(SafetyEvent.objects.all())
         safety_by_month = []
-        if dt_from and dt_to:
-            months_set = set()
-            cur = dt_from.replace(day=1)
-            while cur <= dt_to:
-                months_set.add((cur.year, cur.month))
+        if dt_from or dt_to:
+            if dt_from:
+                month_from = dt_from.replace(day=1)
+            else:
+                earliest = SafetyEvent.objects.order_by('created_at').values_list('created_at', flat=True).first()
+                month_from = earliest.replace(day=1) if earliest else now.replace(day=1)
+            month_to = dt_to.replace(day=1) if dt_to else now.replace(day=1)
+            cur = month_from
+            while cur <= month_to:
+                cnt = safety_qs.filter(created_at__year=cur.year, created_at__month=cur.month).count()
+                safety_by_month.append({'year': cur.year, 'month': cur.month, 'count': cnt})
                 if cur.month == 12:
                     cur = cur.replace(year=cur.year + 1, month=1)
                 else:
                     cur = cur.replace(month=cur.month + 1)
-            for y, m in sorted(months_set):
-                cnt = safety_qs.filter(created_at__year=y, created_at__month=m).count()
-                safety_by_month.append({'year': y, 'month': m, 'count': cnt})
         else:
             for i in range(11, -1, -1):
                 d = (now.replace(day=1) - timedelta(days=30 * i))

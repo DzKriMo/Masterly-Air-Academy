@@ -38,7 +38,7 @@ export default function ProgressionOverviewPage() {
     setLoading(true); setError(null);
     Promise.all([
       api.get("/courses/").catch(() => ({ results: [] })),
-      api.get("/enrollments/").catch(() => ({ results: [] })),
+      api.get("/course-enrollments/").catch(() => ({ results: [] })),
       api.get("/exam-attempts/").catch(() => ({ results: [] })),
     ]).then(([coursesData, enrollData, examData]) => {
       const enrollByCourse: Record<string, any[]> = {};
@@ -48,7 +48,7 @@ export default function ProgressionOverviewPage() {
       });
       const examByCourse: Record<string, number[]> = {};
       (examData.results || []).forEach((e: any) => {
-        const cid = e.course || e.course_id;
+        const cid = e.exam || e.course || e.course_id;
         if (cid && e.score != null) { if (!examByCourse[cid]) examByCourse[cid] = []; examByCourse[cid].push(e.score); }
       });
       const progression: CourseProgression[] = ((coursesData as any).results || []).map((c: any) => {
@@ -63,7 +63,7 @@ export default function ProgressionOverviewPage() {
         const total = enr.length || 1;
         const overall = Math.round(((completed * 100) + (inPgrs * 50)) / total);
         return {
-          id: c.id, course_name: c.name || c.title || "Unnamed", course_code: c.code,
+          id: c.id, course_name: c.name || c.title || "Unnamed", course_code: c.subject_code || c.code,
           enrolled: enr.length, completed, in_progress: inPgrs, at_risk: atRisk,
           avg_score: avg, pass_rate: passRate, overall_progress: Math.min(overall, 100),
           status: c.status || "active",

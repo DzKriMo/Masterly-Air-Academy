@@ -8,18 +8,7 @@ from apps.administration.models import Invoice, Payment
 from apps.flight_training.models import FlightLesson
 from apps.core.models import AuditLog
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
-from io import BytesIO
-
-
-def _style_header(ws, headers, row=1):
-    header_fill = PatternFill(start_color="0a1628", end_color="0a1628", fill_type="solid")
-    header_font = Font(color="c4943c", bold=True, size=11)
-    for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=row, column=col, value=h)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
+from apps.administration.export_utils import style_header, xlsx_response
 
 
 class ExportStudentsView(APIView):
@@ -30,7 +19,7 @@ class ExportStudentsView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Students"
-        _style_header(ws, ["Student Number", "First Name", "Last Name", "Program", "Status", "Enrollment Date"])
+        style_header(ws, ["Student Number", "First Name", "Last Name", "Program", "Status", "Enrollment Date"])
         for i, s in enumerate(Student.objects.all(), 2):
             ws.cell(row=i, column=1, value=s.student_number)
             ws.cell(row=i, column=2, value=s.first_name)
@@ -38,10 +27,7 @@ class ExportStudentsView(APIView):
             ws.cell(row=i, column=4, value=s.program)
             ws.cell(row=i, column=5, value=s.status)
             ws.cell(row=i, column=6, value=str(s.enrollment_date))
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            headers={"Content-Disposition": "attachment; filename=students.xlsx"})
+        return xlsx_response(wb, "students.xlsx")
 
 
 class ExportInvoicesView(APIView):
@@ -52,7 +38,7 @@ class ExportInvoicesView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Invoices"
-        _style_header(ws, ["Invoice #", "Student", "Type", "Amount", "Currency", "Status", "Issued", "Due"])
+        style_header(ws, ["Invoice #", "Student", "Type", "Amount", "Currency", "Status", "Issued", "Due"])
         for i, inv in enumerate(Invoice.objects.select_related('student').all(), 2):
             ws.cell(row=i, column=1, value=inv.invoice_number)
             ws.cell(row=i, column=2, value=inv.student.full_name)
@@ -62,10 +48,7 @@ class ExportInvoicesView(APIView):
             ws.cell(row=i, column=6, value=inv.status)
             ws.cell(row=i, column=7, value=str(inv.issued_at)[:10] if inv.issued_at else "")
             ws.cell(row=i, column=8, value=str(inv.due_at)[:10] if inv.due_at else "")
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            headers={"Content-Disposition": "attachment; filename=invoices.xlsx"})
+        return xlsx_response(wb, "invoices.xlsx")
 
 
 class ExportFlightsView(APIView):
@@ -76,7 +59,7 @@ class ExportFlightsView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Flights"
-        _style_header(ws, ["Date", "Student", "Instructor", "Aircraft", "Duration", "Status", "Grade", "Result"])
+        style_header(ws, ["Date", "Student", "Instructor", "Aircraft", "Duration", "Status", "Grade", "Result"])
         for i, f in enumerate(FlightLesson.objects.select_related('student', 'instructor', 'aircraft').all(), 2):
             ws.cell(row=i, column=1, value=str(f.scheduled_date))
             ws.cell(row=i, column=2, value=f.student.full_name)
@@ -86,10 +69,7 @@ class ExportFlightsView(APIView):
             ws.cell(row=i, column=6, value=f.status)
             ws.cell(row=i, column=7, value=float(f.grade) if f.grade else "")
             ws.cell(row=i, column=8, value=f.result or "")
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            headers={"Content-Disposition": "attachment; filename=flights.xlsx"})
+        return xlsx_response(wb, "flights.xlsx")
 
 
 class FlightsPdfView(APIView):
@@ -164,7 +144,7 @@ class ExportAuditLogsView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "AuditLogs"
-        _style_header(ws, ["Date", "User", "Action", "Entity", "Entity ID", "IP Address", "User Agent"])
+        style_header(ws, ["Date", "User", "Action", "Entity", "Entity ID", "IP Address", "User Agent"])
         for i, log in enumerate(AuditLog.objects.select_related('user').all(), 2):
             ws.cell(row=i, column=1, value=str(log.created_at)[:19] if log.created_at else "")
             ws.cell(row=i, column=2, value=log.user.email if log.user else "")
@@ -173,10 +153,7 @@ class ExportAuditLogsView(APIView):
             ws.cell(row=i, column=5, value=str(log.entity_id) if log.entity_id else "")
             ws.cell(row=i, column=6, value=log.ip_address or "")
             ws.cell(row=i, column=7, value=str(log.user_agent or "")[:200])
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            headers={"Content-Disposition": "attachment; filename=audit_logs.xlsx"})
+        return xlsx_response(wb, "audit_logs.xlsx")
 
 
 class ExportCertificatesView(APIView):
@@ -198,7 +175,7 @@ class ExportCertificatesView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Certificates"
-        _style_header(ws, ["Certificate #", "Student", "Type", "Title", "Program", "Issue Date", "Expiry Date", "Status"])
+        style_header(ws, ["Certificate #", "Student", "Type", "Title", "Program", "Issue Date", "Expiry Date", "Status"])
         for i, c in enumerate(certificates, 2):
             ws.cell(row=i, column=1, value=c.certificate_number or "")
             ws.cell(row=i, column=2, value=c.student.full_name)
@@ -208,13 +185,7 @@ class ExportCertificatesView(APIView):
             ws.cell(row=i, column=6, value=str(c.issue_date) if c.issue_date else "")
             ws.cell(row=i, column=7, value=str(c.expiry_date) if c.expiry_date else "")
             ws.cell(row=i, column=8, value=c.status or "")
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(
-            buf.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=certificates.xlsx"},
-        )
+        return xlsx_response(wb, "certificates.xlsx")
 
 
 class ExportCoursesView(APIView):
@@ -228,7 +199,7 @@ class ExportCoursesView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Courses"
-        _style_header(ws, ["Title", "Subject", "Instructor", "Date", "Start", "End", "Room", "Status"])
+        style_header(ws, ["Title", "Subject", "Instructor", "Date", "Start", "End", "Room", "Status"])
         for i, c in enumerate(courses, 2):
             ws.cell(row=i, column=1, value=c.title or "")
             ws.cell(row=i, column=2, value=c.subject.code if c.subject else "")
@@ -238,13 +209,7 @@ class ExportCoursesView(APIView):
             ws.cell(row=i, column=6, value=str(c.end_time) if c.end_time else "")
             ws.cell(row=i, column=7, value=c.room.name if c.room else "")
             ws.cell(row=i, column=8, value=c.status or "")
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(
-            buf.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=courses.xlsx"},
-        )
+        return xlsx_response(wb, "courses.xlsx")
 
 
 class CoursesPdfView(APIView):
@@ -325,7 +290,7 @@ class ExportExamsView(APIView):
         wb = Workbook()
         ws = wb.active
         ws.title = "Exams"
-        _style_header(ws, ["ID", "Code", "Title", "Subject", "Program", "Type", "Status", "Attempts", "Pass Rate (%)"])
+        style_header(ws, ["ID", "Code", "Title", "Subject", "Program", "Type", "Status", "Attempts", "Pass Rate (%)"])
         for i, e in enumerate(exams, 2):
             pass_rate = round((e.passed_count / e.attempt_count * 100), 1) if e.attempt_count else 0
             ws.cell(row=i, column=1, value=str(e.id))
@@ -337,10 +302,4 @@ class ExportExamsView(APIView):
             ws.cell(row=i, column=7, value=e.status or "")
             ws.cell(row=i, column=8, value=e.attempt_count)
             ws.cell(row=i, column=9, value=pass_rate)
-        buf = BytesIO()
-        wb.save(buf)
-        return HttpResponse(
-            buf.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=exams.xlsx"},
-        )
+        return xlsx_response(wb, "exams.xlsx")

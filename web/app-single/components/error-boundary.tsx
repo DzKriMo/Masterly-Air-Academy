@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, ReactNode } from 'react';
+import { useTranslation } from '@/lib/use-translation';
 
 interface Props {
   children: ReactNode;
@@ -12,7 +13,11 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+interface ClassProps extends Props {
+  t: (key: string, fallback?: string) => string;
+}
+
+class ErrorBoundaryClass extends Component<ClassProps, State> {
   state: State = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -29,6 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    const { t } = this.props;
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
@@ -39,13 +45,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+            <h2 className="text-xl font-bold text-white mb-2">{t('errors.title', 'Something went wrong')}</h2>
             <p className="text-gray-400 text-sm mb-2">
-              An unexpected error occurred while loading this page.
+              {t('errors.unexpected', 'An unexpected error occurred while loading this page.')}
             </p>
             {this.state.error && (
               <p className="text-red-400 text-xs font-mono bg-navy-900 rounded-lg p-3 mb-4 break-all">
-                {this.state.error.message || 'Unknown error'}
+                {this.state.error.message || t('errors.unknown', 'Unknown error')}
               </p>
             )}
             <div className="flex gap-3 justify-center">
@@ -53,13 +59,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={() => window.history.back()}
                 className="px-4 py-2 bg-navy-700 text-white rounded-lg text-sm font-medium hover:bg-navy-600 transition-colors"
               >
-                Go Back
+                {t('errors.goBack', 'Go Back')}
               </button>
               <button
                 onClick={this.handleReset}
                 className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors"
               >
-                Reload Page
+                {t('errors.reload', 'Reload Page')}
               </button>
             </div>
           </div>
@@ -69,4 +75,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+export function ErrorBoundary(props: Props) {
+  const { t } = useTranslation();
+  return <ErrorBoundaryClass {...props} t={t} />;
 }

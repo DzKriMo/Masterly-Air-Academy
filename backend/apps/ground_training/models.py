@@ -232,4 +232,4 @@ class TimeEntry(models.Model):
         ordering = ['-date', '-clock_in']
 
     def __str__(self):
-        return f'{self.instructor.name or self.instructor.email} - {self.date}'
+        return f'{self.instructor.get_full_name() or self.instructor.email} - {self.date}'

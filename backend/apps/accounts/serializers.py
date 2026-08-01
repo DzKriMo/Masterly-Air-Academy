@@ -90,17 +90,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     roles = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'role', 'status', 'is_active',
+            'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
+            'name', 'role', 'status', 'is_active',
             'last_login_at', 'date_joined', 'permissions', 'roles',
         ]
 
     def get_name(self, obj):
+        return obj.get_full_name() or obj.email
+
+    def get_full_name(self, obj):
         return obj.get_full_name() or obj.email
 
     def get_permissions(self, obj):
@@ -112,14 +117,18 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
+    name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'password', 'role', 'status', 'is_active', 'last_login_at', 'date_joined']
+        fields = ['id', 'email', 'username', 'password', 'name', 'role', 'status', 'is_active', 'last_login_at', 'date_joined']
         read_only_fields = ['id', 'last_login_at', 'date_joined']
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+        name = validated_data.pop('name', '') or ''
+        if name:
+            validated_data['first_name'] = name
         role = validated_data.get('role', '')
         user = User(**validated_data)
         user.set_password(password)

@@ -48,7 +48,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from apps.administration.exports import ExportStudentsView, ExportInvoicesView, ExportFlightsView, ExportAuditLogsView, ExportCertificatesView, ExportCoursesView, ExportExamsView, FlightsPdfView, CoursesPdfView
+from apps.administration.export_utils import style_header as _style_header
 from apps.quality_safety.exports import ExportAuditsView, ExportNCRsView, ExportCAPAsView, ExportSafetyEventsView, ExportRiskAssessmentsView
+from django.http import HttpResponse
+from django.contrib.auth import get_user_model
+from io import BytesIO
+from openpyxl import Workbook
 from datetime import timedelta
 from django.utils import timezone
 
@@ -63,6 +68,51 @@ from apps.flight_training.models import Aircraft, FlightLesson, SimulatorSession
 from apps.administration.models import Invoice, Payment
 from apps.quality_safety.models import Audit, NonConformity
 from apps.exams.models import ExamAttempt, Certificate
+
+
+class ExportUsersView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'users.export'
+
+    def get(self, request):
+        UserModel = get_user_model()
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Users"
+        _style_header(ws, ["Email", "Full Name", "Username", "Role", "Status", "Active"])
+        for i, u in enumerate(UserModel.objects.all(), 2):
+            ws.cell(row=i, column=1, value=u.email)
+            ws.cell(row=i, column=2, value=u.get_full_name() or u.email)
+            ws.cell(row=i, column=3, value=u.username)
+            ws.cell(row=i, column=4, value=u.role)
+            ws.cell(row=i, column=5, value=u.status)
+            ws.cell(row=i, column=6, value=u.is_active)
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={"Content-Disposition": "attachment; filename=users.xlsx"})
+
+
+class ExportPaymentsView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'invoicing.export'
+
+    def get(self, request):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Payments"
+        _style_header(ws, ["Student", "Invoice", "Amount", "Date", "Method", "Status"])
+        for i, p in enumerate(Payment.objects.select_related('student', 'invoice').all(), 2):
+            ws.cell(row=i, column=1, value=p.student.full_name)
+            ws.cell(row=i, column=2, value=p.invoice.invoice_number if p.invoice else "")
+            ws.cell(row=i, column=3, value=float(p.amount))
+            ws.cell(row=i, column=4, value=str(p.paid_at)[:10] if p.paid_at else "")
+            ws.cell(row=i, column=5, value=p.method or "")
+            ws.cell(row=i, column=6, value=p.invoice.status if p.invoice else "")
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={"Content-Disposition": "attachment; filename=payments.xlsx"})
 
 
 class DashboardKPIView(APIView):
@@ -303,8 +353,8 @@ def tv_schedule(request):
             'instructor': f'{c.instructor.first_name} {c.instructor.last_name}'.strip(),
             'location': c.room.name if c.room else None,
             'date': c.scheduled_date.isoformat(),
-            'start': f'{c.scheduled_date.isoformat()}T{c.start_time}' if c.start_time else None,
-            'end': f'{c.scheduled_date.isoformat()}T{c.end_time}' if c.end_time else None,
+            'start': f'{c.scheduled_date.isoformat()}T{c.start_time.strftime("%H:%M")}' if c.start_time else None,
+            'end': f'{c.scheduled_date.isoformat()}T{c.end_time.strftime("%H:%M")}' if c.end_time else None,
             'status': c.status,
         })
     for s in sims:
@@ -433,7 +483,7 @@ def student_report(request):
     total = Student.objects.count()
     by_program = list(Student.objects.values('program').annotate(count=Count('id')))
     by_status = list(Student.objects.values('status').annotate(count=Count('id')))
-    new_this_month = Student.objects.filter(enrollment_date__month=timezone.now().month).count()
+    new_this_month = Student.objects.filter(enrollment_date__month=timezone.now().month, enrollment_date__year=timezone.now().year).count()
     return Response({
         'total': total, 'by_program': by_program, 'by_status': by_status,
         'new_this_month': new_this_month,
@@ -893,6 +943,8 @@ urlpatterns = [
     path('quality/dashboard/', QualityDashboardView.as_view(), name='quality-dashboard'),
     path('finance/reports/', finance_reports, name='finance-reports'),
     path('export/students/', ExportStudentsView.as_view(), name='export-students'),
+    path('export/users/', ExportUsersView.as_view(), name='export-users'),
+    path('export/payments/', ExportPaymentsView.as_view(), name='export-payments'),
     path('export/invoices/', ExportInvoicesView.as_view(), name='export-invoices'),
     path('export/flights/', ExportFlightsView.as_view(), name='export-flights'),
     path('attendance/<uuid:course_id>/pdf/', AttendancePdfView.as_view(), name='attendance-pdf'),

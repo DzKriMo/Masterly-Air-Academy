@@ -9,6 +9,24 @@ from .models import Application, Invoice, Payment, Contract, Document
 from .serializers import ApplicationSerializer, InvoiceSerializer, PaymentSerializer, DocumentSerializer, ContractSerializer
 
 
+def refresh_invoice_status(invoice):
+    """Reconcile an invoice's status from the sum of its recorded payments.
+
+    Marks the invoice as 'paid' or 'partially_paid' based on the total paid
+    amount, leaving draft/overdue transitions to the caller.
+    """
+    paid = sum(float(p.amount) for p in invoice.payments.all())
+    if paid >= float(invoice.amount):
+        if invoice.status != 'paid' or not invoice.paid_at:
+            invoice.status = 'paid'
+            invoice.paid_at = timezone.now()
+            invoice.save(update_fields=['status', 'paid_at'])
+    elif paid > 0 and invoice.status != 'partially_paid':
+        invoice.status = 'partially_paid'
+        invoice.save(update_fields=['status'])
+    return paid
+
+
 class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects.select_related('student').all()
     serializer_class = ApplicationSerializer
@@ -81,7 +99,12 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             due_at__lt=timezone.now(),
         )
         if overdue_candidates.exists():
-            overdue_candidates.update(status='overdue')
+            # Reconcile payments first so fully-paid invoices are not marked overdue
+            for invoice in overdue_candidates:
+                refresh_invoice_status(invoice)
+            overdue_candidates.filter(
+                Q(status='issued') | Q(status='partially_paid'),
+            ).update(status='overdue')
 
         qs = Invoice.objects.select_related('student').prefetch_related('payments').all()
         if self.request.user.role == 'student':
@@ -149,13 +172,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         payment = serializer.save(student=invoice.student, invoice=invoice)
         # Re-fetch invoice to get fresh payments list (avoids stale queryset cache)
         invoice = Invoice.objects.prefetch_related('payments').get(id=invoice.id)
-        paid = sum(float(p.amount) for p in invoice.payments.all())
-        if paid >= float(invoice.amount):
-            invoice.status = 'paid'
-            invoice.paid_at = timezone.now()
-        elif paid > 0:
-            invoice.status = 'partially_paid'
-        invoice.save(update_fields=['status', 'paid_at'] if invoice.status == 'paid' else ['status'])
+        refresh_invoice_status(invoice)
         return Response(PaymentSerializer(payment).data, status=201)
 
 
@@ -190,11 +207,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
         # Auto-update invoice status
         invoice = payment.invoice
         if invoice:
-            paid = sum(float(p.amount) for p in invoice.payments.all())
             was_overdue = invoice.status == 'overdue'
-            if paid >= float(invoice.amount):
-                invoice.status = 'paid'
-                invoice.paid_at = timezone.now()
+            refresh_invoice_status(invoice)
+            if invoice.status == 'paid':
                 invoice.save()
                 # If was overdue and now paid, notify finance
                 if was_overdue:
@@ -205,8 +220,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                         f'Invoice #{invoice.invoice_number} ({invoice.student.full_name}) was overdue and is now fully paid.',
                         {'invoice_id': str(invoice.id), 'student': invoice.student.full_name}
                     )
-            elif paid > 0:
-                invoice.status = 'partially_paid'
+            elif invoice.status == 'partially_paid':
                 invoice.save()
 
     @action(detail=False, methods=['get'])

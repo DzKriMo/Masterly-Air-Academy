@@ -18,6 +18,9 @@ class AuditSerializer(serializers.ModelSerializer):
         return obj.lead_auditor.email if obj.lead_auditor else None
 
     def get_ncr_count(self, obj):
+        count = getattr(obj, 'ncr_count', None)
+        if count is not None:
+            return count
         return obj.non_conformities.count()
 
 
@@ -38,6 +41,9 @@ class NonConformitySerializer(serializers.ModelSerializer):
         return obj.responsible.email if obj.responsible else None
 
     def get_capa_count(self, obj):
+        count = getattr(obj, 'capa_count', None)
+        if count is not None:
+            return count
         return obj.capas.count()
 
 

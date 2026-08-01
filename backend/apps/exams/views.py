@@ -3,6 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 from apps.accounts.permissions import HasRolePermission
 from .models import (
@@ -36,7 +38,9 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
 
 
 class ExamViewSet(viewsets.ModelViewSet):
-    queryset = Exam.objects.select_related('subject').all()
+    queryset = Exam.objects.select_related('subject').prefetch_related('questions').annotate(
+        fixed_question_count=Count('questions', distinct=True)
+    ).all()
     serializer_class = ExamSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'exams.view'
@@ -69,27 +73,32 @@ class ExamViewSet(viewsets.ModelViewSet):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
 
-        # Check max attempts
-        existing = ExamAttempt.objects.filter(exam=exam, student=student).count()
-        if existing >= exam.max_attempts:
-            return Response({'error': f'Maximum {exam.max_attempts} attempts reached'}, status=400)
+        with transaction.atomic():
+            # Check max attempts
+            existing = len(list(
+                ExamAttempt.objects.select_for_update()
+                .filter(exam=exam, student=student)
+                .order_by('-attempt')
+            ))
+            if existing >= exam.max_attempts:
+                return Response({'error': f'Maximum {exam.max_attempts} attempts reached'}, status=400)
 
-        # Get questions — fixed list if ExamQuestion entries exist, else random from subject
-        fixed_questions = exam.questions.select_related('question').order_by('order')
-        if fixed_questions.exists():
-            questions = [eq.question for eq in fixed_questions]
-        else:
-            all_questions = list(QuestionBank.objects.filter(subject=exam.subject))
-            count = exam.question_count or 20
-            if len(all_questions) < count:
-                return Response({'error': f'Not enough questions. Need {count}, have {len(all_questions)}.'}, status=400)
-            questions = random.sample(all_questions, count)
+            # Get questions — fixed list if ExamQuestion entries exist, else random from subject
+            fixed_questions = exam.questions.select_related('question').order_by('order')
+            if fixed_questions.exists():
+                questions = [eq.question for eq in fixed_questions]
+            else:
+                all_questions = list(QuestionBank.objects.filter(subject=exam.subject))
+                count = exam.question_count or 20
+                if len(all_questions) < count:
+                    return Response({'error': f'Not enough questions. Need {count}, have {len(all_questions)}.'}, status=400)
+                questions = random.sample(all_questions, count)
 
-        attempt = ExamAttempt.objects.create(
-            exam=exam, student=student,
-            attempt=existing + 1, started_at=timezone.now(),
-            answers={'question_ids': [str(q.id) for q in questions]},
-        )
+            attempt = ExamAttempt.objects.create(
+                exam=exam, student=student,
+                attempt=existing + 1, started_at=timezone.now(),
+                answers={'question_ids': [str(q.id) for q in questions]},
+            )
 
         return Response({
             'attempt_id': str(attempt.id),
@@ -134,6 +143,11 @@ class ExamViewSet(viewsets.ModelViewSet):
         if attempt.completed_at:
             return Response({'error': 'This attempt is already completed'}, status=400)
 
+        if attempt.started_at and exam.duration:
+            from datetime import timedelta
+            if timezone.now() - attempt.started_at > timedelta(minutes=exam.duration):
+                return Response({'error': 'Exam duration has elapsed; this attempt can no longer be submitted.'}, status=400)
+
         question_ids = attempt.answers.get('question_ids') if isinstance(attempt.answers, dict) else None
         result = AutoGradingService.grade_exam(exam, answers, question_ids=question_ids)
 
@@ -174,7 +188,7 @@ class ExamViewSet(viewsets.ModelViewSet):
             student = Student.objects.get(user=request.user)
         except Student.DoesNotExist:
             return Response([])
-        attempts = ExamAttempt.objects.filter(student=student).select_related('exam')
+        attempts = ExamAttempt.objects.filter(student=student).select_related('exam', 'student__user')
         return Response(ExamAttemptSerializer(attempts, many=True).data)
 
     @action(detail=True, methods=['post'], url_path='attempts/(?P<attempt_id>[^/.]+)/grade')
@@ -193,9 +207,15 @@ class ExamViewSet(viewsets.ModelViewSet):
         grade = request.data.get('grade')
         feedback = request.data.get('feedback', '')
 
-        if grade is not None:
+        if grade is not None and grade != '':
+            try:
+                grade = float(grade)
+            except (TypeError, ValueError):
+                return Response({'error': 'Invalid grade. Grade must be a number between 0 and 100.'}, status=400)
+            if grade < 0 or grade > 100:
+                return Response({'error': 'Grade must be between 0 and 100.'}, status=400)
             attempt.score = grade
-            attempt.is_passed = float(grade) >= float(exam.passing_grade) if exam.passing_grade else None
+            attempt.is_passed = grade >= float(exam.passing_grade) if exam.passing_grade else None
         attempt.notes = feedback
         attempt.graded_by = request.user
         attempt.save()
@@ -227,6 +247,8 @@ class QuizViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         quiz = self.get_object()
+        if not quiz.is_open:
+            return Response({'error': 'This quiz is not open'}, status=400)
         from apps.students.models import Student
         try:
             student = Student.objects.get(user=request.user)
@@ -242,7 +264,13 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No questions available for this quiz module'}, status=400)
         questions = random.sample(all_questions, min(10, len(all_questions)))
 
+        attempt = QuizAttempt.objects.create(
+            quiz=quiz, student=student,
+            answers={'question_ids': [str(q.id) for q in questions]},
+        )
+
         return Response({
+            'attempt_id': str(attempt.id),
             'quiz_id': str(quiz.id),
             'title': quiz.title,
             'duration': quiz.duration,

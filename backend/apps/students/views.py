@@ -56,6 +56,21 @@ class StudentViewSet(viewsets.ModelViewSet):
         student.save()
         return Response({'status': 'archived'})
 
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        from django.db.models import Count
+        qs = self.get_queryset()
+        total = qs.count()
+        total_active = qs.filter(status='active').count()
+        by_program = dict(
+            qs.values('program').annotate(count=Count('id')).values_list('program', 'count')
+        )
+        return Response({
+            'total': total,
+            'total_active': total_active,
+            'by_program': by_program,
+        })
+
     @action(detail=True, methods=['get'])
     def dossier(self, request, pk=None):
         from django.http import HttpResponse

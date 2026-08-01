@@ -284,7 +284,7 @@ class FlightLogViewSet(viewsets.ViewSet):
     required_permission = 'flight_training.view'
 
     def list(self, request):
-        from apps.students.models import Student
+        from apps.students.models import Student, FlightInstructor
         student_id = request.query_params.get('student_id')
         if request.user.role == 'student':
             try:
@@ -292,6 +292,21 @@ class FlightLogViewSet(viewsets.ViewSet):
                 student_id = str(student.id)
             except Student.DoesNotExist:
                 return Response({'error': 'Student profile not found'}, status=404)
+        elif student_id:
+            # Scope access: admins/CFI/chiefs may view any student's log; other
+            # staff (e.g. flight instructors) may only view students assigned to them.
+            if not (
+                request.user.is_superuser
+                or request.user.role in (
+                    'system_admin', 'chief_flight_instructor', 'director_general',
+                    'head_of_training', 'training_admin',
+                )
+            ):
+                try:
+                    instructor = FlightInstructor.objects.get(user=request.user)
+                    Student.objects.get(id=student_id, main_instructor=instructor)
+                except (Student.DoesNotExist, FlightInstructor.DoesNotExist):
+                    return Response({'error': 'Permission denied'}, status=403)
 
         if not student_id:
             return Response({'total_flight_hours': 0, 'total_lessons': 0, 'lessons': []})

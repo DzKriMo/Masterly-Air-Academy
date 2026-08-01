@@ -161,8 +161,8 @@ export default function StudentDashboard() {
               <div className="bg-navy-800 rounded-xl border border-navy-700 p-6">
                 <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">{t('student.nextMilestones')}</h3>
                 <div className="space-y-4">
-                  {milestones.map((m: any, i: number) => (
-                    <div key={i}>
+                  {milestones.map((m: any) => (
+                    <div key={m.label}>
                       <div className="flex justify-between text-sm mb-1"><span className="text-gray-300">{m.label}</span><span className="text-gray-500">{m.current}/{m.target}h</span></div>
                       <div className="w-full bg-navy-900 rounded-full h-2"><div className={`bg-gold-500 h-2 rounded-full transition-all`} style={{ width: `${m.pct}%` }} /></div>
                     </div>

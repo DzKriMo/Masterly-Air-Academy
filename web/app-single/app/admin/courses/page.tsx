@@ -6,6 +6,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
 import { api, unwrapResults } from "@/lib/api";
+import { todayLocal } from "@/lib/format-utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -177,10 +178,7 @@ export default function AdminCoursesPage() {
     setCreateError("");
   };
 
-  const todayStr = () => {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
-  };
+  const todayStr = () => todayLocal();
 
   const buildPayload = (form: typeof createForm) => ({
     subject: form.subject || null,

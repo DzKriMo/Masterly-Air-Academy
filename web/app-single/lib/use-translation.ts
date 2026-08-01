@@ -137,6 +137,15 @@ const translations: Record<string, Record<string, string>> = {
     "common.submit": "Submit",
     "common.selectAll": "Select All",
 
+    "common.empty": "No data available",
+
+    "errors.title": "Something went wrong",
+    "errors.unexpected": "An unexpected error occurred while loading this page.",
+    "errors.unknown": "Unknown error",
+    "errors.goBack": "Go Back",
+    "errors.reload": "Reload Page",
+    "errors.retry": "Try Again",
+
     // ── student ──
     "student.dashboard": "Dashboard",
     "student.exams": "Exams",
@@ -580,6 +589,7 @@ const translations: Record<string, Record<string, string>> = {
     "exam.failed": "Failed",
     "exam.correctPassing": "correct | Passing:",
     "exam.autoSubmitted": "This exam was auto-submitted by the anti-cheat system due to tab switching.",
+    "exam.autoSubmittedCheat": "Exam auto-submitted due to suspicious activity.",
     "exam.questionBreakdown": "Question Breakdown",
     "exam.yourAnswer": "Your answer:",
     "exam.correctAnswer": "Correct:",
@@ -725,6 +735,15 @@ const translations: Record<string, Record<string, string>> = {
     "common.close": "Fermer",
     "common.submit": "Soumettre",
     "common.selectAll": "Tout selectionner",
+
+    "common.empty": "Aucune donnee",
+
+    "errors.title": "Une erreur est survenue",
+    "errors.unexpected": "Une erreur inattendue est survenue lors du chargement de cette page.",
+    "errors.unknown": "Erreur inconnue",
+    "errors.goBack": "Retour",
+    "errors.reload": "Recharger la page",
+    "errors.retry": "Reessayer",
 
     // ── student ──
     "student.dashboard": "Tableau de bord",
@@ -1144,6 +1163,7 @@ const translations: Record<string, Record<string, string>> = {
     "exam.failed": "Echoue",
     "exam.correctPassing": "correct | Passage :",
     "exam.autoSubmitted": "Cet examen a ete soumis automatiquement par le systeme anti-triche.",
+    "exam.autoSubmittedCheat": "Examen soumis automatiquement en raison d'une activite suspecte.",
     "exam.questionBreakdown": "Detail des questions",
     "exam.yourAnswer": "Votre reponse :",
     "exam.correctAnswer": "Correct :",
@@ -1154,6 +1174,31 @@ const translations: Record<string, Record<string, string>> = {
     "exam.answeredCount": "repondues",
     "exam.submitExam": "Soumettre l'Examen",
     "exam.failedToStart": "Echec du demarrage de l'examen. Veuillez reessayer.",
+
+    // ── admin ──
+    "admin.dashboard": "Tableau de bord",
+    "admin.users": "Utilisateurs",
+    "admin.applications": "Candidatures",
+    "admin.invoices": "Factures",
+    "admin.payments": "Paiements",
+    "admin.documents": "Documents",
+    "admin.contracts": "Contrats",
+    "admin.students": "Eleves",
+    "admin.djangoAdmin": "Admin Django",
+    "admin.reports": "Rapports",
+    "admin.instructors": "Instructeurs",
+    "admin.subjects": "Matieres",
+    "admin.classrooms": "Salles de classe",
+    "admin.aircraft": "Aeronefs",
+    "admin.exams": "Examens",
+    "admin.certificates": "Certificats",
+    "admin.auditLogs": "Journaux d'audit",
+    "admin.settings": "Parametres",
+    "admin.communication": "Communication",
+    "admin.simulators": "Simulateurs",
+    "admin.totalUsers": "Total des utilisateurs",
+    "admin.roles": "Roles",
+    "admin.rooms": "Salles",
   },
 
   ar: {
@@ -1289,6 +1334,15 @@ const translations: Record<string, Record<string, string>> = {
     "common.close": "إغلاق",
     "common.submit": "إرسال",
     "common.selectAll": "تحديد الكل",
+
+    "common.empty": "لا توجد بيانات",
+
+    "errors.title": "حدث خطأ ما",
+    "errors.unexpected": "حدث خطأ غير متوقع أثناء تحميل هذه الصفحة.",
+    "errors.unknown": "خطأ غير معروف",
+    "errors.goBack": "رجوع",
+    "errors.reload": "إعادة تحميل الصفحة",
+    "errors.retry": "إعادة المحاولة",
 
     // ── student ──
     "student.dashboard": "لوحة القيادة",
@@ -1708,6 +1762,7 @@ const translations: Record<string, Record<string, string>> = {
     "exam.failed": "راسب",
     "exam.correctPassing": "صحيح | درجة النجاح:",
     "exam.autoSubmitted": "تم تسليم هذا الامتحان تلقائياً بواسطة نظام مكافحة الغش بسبب تبديل علامات التبويب.",
+    "exam.autoSubmittedCheat": "تم تسليم الامتحان تلقائياً بسبب نشاط مشبوه.",
     "exam.questionBreakdown": "تفصيل الأسئلة",
     "exam.yourAnswer": "إجابتك:",
     "exam.correctAnswer": "الإجابة الصحيحة:",
@@ -1769,6 +1824,7 @@ export function useTranslation() {
   const switchTo = (code: string) => {
     document.cookie = `locale=${code};path=/;max-age=${365 * 24 * 60 * 60}`;
     setLocale(code); setStrings(translations[code] || translations.en);
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("localechange"));
   };
 
   const t = useCallback((key: string, fallback?: string) => strings[key] || fallback || key, [strings]);

@@ -1,5 +1,7 @@
 'use client';
 
+const SKELETON_WIDTHS = [60, 75, 50, 90, 65, 80];
+
 interface LoadingSkeletonProps {
   rows?: number;
   type?: 'card' | 'table' | 'detail';
@@ -17,7 +19,7 @@ export function LoadingSkeleton({ rows = 4, type = 'card' }: LoadingSkeletonProp
         {[...Array(rows)].map((_, r) => (
           <div key={r} className="grid grid-cols-4 gap-4 px-5 py-3 border-b border-navy-700/50">
             {[...Array(4)].map((_, c) => (
-              <div key={c} className="h-4 bg-navy-700 rounded" style={{ width: `${60 + Math.random() * 30}%` }} />
+              <div key={c} className="h-4 bg-navy-700 rounded" style={{ width: `${SKELETON_WIDTHS[(r + c) % SKELETON_WIDTHS.length]}%` }} />
             ))}
           </div>
         ))}

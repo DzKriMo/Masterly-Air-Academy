@@ -4,6 +4,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { api } from "@/lib/api";
+import { todayLocal } from "@/lib/format-utils";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { PageHeader } from "@/components/page-header";
@@ -15,7 +16,7 @@ export default function InstructorDashboard() {
   const isFI = user?.role === 'flight_instructor';
   const isGI = user?.role === 'ground_instructor';
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   // GI loads courses; FI loads flights
   const { data: courses = [], isLoading: coursesLoading } = useQuery({

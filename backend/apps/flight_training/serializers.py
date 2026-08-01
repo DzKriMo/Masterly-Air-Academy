@@ -117,15 +117,16 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'instructor': 'This field is required.'})
 
         from .services import ConflictDetectionService
-        conflicts = ConflictDetectionService.resolve_all(
-            student_id=data['student'].id,
-            instructor_id=data['instructor'].id,
-            aircraft_id=data['aircraft'].id,
-            start_time=data.get('start_time'),
-            end_time=data.get('end_time'),
-        )
-        if conflicts:
-            raise serializers.ValidationError({'conflicts': conflicts})
+        if data.get('start_time') and data.get('end_time'):
+            conflicts = ConflictDetectionService.resolve_all(
+                student_id=data['student'].id,
+                instructor_id=data['instructor'].id,
+                aircraft_id=data['aircraft'].id,
+                start_time=data.get('start_time'),
+                end_time=data.get('end_time'),
+            )
+            if conflicts:
+                raise serializers.ValidationError({'conflicts': conflicts})
         return data
 
 

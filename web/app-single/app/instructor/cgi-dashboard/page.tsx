@@ -4,6 +4,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { api } from "@/lib/api";
+import { todayLocal } from "@/lib/format-utils";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +15,7 @@ export default function CGIDashboard() {
   const { user, isAuthenticated } = useAuth();
   const { t } = useTranslation();
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
 
   const { data: courses = [], isLoading, error: queryError } = useQuery({
     queryKey: ['cgi-courses'],

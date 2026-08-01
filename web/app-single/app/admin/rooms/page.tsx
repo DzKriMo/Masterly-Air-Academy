@@ -373,7 +373,7 @@ export default function AdminRoomsPage() {
               {equipmentList.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {equipmentList.map((item, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
+                    <span key={item} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
                       {item}
                       <button
                         type="button"
@@ -535,7 +535,7 @@ export default function AdminRoomsPage() {
                     {editEquipmentList.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {editEquipmentList.map((item, i) => (
-                          <span key={i} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
+                          <span key={item} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">
                             {item}
                             <button type="button" onClick={() => setEditEquipmentList(prev => prev.filter((_, j) => j !== i))}
                               className="text-gold-500 hover:text-red-400 transition-colors">×</button>
@@ -560,8 +560,8 @@ export default function AdminRoomsPage() {
                     try {
                       const eq = typeof selectedRoom.equipment === 'string' ? JSON.parse(selectedRoom.equipment) : selectedRoom.equipment;
                       if (Array.isArray(eq) && eq.length > 0) {
-                        return (<div className="flex flex-wrap gap-2">{eq.map((item: string, i: number) => (
-                          <span key={i} className="text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{item}</span>
+                        return (<div className="flex flex-wrap gap-2">{eq.map((item: string) => (
+                          <span key={item} className="text-xs px-2.5 py-1 bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-full">{item}</span>
                         ))}</div>);
                       }
                       if (eq && typeof eq === 'object' && !Array.isArray(eq)) {
