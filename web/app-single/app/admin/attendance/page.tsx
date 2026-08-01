@@ -14,6 +14,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel, formatDate } from "@/lib/format-utils";
 
 interface Attendance {
   id: string;
@@ -35,19 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
   excused_absence: "bg-blue-500/10 text-blue-400",
 };
 
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 export default function AdminAttendancePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -182,7 +172,7 @@ export default function AdminAttendancePage() {
         header: "Status",
         render: (a) => (
           <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>
-            {fmtStatus(a.status)}
+            {fmtLabel(a.status)}
           </span>
         ),
       },
@@ -251,7 +241,7 @@ export default function AdminAttendancePage() {
             {
               key: "status",
               label: "All Statuses",
-              options: ATTENDANCE_STATUSES.map((s) => ({ value: s, label: fmtStatus(s) })),
+              options: ATTENDANCE_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })),
             },
             {
               key: "course",
@@ -302,7 +292,7 @@ export default function AdminAttendancePage() {
             <div className="space-y-4">
               <DetailField label="Student" value={selected.student_name} />
               <DetailField label="Date" value={formatDate(selected.date)} />
-              <DetailField label="Status" value={fmtStatus(selected.status)} />
+              <DetailField label="Status" value={fmtLabel(selected.status)} />
               <DetailField label="Notes" value={selected.notes || "—"} />
               <DetailField label="Recorded At" value={formatDate(selected.recorded_at)} />
             </div>
@@ -389,7 +379,7 @@ export default function AdminAttendancePage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {ATTENDANCE_STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>
@@ -479,7 +469,7 @@ export default function AdminAttendancePage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {ATTENDANCE_STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>
@@ -528,11 +518,3 @@ export default function AdminAttendancePage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}

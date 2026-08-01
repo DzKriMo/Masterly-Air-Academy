@@ -2,9 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.conf import settings
 from django.utils import timezone
 from apps.accounts.permissions import HasRolePermission
+from apps.students.models import Student
+from apps.exams.pdf import generate_invoice_pdf as _inv_pdf
 from .models import Application, Invoice, Payment, Contract, Document
 from .serializers import ApplicationSerializer, InvoiceSerializer, PaymentSerializer, DocumentSerializer, ContractSerializer
 
@@ -361,3 +364,22 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response({'file_url': contract.file_url, 'status': 'generated'})
         except ImportError:
             return Response({'error': 'PDF generation not available'}, status=501)
+
+
+class InvoicePdfView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'invoicing.view'
+
+    def get(self, request, inv_id):
+        try:
+            inv = Invoice.objects.get(id=inv_id)
+        except Invoice.DoesNotExist:
+            return Response({'error': 'Invoice not found'}, status=404)
+        if request.user.role == 'student':
+            try:
+                student = Student.objects.get(user=request.user)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=404)
+            if inv.student_id != student.id:
+                return Response({'error': 'Permission denied'}, status=403)
+        return _inv_pdf(inv)

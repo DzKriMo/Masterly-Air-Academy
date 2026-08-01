@@ -13,6 +13,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { formatDate } from "@/lib/format-utils";
 
 interface CAPA {
   id: string;
@@ -40,12 +42,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const fmtStatus = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try { return new Date(dateStr).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }); }
-  catch { return "—"; }
-}
 
 export default function AdminCAPAsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -183,6 +179,3 @@ export default function AdminCAPAsPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs text-gray-500 mb-0.5">{label}</p><p className="text-sm text-white">{value}</p></div>;
-}

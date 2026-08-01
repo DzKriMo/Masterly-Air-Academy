@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel } from "@/lib/format-utils";
 
 interface PC {
   id: string; student: string; student_name: string; examiner: string; examiner_name: string;
@@ -27,8 +29,6 @@ const STATUS_COLORS: Record<string, string> = {
   scheduled: "bg-blue-500/10 text-blue-400", in_progress: "bg-amber-500/10 text-amber-400",
   completed: "bg-green-500/10 text-green-400", cancelled: "bg-red-500/10 text-red-400",
 };
-
-const fmtStatus = (s: string) => s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
@@ -108,8 +108,8 @@ export default function AdminProgressChecksPage() {
     { key: "student_name", header: "Student", render: (a) => <span className="text-sm font-semibold text-white">{a.student_name}</span> },
     { key: "examiner_name", header: "Examiner", render: (a) => <span className="text-sm text-gray-300">{a.examiner_name}</span> },
     { key: "scheduled_date", header: "Date", render: (a) => <span className="text-sm text-gray-300">{fmtDate(a.scheduled_date)}</span> },
-    { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtStatus(a.status)}</span> },
-    { key: "result", header: "Result", render: (a) => a.result ? <span className={`text-xs px-2 py-0.5 rounded ${a.result === "pass" ? "bg-green-500/10 text-green-400" : a.result === "fail" ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}>{fmtStatus(a.result)}</span> : <span className="text-xs text-gray-500">—</span> },
+    { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(a.status)}</span> },
+    { key: "result", header: "Result", render: (a) => a.result ? <span className={`text-xs px-2 py-0.5 rounded ${a.result === "pass" ? "bg-green-500/10 text-green-400" : a.result === "fail" ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}>{fmtLabel(a.result)}</span> : <span className="text-xs text-gray-500">—</span> },
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => { setEditItem(a); setEditForm({ student: a.student, examiner: a.examiner, scheduled_date: a.scheduled_date, result: a.result || "", observations: a.observations || "", recommendations: a.recommendations || "", status: a.status }); setEditError(""); }} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded transition-colors">{t('common.edit')}</button>
@@ -135,8 +135,8 @@ export default function AdminProgressChecksPage() {
             <DetailField label="Examiner" value={selected.examiner_name} />
             <DetailField label="Scheduled" value={fmtDate(selected.scheduled_date)} />
             <DetailField label="Completed" value={fmtDate(selected.completed_date)} />
-            <DetailField label="Status" value={fmtStatus(selected.status)} />
-            <DetailField label="Result" value={selected.result ? fmtStatus(selected.result) : "—"} />
+            <DetailField label="Status" value={fmtLabel(selected.status)} />
+            <DetailField label="Result" value={selected.result ? fmtLabel(selected.result) : "—"} />
             <DetailField label="Observations" value={selected.observations || "—"} />
             <DetailField label="Recommendations" value={selected.recommendations || "—"} />
           </div>}
@@ -161,7 +161,7 @@ export default function AdminProgressChecksPage() {
             <div className="grid grid-cols-2 gap-4">
               <div><label className="block text-sm text-gray-400 mb-1">Scheduled <span className="text-red-400">*</span></label><input type="datetime-local" value={createForm.scheduled_date} onChange={(e) => setCreateForm((f) => ({ ...f, scheduled_date: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
               <div><label className="block text-sm text-gray-400 mb-1">Status</label>
-                <select value={createForm.status} onChange={(e) => setCreateForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtStatus(s)}</option>)}</select></div>
+                <select value={createForm.status} onChange={(e) => setCreateForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtLabel(s)}</option>)}</select></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Observations</label><textarea rows={2} value={createForm.observations} onChange={(e) => setCreateForm((f) => ({ ...f, observations: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Recommendations</label><textarea rows={2} value={createForm.recommendations} onChange={(e) => setCreateForm((f) => ({ ...f, recommendations: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none" /></div>
@@ -187,13 +187,13 @@ export default function AdminProgressChecksPage() {
             <div className="grid grid-cols-2 gap-4">
               <div><label className="block text-sm text-gray-400 mb-1">Scheduled</label><input type="datetime-local" value={editForm.scheduled_date} onChange={(e) => setEditForm((f) => ({ ...f, scheduled_date: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
               <div><label className="block text-sm text-gray-400 mb-1">Status</label>
-                <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtStatus(s)}</option>)}</select></div>
+                <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtLabel(s)}</option>)}</select></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Observations</label><textarea rows={2} value={editForm.observations} onChange={(e) => setEditForm((f) => ({ ...f, observations: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Recommendations</label><textarea rows={2} value={editForm.recommendations} onChange={(e) => setEditForm((f) => ({ ...f, recommendations: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Result</label>
               <select value={editForm.result || ""} onChange={(e) => setEditForm((f) => ({ ...f, result: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">
-                <option value="">No result</option>{RESULTS.map((r) => <option key={r} value={r}>{fmtStatus(r)}</option>)}
+                <option value="">No result</option>{RESULTS.map((r) => <option key={r} value={r}>{fmtLabel(r)}</option>)}
               </select></div>
           </div>
         </ModalForm>
@@ -215,6 +215,4 @@ export default function AdminProgressChecksPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs text-gray-500 mb-0.5">{label}</p><p className="text-sm text-white">{value}</p></div>;
-}
+

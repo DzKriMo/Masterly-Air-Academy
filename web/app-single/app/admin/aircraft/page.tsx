@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
+import { fmtLabel, formatDate } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -67,20 +68,6 @@ const STATUS_COLORS: Record<string, string> = {
   grounded: "bg-red-500/10 text-red-400",
   retired: "bg-gray-500/10 text-gray-400",
 };
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 // ── Component ─────────────────────────────────────────────
 
@@ -267,7 +254,7 @@ export default function AdminAircraftPage() {
               STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtStatus(a.status)}
+            {fmtLabel(a.status)}
           </span>
         ),
       },
@@ -343,7 +330,7 @@ export default function AdminAircraftPage() {
               label: "All Statuses",
               options: STATUSES.map((s) => ({
                 value: s,
-                label: fmtStatus(s),
+                label: fmtLabel(s),
               })),
             },
             {
@@ -492,7 +479,7 @@ export default function AdminAircraftPage() {
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {fmtStatus(s)}
+                    {fmtLabel(s)}
                   </option>
                 ))}
               </select>
@@ -574,11 +561,11 @@ export default function AdminAircraftPage() {
                     {editingAircraft ? (
                       <select value={editStatus} onChange={e => setEditStatus(e.target.value)}
                         className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
-                        {STATUSES.map(s => <option key={s} value={s}>{fmtStatus(s)}</option>)}
+                        {STATUSES.map(s => <option key={s} value={s}>{fmtLabel(s)}</option>)}
                       </select>
                     ) : (
                       <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedAircraft.status] || "bg-gray-500/10 text-gray-400"}`}>
-                        {fmtStatus(selectedAircraft.status)}
+                        {fmtLabel(selectedAircraft.status)}
                       </span>
                     )}
                   </div>
@@ -613,7 +600,7 @@ export default function AdminAircraftPage() {
                           <span>{formatDate(m.start_date)}</span>
                           {m.end_date && <span>→ {formatDate(m.end_date)}</span>}
                           <span className={`px-2 py-0.5 rounded ${m.status === 'completed' ? 'bg-green-500/10 text-green-400' : m.status === 'in_progress' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                            {fmtStatus(m.status)}
+                            {fmtLabel(m.status)}
                           </span>
                         </div>
                       </div>
@@ -633,7 +620,7 @@ export default function AdminAircraftPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
                   <option value="">Select...</option>
                   {['routine','scheduled','unscheduled','inspection','repair','overhaul','modification','other'].map(t => (
-                    <option key={t} value={t}>{fmtStatus(t)}</option>
+                    <option key={t} value={t}>{fmtLabel(t)}</option>
                   ))}
                 </select>
               </div>

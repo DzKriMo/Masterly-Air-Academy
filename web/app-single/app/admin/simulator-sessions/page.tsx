@@ -14,6 +14,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel, formatDateTime } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -46,32 +48,6 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-green-500/10 text-green-400",
   cancelled: "bg-gray-500/10 text-gray-400",
 };
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 // ── Component ─────────────────────────────────────────────
 
@@ -235,7 +211,7 @@ export default function AdminSimulatorSessionsPage() {
               STATUS_COLORS[s.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtStatus(s.status)}
+            {fmtLabel(s.status)}
           </span>
         ),
       },
@@ -282,7 +258,7 @@ export default function AdminSimulatorSessionsPage() {
               label: "All Statuses",
               options: SESSION_STATUSES.map((s) => ({
                 value: s,
-                label: fmtStatus(s),
+                label: fmtLabel(s),
               })),
             },
             {
@@ -502,11 +478,4 @@ export default function AdminSimulatorSessionsPage() {
 
 // ── Detail Field ──────────────────────────────────────────
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}
+

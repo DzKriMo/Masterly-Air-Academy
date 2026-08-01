@@ -14,6 +14,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel, formatDate, formatDateTime } from "@/lib/format-utils";
 
 interface MaintenanceRecord {
   id: string;
@@ -37,31 +39,6 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-green-500/10 text-green-400",
   cancelled: "bg-gray-500/10 text-gray-400",
 };
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 function truncate(str: string | null | undefined, len = 60): string {
   if (!str) return "—";
@@ -191,7 +168,7 @@ export default function AdminMaintenanceRecordsPage() {
       {
         key: "type",
         header: "Type",
-        render: (a) => <span className="text-sm text-gray-300">{fmtStatus(a.type)}</span>,
+        render: (a) => <span className="text-sm text-gray-300">{fmtLabel(a.type)}</span>,
       },
       {
         key: "start_date",
@@ -208,7 +185,7 @@ export default function AdminMaintenanceRecordsPage() {
         header: "Status",
         render: (a) => (
           <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>
-            {fmtStatus(a.status)}
+            {fmtLabel(a.status)}
           </span>
         ),
       },
@@ -254,7 +231,7 @@ export default function AdminMaintenanceRecordsPage() {
   );
 
   const typeFilterOptions = useMemo(
-    () => MAINTENANCE_TYPES.map((t) => ({ value: t, label: fmtStatus(t) })),
+    () => MAINTENANCE_TYPES.map((t) => ({ value: t, label: fmtLabel(t) })),
     []
   );
 
@@ -292,7 +269,7 @@ export default function AdminMaintenanceRecordsPage() {
             {
               key: "status",
               label: "All Statuses",
-              options: STATUS_OPTIONS.map((s) => ({ value: s, label: fmtStatus(s) })),
+              options: STATUS_OPTIONS.map((s) => ({ value: s, label: fmtLabel(s) })),
             },
             {
               key: "type",
@@ -347,11 +324,11 @@ export default function AdminMaintenanceRecordsPage() {
           {selected && (
             <div className="space-y-4">
               <DetailField label="Aircraft" value={(selected as any).aircraft_registration || "—"} />
-              <DetailField label="Type" value={fmtStatus(selected.type)} />
+              <DetailField label="Type" value={fmtLabel(selected.type)} />
               <DetailField label="Description" value={selected.description || "—"} />
               <DetailField label="Start Date" value={formatDateTime(selected.start_date)} />
               <DetailField label="End Date" value={formatDateTime(selected.end_date)} />
-              <DetailField label="Status" value={fmtStatus(selected.status)} />
+              <DetailField label="Status" value={fmtLabel(selected.status)} />
               <DetailField label="Notes" value={selected.notes || "—"} />
             </div>
           )}
@@ -409,7 +386,7 @@ export default function AdminMaintenanceRecordsPage() {
               >
                 <option value="">Select type...</option>
                 {MAINTENANCE_TYPES.map((t) => (
-                  <option key={t} value={t}>{fmtStatus(t)}</option>
+                  <option key={t} value={t}>{fmtLabel(t)}</option>
                 ))}
               </select>
             </div>
@@ -453,7 +430,7 @@ export default function AdminMaintenanceRecordsPage() {
                 className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
               >
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{fmtStatus(s)}</option>
+                  <option key={s} value={s}>{fmtLabel(s)}</option>
                 ))}
               </select>
             </div>
@@ -520,7 +497,7 @@ export default function AdminMaintenanceRecordsPage() {
               >
                 <option value="">Select type...</option>
                 {MAINTENANCE_TYPES.map((t) => (
-                  <option key={t} value={t}>{fmtStatus(t)}</option>
+                  <option key={t} value={t}>{fmtLabel(t)}</option>
                 ))}
               </select>
             </div>
@@ -562,7 +539,7 @@ export default function AdminMaintenanceRecordsPage() {
                 className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
               >
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{fmtStatus(s)}</option>
+                  <option key={s} value={s}>{fmtLabel(s)}</option>
                 ))}
               </select>
             </div>
@@ -585,7 +562,7 @@ export default function AdminMaintenanceRecordsPage() {
             <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-white">Delete Record</h3>
               <p className="text-sm text-gray-400">
-                Remove maintenance record for {deleteTarget?.aircraft_registration || "Unknown"} ({fmtStatus(deleteTarget.type)})?
+                Remove maintenance record for {deleteTarget?.aircraft_registration || "Unknown"} ({fmtLabel(deleteTarget.type)})?
               </p>
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -611,11 +588,4 @@ export default function AdminMaintenanceRecordsPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}
+

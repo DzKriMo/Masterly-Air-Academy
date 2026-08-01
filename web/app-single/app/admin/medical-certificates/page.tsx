@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
 
 interface MC {
   id: string; student: string; issue_date: string; expiry_date: string;
@@ -185,6 +186,4 @@ export default function AdminMedicalCertificatesPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs text-gray-500 mb-0.5">{label}</p><p className="text-sm text-white">{value}</p></div>;
-}
+

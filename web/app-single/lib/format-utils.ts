@@ -67,6 +67,24 @@ export const fmtDate = (value?: string | null): string => {
   }
 };
 
+export function formatTime(timeStr: string | null | undefined): string {
+  if (!timeStr) return "—";
+  try {
+    const [h, m] = timeStr.split(":");
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const h12 = hour % 12 || 12;
+    return `${h12}:${m} ${ampm}`;
+  } catch {
+    return timeStr;
+  }
+}
+
+export function truncate(text: string | null | undefined, n: number): string {
+  if (!text) return "—";
+  return text.length > n ? text.substring(0, n) + "…" : text;
+}
+
 export const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
 
 export const EXAM_TYPES = ["quiz", "progress_test", "module_exam", "mock_exam", "final_exam"];

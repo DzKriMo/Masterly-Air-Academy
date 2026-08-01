@@ -1,10 +1,16 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from django.utils import timezone
 from rest_framework import status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .serializers import UserSerializer, UserCreateSerializer, ProfileUpdateSerializer
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import (
+    UserSerializer, UserCreateSerializer, ProfileUpdateSerializer,
+    CustomTokenObtainPairSerializer, GroupSerializer, PermissionSerializer,
+)
 from apps.accounts.permissions import HasRolePermission
 from apps.core.models import AuditLog
 
@@ -161,3 +167,34 @@ class UserViewSet(viewsets.ModelViewSet):
         user.is_active = not user.is_active
         user.save()
         return Response(UserSerializer(user).data)
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            s = self.get_serializer(data=request.data)
+            s.is_valid()
+            if getattr(s, 'user', None):
+                s.user.last_login_at = timezone.now()
+                s.user.last_login_ip = request.META.get('REMOTE_ADDR', '')
+                s.user.save(update_fields=['last_login_at', 'last_login_ip'])
+        return response
+
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = Group.objects.all().prefetch_related('permissions')
+    serializer_class = GroupSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'accounts.manage'
+
+
+class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'accounts.manage'

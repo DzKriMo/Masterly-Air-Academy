@@ -1,4 +1,6 @@
 """Excel export views for reports."""
+from io import BytesIO
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +11,51 @@ from apps.flight_training.models import FlightLesson
 from apps.core.models import AuditLog
 from openpyxl import Workbook
 from apps.administration.export_utils import style_header, xlsx_response
+
+
+class ExportUsersView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'users.export'
+
+    def get(self, request):
+        UserModel = get_user_model()
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Users"
+        style_header(ws, ["Email", "Full Name", "Username", "Role", "Status", "Active"])
+        for i, u in enumerate(UserModel.objects.all(), 2):
+            ws.cell(row=i, column=1, value=u.email)
+            ws.cell(row=i, column=2, value=u.get_full_name() or u.email)
+            ws.cell(row=i, column=3, value=u.username)
+            ws.cell(row=i, column=4, value=u.role)
+            ws.cell(row=i, column=5, value=u.status)
+            ws.cell(row=i, column=6, value=u.is_active)
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={"Content-Disposition": "attachment; filename=users.xlsx"})
+
+
+class ExportPaymentsView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'invoicing.export'
+
+    def get(self, request):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Payments"
+        style_header(ws, ["Student", "Invoice", "Amount", "Date", "Method", "Status"])
+        for i, p in enumerate(Payment.objects.select_related('student', 'invoice').all(), 2):
+            ws.cell(row=i, column=1, value=p.student.full_name)
+            ws.cell(row=i, column=2, value=p.invoice.invoice_number if p.invoice else "")
+            ws.cell(row=i, column=3, value=float(p.amount))
+            ws.cell(row=i, column=4, value=str(p.paid_at)[:10] if p.paid_at else "")
+            ws.cell(row=i, column=5, value=p.method or "")
+            ws.cell(row=i, column=6, value=p.invoice.status if p.invoice else "")
+        buf = BytesIO()
+        wb.save(buf)
+        return HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={"Content-Disposition": "attachment; filename=payments.xlsx"})
 
 
 class ExportStudentsView(APIView):

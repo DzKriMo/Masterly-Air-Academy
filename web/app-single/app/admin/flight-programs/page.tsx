@@ -13,6 +13,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { truncate } from "@/lib/format-utils";
 
 interface FlightProgram {
   id: string;
@@ -38,10 +40,7 @@ const PROGRAM_COLORS: Record<string, string> = {
   MCC: "bg-pink-500/10 text-pink-400",
 };
 
-function truncate(str: string | null, len: number): string {
-  if (!str) return "—";
-  return str.length > len ? str.substring(0, len) + "…" : str;
-}
+
 
 export default function AdminFlightProgramsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -348,11 +347,3 @@ export default function AdminFlightProgramsPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}

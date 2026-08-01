@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
+import { fmtLabel, fmtCurrency } from "@/lib/format-utils";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -57,20 +58,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const CURRENCIES = ["DZD", "USD", "EUR"];
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
-const fmtCurrency = (amount: string | number, currency = "DZD") => {
-  const n = typeof amount === "string" ? parseFloat(amount) : amount;
-  if (isNaN(n)) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-};
 
 // ── Page Component ───────────────────────────────────────────────────
 
@@ -326,7 +313,7 @@ export default function AdminInvoicesPage() {
               STATUS_COLORS[i.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtStatus(i.status)}
+            {fmtLabel(i.status)}
           </span>
         ),
       },
@@ -468,7 +455,7 @@ export default function AdminInvoicesPage() {
               label: "All Statuses",
               options: STATUSES.map((s) => ({
                 value: s,
-                label: fmtStatus(s),
+                label: fmtLabel(s),
               })),
             },
           ]}

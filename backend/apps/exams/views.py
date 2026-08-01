@@ -3,10 +3,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 from apps.accounts.permissions import HasRolePermission
+from apps.students.models import Student
+from .pdf import generate_certificate_pdf as _cert_pdf
 from .models import (
     QuestionBank, Quiz, QuizAttempt, Exam, ExamAttempt,
     PracticalEvaluation, StudentCompetency,
@@ -498,3 +501,22 @@ class ExamAttemptViewSet(viewsets.ModelViewSet):
         if self.request.user.role == 'flight_instructor':
             return qs.filter(student__main_instructor__user=self.request.user)
         return qs
+
+
+class CertificatePdfView(APIView):
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
+
+    def get(self, request, cert_id):
+        try:
+            cert = Certificate.objects.get(id=cert_id)
+        except Certificate.DoesNotExist:
+            return Response({'error': 'Certificate not found'}, status=404)
+        if request.user.role == 'student':
+            try:
+                student = Student.objects.get(user=request.user)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=404)
+            if cert.student_id != student.id:
+                return Response({'error': 'Permission denied'}, status=403)
+        return _cert_pdf(cert)

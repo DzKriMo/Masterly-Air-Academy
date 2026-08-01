@@ -14,6 +14,8 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel, formatDate } from "@/lib/format-utils";
 
 interface QualityDocument {
   id: string;
@@ -52,19 +54,7 @@ const TYPE_COLORS: Record<string, string> = {
   Report: "bg-pink-500/10 text-pink-400",
 };
 
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 export default function AdminQualityDocumentsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -232,7 +222,7 @@ export default function AdminQualityDocumentsPage() {
         header: "Status",
         render: (d) => (
           <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[d.status] || "bg-gray-500/10 text-gray-400"}`}>
-            {fmtStatus(d.status)}
+            {fmtLabel(d.status)}
           </span>
         ),
       },
@@ -285,7 +275,7 @@ export default function AdminQualityDocumentsPage() {
   );
 
   const statusFilterOptions = useMemo(
-    () => DOC_STATUSES.map((s) => ({ value: s, label: fmtStatus(s) })),
+    () => DOC_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })),
     []
   );
 
@@ -376,7 +366,7 @@ export default function AdminQualityDocumentsPage() {
               <DetailField label="Title" value={selected.title} />
               <DetailField label="Type" value={selected.type || "—"} />
               <DetailField label="Version" value={selected.version || "—"} />
-              <DetailField label="Status" value={fmtStatus(selected.status)} />
+              <DetailField label="Status" value={fmtLabel(selected.status)} />
               <DetailField label="Issue Date" value={formatDate(selected.issue_date)} />
               <DetailField label="Revision Date" value={formatDate(selected.revision_date)} />
               <DetailField label="Author" value={selected.author_name || "—"} />
@@ -538,7 +528,7 @@ export default function AdminQualityDocumentsPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {DOC_STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>
@@ -685,7 +675,7 @@ export default function AdminQualityDocumentsPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {DOC_STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>
@@ -734,11 +724,4 @@ export default function AdminQualityDocumentsPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}
+

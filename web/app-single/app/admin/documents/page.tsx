@@ -14,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { fmtLabel } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -61,10 +62,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ── Helpers ───────────────────────────────────────────────
 
-function formatLabel(value: string): string {
-  if (!value) return "—";
-  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+
 
 // ── Component ─────────────────────────────────────────────
 
@@ -182,7 +180,7 @@ export default function AdminDocumentsPage() {
         header: "Type",
         render: (i) => (
           <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-300">
-            {formatLabel(i.type)}
+            {fmtLabel(i.type)}
           </span>
         ),
       },
@@ -191,7 +189,7 @@ export default function AdminDocumentsPage() {
         header: "Category",
         render: (i) => (
           <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-300">
-            {formatLabel(i.category)}
+            {fmtLabel(i.category)}
           </span>
         ),
       },
@@ -204,7 +202,7 @@ export default function AdminDocumentsPage() {
               STATUS_COLORS[i.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {formatLabel(i.status)}
+            {fmtLabel(i.status)}
           </span>
         ),
       },
@@ -283,7 +281,7 @@ export default function AdminDocumentsPage() {
               label: "All Types",
               options: TYPES.map((t) => ({
                 value: t,
-                label: formatLabel(t),
+                label: fmtLabel(t),
               })),
             },
             {
@@ -291,7 +289,7 @@ export default function AdminDocumentsPage() {
               label: "All Categories",
               options: CATEGORIES.map((c) => ({
                 value: c,
-                label: formatLabel(c),
+                label: fmtLabel(c),
               })),
             },
           ]}
@@ -399,7 +397,7 @@ export default function AdminDocumentsPage() {
               >
                 {TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {formatLabel(t)}
+                    {fmtLabel(t)}
                   </option>
                 ))}
               </select>
@@ -420,7 +418,7 @@ export default function AdminDocumentsPage() {
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {formatLabel(c)}
+                    {fmtLabel(c)}
                   </option>
                 ))}
               </select>

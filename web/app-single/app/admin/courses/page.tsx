@@ -6,7 +6,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
 import { api, unwrapResults } from "@/lib/api";
-import { todayLocal } from "@/lib/format-utils";
+import { todayLocal, fmtLabel, formatDate, formatTime, truncate } from "@/lib/format-utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -47,37 +47,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-gray-500/10 text-gray-400",
 };
 
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function formatTime(timeStr: string | null | undefined): string {
-  if (!timeStr) return "—";
-  try {
-    const [h, m] = timeStr.split(":");
-    const hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const h12 = hour % 12 || 12;
-    return `${h12}:${m} ${ampm}`;
-  } catch {
-    return timeStr;
-  }
-}
-
-function truncate(str: string, len: number): string {
-  if (!str) return "—";
-  return str.length > len ? str.substring(0, len) + "…" : str;
-}
 
 export default function AdminCoursesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -306,7 +276,7 @@ export default function AdminCoursesPage() {
         header: "Status",
         render: (c) => (
           <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[c.status] || "bg-gray-500/10 text-gray-400"}`}>
-            {fmtStatus(c.status)}
+            {fmtLabel(c.status)}
           </span>
         ),
       },
@@ -358,7 +328,7 @@ export default function AdminCoursesPage() {
 
   const filterOptions = useMemo(
     () => ({
-      status: STATUSES.map((s) => ({ value: s, label: fmtStatus(s) })),
+      status: STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })),
       subject: subjects.map((s: any) => ({ value: s.id, label: s.title_en || s.code })),
     }),
     [subjects]
@@ -465,7 +435,7 @@ export default function AdminCoursesPage() {
                   <DetailField label="Date" value={formatDate(selected.scheduled_date)} />
                   <DetailField label="Time" value={`${formatTime(selected.start_time)} – ${formatTime(selected.end_time)}`} />
                   <DetailField label="Room" value={selected.room_name || "—"} />
-                  <DetailField label="Status" value={fmtStatus(selected.status)} />
+                  <DetailField label="Status" value={fmtLabel(selected.status)} />
                   <DetailField label="Enrolled" value={selected.enrollment_count != null ? String(selected.enrollment_count) : "—"} />
                 </div>
               </section>
@@ -608,7 +578,7 @@ export default function AdminCoursesPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>
@@ -768,7 +738,7 @@ export default function AdminCoursesPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {STATUSES.map((s) => (
-                    <option key={s} value={s}>{fmtStatus(s)}</option>
+                    <option key={s} value={s}>{fmtLabel(s)}</option>
                   ))}
                 </select>
               </div>

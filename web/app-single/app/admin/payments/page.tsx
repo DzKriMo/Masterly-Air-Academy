@@ -16,6 +16,7 @@ import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
 import { fmtCurrency, fmtDate } from "@/lib/format-utils";
+import { DetailField } from "@/components/detail-field";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -559,11 +560,4 @@ export default function AdminPaymentsPage() {
 
 // ── Detail Field ──────────────────────────────────────────
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}
+

@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { QuestionFormFields, QuestionFormData, QUESTION_TYPES, PROGRAMS, DIFFICULTIES } from "@/components/question-form-fields";
+import { fmtLabel, formatDate, truncate } from "@/lib/format-utils";
 
 interface Question {
   id: string;
@@ -49,24 +50,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   hard: "bg-red-500/10 text-red-400",
 };
 
-const fmtType = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function truncate(str: string, len: number): string {
-  if (!str) return "—";
-  return str.length > len ? str.substring(0, len) + "…" : str;
-}
 
 export default function AdminQuestionBankPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -227,7 +211,7 @@ export default function AdminQuestionBankPage() {
         header: "Type",
         render: (q) => (
           <span className={`text-xs px-2 py-0.5 rounded ${TYPE_COLORS[q.question_type] || "bg-gray-500/10 text-gray-400"}`}>
-            {fmtType(q.question_type)}
+            {fmtLabel(q.question_type)}
           </span>
         ),
       },
@@ -302,7 +286,7 @@ export default function AdminQuestionBankPage() {
 
   const filterOptions = useMemo(
     () => ({
-      questionType: QUESTION_TYPES.map((t) => ({ value: t, label: fmtType(t) })),
+      questionType: QUESTION_TYPES.map((t) => ({ value: t, label: fmtLabel(t) })),
       difficulty: DIFFICULTIES.map((d) => ({ value: d, label: d.charAt(0).toUpperCase() + d.slice(1) })),
       program: PROGRAMS.map((p) => ({ value: p, label: p })),
       subject: subjects.map((s: any) => ({ value: s.id, label: s.title_en || s.code })),
@@ -416,7 +400,7 @@ export default function AdminQuestionBankPage() {
                   <div className="col-span-2">
                     <DetailField label="Question Text" value={selected.question_text} />
                   </div>
-                  <DetailField label="Type" value={fmtType(selected.question_type)} />
+                  <DetailField label="Type" value={fmtLabel(selected.question_type)} />
                   <DetailField label="Difficulty" value={selected.difficulty ? selected.difficulty.charAt(0).toUpperCase() + selected.difficulty.slice(1) : "—"} />
                   <DetailField label="Program" value={selected.program || "—"} />
                   <DetailField label="Subject" value={selected.subject_name || "—"} />

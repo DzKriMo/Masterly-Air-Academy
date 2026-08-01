@@ -14,6 +14,7 @@ import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { truncate } from "@/lib/format-utils";
 
 interface Module {
   id: string;
@@ -39,10 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
   inactive: "bg-gray-500/10 text-gray-400",
 };
 
-function truncate(str: string | null | undefined, len: number): string {
-  if (!str) return "—";
-  return str.length > len ? str.substring(0, len) + "…" : str;
-}
+
 
 export default function AdminModulesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();

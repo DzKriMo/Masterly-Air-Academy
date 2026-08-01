@@ -1,10 +1,47 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
+from apps.accounts.permissions import HasRolePermission
 from .models import Notification, Message
 from .serializers import NotificationSerializer, MessageSerializer
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, HasRolePermission])
+def notification_broadcast(request):
+    """POST /api/notifications/broadcast/ — send notification to users by role or individual user_id"""
+    title = request.data.get('title', '')
+    message = request.data.get('message', '')
+    user_id = request.data.get('user_id', None)
+    role = request.data.get('role', '')
+
+    if not title:
+        return Response({'error': 'Title is required'}, status=400)
+
+    from apps.notifications.models import Notification
+    from apps.accounts.models import User
+
+    # If user_id is provided, send to that specific user
+    if user_id:
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+            Notification.objects.create(user=user, type='broadcast', title=title, message=message)
+            return Response({'sent': 1})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+
+    # Otherwise send by role
+    if not role:
+        return Response({'error': 'Role or user_id is required'}, status=400)
+
+    users = User.objects.filter(role=role, is_active=True)
+    count = 0
+    for user in users:
+        Notification.objects.create(user=user, type='broadcast', title=title, message=message)
+        count += 1
+    return Response({'sent': count})
 
 
 class NotificationViewSet(viewsets.ModelViewSet):

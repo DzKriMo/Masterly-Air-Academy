@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
+import { DetailField } from "@/components/detail-field";
+import { fmtLabel } from "@/lib/format-utils";
 
 interface FL {
   id: string; student: string; student_name: string; instructor: string | null; instructor_name: string | null;
@@ -32,8 +34,6 @@ const STATUS_COLORS: Record<string, string> = {
   scheduled: "bg-blue-500/10 text-blue-400", in_progress: "bg-amber-500/10 text-amber-400",
   completed: "bg-green-500/10 text-green-400", cancelled: "bg-red-500/10 text-red-400", postponed: "bg-gray-500/10 text-gray-400",
 };
-
-const fmtStatus = (s: string) => s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
@@ -136,7 +136,7 @@ export default function AdminFlightLessonsPage() {
     { key: "aircraft_reg", header: "Aircraft", render: (a) => <span className="text-sm text-gray-300">{a.aircraft_reg}</span> },
     { key: "scheduled_date", header: "Date", render: (a) => <span className="text-sm text-gray-300">{fmtDate(a.scheduled_date)}</span> },
     { key: "start_time", header: "Start", render: (a) => <span className="text-sm text-gray-400">{fmtTime(a.start_time)}</span> },
-    { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtStatus(a.status)}</span> },
+    { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(a.status)}</span> },
     { key: "actions", header: "", render: (a) => (
       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
         {a.status === "scheduled" && <button onClick={() => statusActionMutation.mutate({ id: a.id, action: "conflicts" })} disabled={statusActionMutation.isPending} className="px-2 py-1 text-xs text-amber-400 hover:bg-amber-500/10 rounded transition-colors">Check</button>}
@@ -176,7 +176,7 @@ export default function AdminFlightLessonsPage() {
               <DetailField label="Date" value={fmtDate(selected.scheduled_date)} />
               <DetailField label="Start" value={fmtTime(selected.start_time)} />
               <DetailField label="End" value={fmtTime(selected.end_time)} />
-              <DetailField label="Status" value={fmtStatus(selected.status)} />
+              <DetailField label="Status" value={fmtLabel(selected.status)} />
               <DetailField label="Flight Duration" value={selected.flight_duration ? `${selected.flight_duration}h` : "—"} />
               <DetailField label="Briefing" value={selected.briefing_duration ? `${selected.briefing_duration}h` : "—"} />
               <DetailField label="Debrief" value={selected.debrief_duration ? `${selected.debrief_duration}h` : "—"} />
@@ -227,7 +227,7 @@ export default function AdminFlightLessonsPage() {
               <div><label className="block text-sm text-gray-400 mb-1">End Time <span className="text-red-400">*</span></label><input type="datetime-local" value={createForm.end_time} onChange={(e) => setCreateForm((f) => ({ ...f, end_time: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Status</label>
-              <select value={createForm.status} onChange={(e) => setCreateForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtStatus(s)}</option>)}</select></div>
+              <select value={createForm.status} onChange={(e) => setCreateForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtLabel(s)}</option>)}</select></div>
           </div>
         </ModalForm>
 
@@ -263,7 +263,7 @@ export default function AdminFlightLessonsPage() {
               <div><label className="block text-sm text-gray-400 mb-1">End</label><input type="datetime-local" value={editForm.end_time} onChange={(e) => setEditForm((f) => ({ ...f, end_time: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             </div>
             <div><label className="block text-sm text-gray-400 mb-1">Status</label>
-              <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtStatus(s)}</option>)}</select></div>
+              <select value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{STATUSES.map((s) => <option key={s} value={s}>{fmtLabel(s)}</option>)}</select></div>
           </div>
         </ModalForm>
 
@@ -284,6 +284,4 @@ export default function AdminFlightLessonsPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs text-gray-500 mb-0.5">{label}</p><p className="text-sm text-white">{value}</p></div>;
-}
+

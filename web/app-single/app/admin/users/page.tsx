@@ -16,6 +16,7 @@ import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
 import { generateStrongPassword, copyToClipboard } from "@/lib/password";
+import { formatDateTime } from "@/lib/format-utils";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -84,18 +85,6 @@ function getRoleBadgeColor(role: string): string {
 
 function getStatusBadgeColor(status: string): string {
   return STATUS_BADGE_COLORS[status] || "bg-navy-700/60 text-gray-300 border-navy-600";
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
 }
 
 function computeStats(users: AppUser[]) {
@@ -437,7 +426,7 @@ export default function AdminUsersPage() {
         sortable: true,
         render: (u) => (
           <span className="text-xs text-gray-500 whitespace-nowrap">
-            {formatDate(u.last_login_at)}
+            {formatDateTime(u.last_login_at)}
           </span>
         ),
       },

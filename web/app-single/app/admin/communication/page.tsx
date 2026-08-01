@@ -13,6 +13,7 @@ import { ModalForm } from "@/components/modal-form";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { useToast } from "@/components/toast";
+import { formatDateTime } from "@/lib/format-utils";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -50,18 +51,6 @@ const ROLES = [
 
 function formatRole(role: string): string {
   return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
 }
 
 // ── Tab Config ───────────────────────────────────────────

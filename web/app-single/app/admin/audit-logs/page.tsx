@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
+import { fmtLabel, formatDateTime } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -85,20 +86,7 @@ const ACTION_COLORS: Record<string, string> = {
   reset_password: "bg-orange-500/10 text-orange-400",
 };
 
-const fmtAction = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
-}
 
 // ── Component ─────────────────────────────────────────────
 
@@ -181,7 +169,7 @@ export default function AdminAuditLogsPage() {
               ACTION_COLORS[l.action] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtAction(l.action)}
+            {fmtLabel(l.action)}
           </span>
         ),
       },
@@ -253,7 +241,7 @@ export default function AdminAuditLogsPage() {
               label: "All Actions",
               options: ACTIONS.map((a) => ({
                 value: a,
-                label: fmtAction(a),
+                label: fmtLabel(a),
               })),
             },
           ]}
@@ -297,7 +285,7 @@ export default function AdminAuditLogsPage() {
               <label className="block text-sm text-gray-400 mb-1">Action</label>
               {selectedLog?.action ? (
                 <span className={`text-xs px-2 py-0.5 rounded ${ACTION_COLORS[selectedLog.action] || "bg-gray-500/10 text-gray-400"}`}>
-                  {fmtAction(selectedLog.action)}
+                  {fmtLabel(selectedLog.action)}
                 </span>
               ) : (
                 <p className="text-white">—</p>

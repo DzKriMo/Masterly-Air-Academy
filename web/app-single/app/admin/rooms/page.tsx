@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
+import { fmtLabel } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -37,9 +38,6 @@ const STATUS_COLORS: Record<string, string> = {
   maintenance: "bg-amber-500/10 text-amber-400",
   out_of_service: "bg-gray-500/10 text-gray-400",
 };
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 // ── Component ─────────────────────────────────────────────
 
@@ -209,7 +207,7 @@ export default function AdminRoomsPage() {
               STATUS_COLORS[r.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtStatus(r.status)}
+            {fmtLabel(r.status)}
           </span>
         ),
       },
@@ -267,7 +265,7 @@ export default function AdminRoomsPage() {
               label: "All Statuses",
               options: STATUSES.map((s) => ({
                 value: s,
-                label: fmtStatus(s),
+                label: fmtLabel(s),
               })),
             },
           ]}
@@ -427,7 +425,7 @@ export default function AdminRoomsPage() {
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {fmtStatus(s)}
+                    {fmtLabel(s)}
                   </option>
                 ))}
               </select>
@@ -517,11 +515,11 @@ export default function AdminRoomsPage() {
                       <select value={editForm.status}
                         onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
                         className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none">
-                        {STATUSES.map(s => <option key={s} value={s}>{fmtStatus(s)}</option>)}
+                        {STATUSES.map(s => <option key={s} value={s}>{fmtLabel(s)}</option>)}
                       </select>
                     ) : (
                       <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[selectedRoom.status] || "bg-gray-500/10 text-gray-400"}`}>
-                        {fmtStatus(selectedRoom.status)}
+                        {fmtLabel(selectedRoom.status)}
                       </span>
                     )}
                   </div>

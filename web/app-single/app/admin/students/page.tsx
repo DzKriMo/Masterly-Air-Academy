@@ -16,6 +16,7 @@ import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
+import { DetailField } from "@/components/detail-field";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -540,11 +541,4 @@ export default function AdminStudentsPage() {
 
 // ── Detail Field Sub-component ───────────────────────────
 
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-    </div>
-  );
-}
+

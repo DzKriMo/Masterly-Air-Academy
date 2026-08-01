@@ -15,6 +15,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { StatsCard } from "@/components/stats-card";
+import { fmtLabel } from "@/lib/format-utils";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -43,9 +44,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const QUALIFICATION_TYPES = ["FNPT II", "FNPT II MCC", "FTD", "FFS", "Other"];
-
-const fmtStatus = (s: string) =>
-  s ? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
 
 // ── Component ─────────────────────────────────────────────
 
@@ -187,7 +185,7 @@ export default function AdminSimulatorsPage() {
               STATUS_COLORS[s.status] || "bg-gray-500/10 text-gray-400"
             }`}
           >
-            {fmtStatus(s.status)}
+            {fmtLabel(s.status)}
           </span>
         ),
       },
@@ -245,7 +243,7 @@ export default function AdminSimulatorsPage() {
               label: "All Statuses",
               options: STATUSES.map((s) => ({
                 value: s,
-                label: fmtStatus(s),
+                label: fmtLabel(s),
               })),
             },
           ]}
@@ -400,7 +398,7 @@ export default function AdminSimulatorsPage() {
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {fmtStatus(s)}
+                    {fmtLabel(s)}
                   </option>
                 ))}
               </select>
@@ -498,7 +496,7 @@ export default function AdminSimulatorsPage() {
                         STATUS_COLORS[selectedSim.status] || "bg-gray-500/10 text-gray-400"
                       }`}
                     >
-                      {fmtStatus(selectedSim.status)}
+                      {fmtLabel(selectedSim.status)}
                     </span>
                   </div>
                 </div>
@@ -609,7 +607,7 @@ export default function AdminSimulatorsPage() {
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {fmtStatus(s)}
+                      {fmtLabel(s)}
                     </option>
                   ))}
                 </select>
