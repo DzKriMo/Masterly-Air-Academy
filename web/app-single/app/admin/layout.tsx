@@ -70,6 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/users", label: t("admin.users", "Users"), Icon: Users },
         { href: "/admin/roles", label: t("admin.roles", "Roles"), Icon: ShieldCheck },
         { href: "/admin/students", label: t("admin.students", "Students"), Icon: GraduationCap },
+        { href: "/admin/promotions", label: t("admin.promotions", "Promotions"), Icon: Calendar },
         { href: "/admin/instructors", label: t("admin.instructors", "Instructors"), Icon: GraduationCap },
         { href: "/admin/applications", label: t("admin.applications", "Applications"), Icon: ClipboardCheck },
         { href: "/admin/certificates", label: t("admin.certificates", "Certificates"), Icon: Award },
@@ -198,7 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     let sections = SECTIONS;
     if (user && user.role === "training_admin") {
       const ADMIN_KEEP = new Set([
-        "/admin/students", "/admin/instructors", "/admin/applications",
+        "/admin/students", "/admin/promotions", "/admin/instructors", "/admin/applications",
         "/admin/certificates", "/admin/medical-certificates",
       ]);
       const SYSTEM_KEEP = new Set(["/admin/reports", "/admin/documents"]);
