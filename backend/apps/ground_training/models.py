@@ -62,8 +62,7 @@ class ModuleLesson(models.Model):
     lesson_no = models.IntegerField()
     title = models.CharField(max_length=255, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
-    video_url = models.URLField(blank=True, null=True)
-    video_url = models.URLField(blank=True, null=True)
+    video_url = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta:
         db_table = 'module_lessons'

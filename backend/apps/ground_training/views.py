@@ -22,12 +22,49 @@ from .serializers import (
 )
 
 
+def _store_upload(folder, file, module_id=None):
+    """Persist an uploaded file and return its public /media/ URL."""
+    import os
+    import uuid
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+
+    ext = os.path.splitext(file.name)[1].lower()
+    local_name = f'{uuid.uuid4().hex}{ext}'
+    try:
+        rel = f'{folder}/{local_name}'
+        if module_id:
+            rel = f'{folder}/{module_id}/{local_name}'
+        path = default_storage.save(rel, file)
+        return f'/media/{path}'
+    except Exception:
+        base = os.path.join(settings.MEDIA_ROOT, folder, str(module_id) if module_id else '')
+        os.makedirs(base, exist_ok=True)
+        local_path = os.path.join(base, local_name)
+        with open(local_path, 'wb+') as dest:
+            for chunk in file.chunks():
+                dest.write(chunk)
+        url = f'/media/{folder}/{local_name}'
+        if module_id:
+            url = f'/media/{folder}/{module_id}/{local_name}'
+        return url
+
+
 class ModuleLessonViewSet(viewsets.ModelViewSet):
     queryset = ModuleLesson.objects.all()
     serializer_class = ModuleLessonSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
     filterset_fields = ['module']
+
+    @action(detail=False, methods=['post'])
+    def upload_video(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        module_id = request.data.get('module')
+        video_url = _store_upload('module_videos', file, module_id)
+        return Response({'video_url': video_url}, status=status.HTTP_201_CREATED)
 
 
 class ModuleDocumentViewSet(viewsets.ModelViewSet):
@@ -36,6 +73,15 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
     filterset_fields = ['module', 'type']
+
+    @action(detail=False, methods=['post'])
+    def upload_file(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        module_id = request.data.get('module')
+        file_url = _store_upload('module_docs', file, module_id)
+        return Response({'file_url': file_url}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'])
     def upload(self, request):
@@ -50,9 +96,7 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from django.core.files.storage import default_storage
-        path = default_storage.save(f'module_docs/{module_id}/{file.name}', file)
-        file_url = f'/media/{path}'
+        file_url = _store_upload(file, 'module_docs', module_id)
 
         doc = ModuleDocument.objects.create(
             module_id=module_id,

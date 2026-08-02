@@ -237,7 +237,7 @@ function LessonsTab() {
         { name: "lesson_no", label: "Lesson No.", type: "text", span: "half" },
         { name: "title", label: "Title", type: "text", span: "half" },
         { name: "content", label: "Content", type: "textarea", rows: 3 },
-        { name: "video_url", label: "Video URL", type: "text", placeholder: "https://..." },
+        { name: "video_url", label: "Lesson Video", type: "file", uploadEndpoint: "/module-lessons/upload_video/", accept: "video/*", placeholder: "Upload video or enter URL" },
       ]}
       columns={[
         { key: "lesson_no", header: "#", render: (l) => <span className="text-sm text-white font-mono">{l.lesson_no}</span> },
@@ -289,7 +289,7 @@ function DocsTab() {
         { name: "module", label: "Module", type: "select", required: true, options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
         { name: "name", label: "Name", type: "text", span: "half" },
         { name: "type", label: "Type", type: "text", placeholder: "pdf, doc, etc.", span: "half" },
-        { name: "file_url", label: "File URL", type: "text", placeholder: "https://..." },
+        { name: "file_url", label: "Document File", type: "file", uploadEndpoint: "/module-documents/upload_file/", accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip", placeholder: "Upload file or enter URL" },
       ]}
       columns={[
         { key: "name", header: "Name", render: (d) => <span className="text-sm font-semibold text-white">{d.name || "—"}</span> },

@@ -61,6 +61,7 @@ export default function ModulesPage() {
   const [lessonFormModule, setLessonFormModule] = useState<string>("");
   const [lessonForm, setLessonForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "" });
   const [savingLesson, setSavingLesson] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // View lesson
   const [viewLesson, setViewLesson] = useState<Lesson | null>(null);
@@ -69,6 +70,7 @@ export default function ModulesPage() {
   const [editLesson, setEditLesson] = useState<Lesson | null>(null);
   const [editForm, setEditForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditVideo, setUploadingEditVideo] = useState(false);
 
   // Delete lesson
   const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
@@ -112,6 +114,25 @@ export default function ModulesPage() {
   const openLessonForm = (moduleId: string, nextLessonNo: number) => {
     setLessonFormModule(moduleId);
     setLessonForm({ lesson_no: nextLessonNo, title: "", content: "", video_url: "" });
+  };
+
+  const uploadLessonVideo = async (file: File, mode: "create" | "edit") => {
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await api.upload<any>("/module-lessons/upload_video/", fd);
+      if (mode === "create") {
+        setLessonForm((f) => ({ ...f, video_url: res.video_url || "" }));
+      } else {
+        setEditForm((f) => ({ ...f, video_url: res.video_url || "" }));
+      }
+      showToast("success", t("instructor.videoUploaded", "Video uploaded"));
+    } catch (err: any) {
+      showToast("error", err.message || t("instructor.videoUploadFailed", "Video upload failed"));
+    } finally {
+      setUploadingVideo(false);
+      setUploadingEditVideo(false);
+    }
   };
 
   const handleCreateLesson = async (e: React.FormEvent, moduleId: string) => {
@@ -347,9 +368,21 @@ export default function ModulesPage() {
                                     </div>
                                     <div>
                                       <label className="block text-xs text-gray-500 mb-1">{t("instructor.videoUrl", "Video URL")}</label>
-                                      <input type="url" value={editForm.video_url}
-                                        onChange={e => setEditForm({ ...editForm, video_url: e.target.value })}
-                                        className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+                                      <div className="flex gap-2">
+                                        <input type="url" value={editForm.video_url}
+                                          onChange={e => setEditForm({ ...editForm, video_url: e.target.value })}
+                                          className="flex-1 w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+                                        <label className={`shrink-0 inline-flex items-center gap-2 px-3 py-2 bg-navy-800 border border-navy-600 rounded text-xs text-gray-300 hover:border-gold-500 cursor-pointer ${uploadingEditVideo ? "opacity-50 pointer-events-none" : ""}`}>
+                                          {uploadingEditVideo ? t("instructor.uploading", "Uploading...") : t("instructor.uploadVideo", "Upload Video")}
+                                          <input type="file" accept="video/*" className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (!file) return;
+                                              setUploadingEditVideo(true);
+                                              uploadLessonVideo(file, "edit");
+                                            }} />
+                                        </label>
+                                      </div>
                                     </div>
                                     <div className="flex gap-2">
                                       <button type="submit" disabled={savingEdit}
@@ -423,10 +456,22 @@ export default function ModulesPage() {
                             </div>
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">{t("instructor.videoUrl", "Video URL")}</label>
-                              <input type="url" value={lessonForm.video_url}
-                                onChange={e => setLessonForm({ ...lessonForm, video_url: e.target.value })}
-                                placeholder={t("instructor.videoUrlPlaceholder", "https://www.youtube.com/watch?v=...")}
-                                className="w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+                              <div className="flex gap-2">
+                                <input type="url" value={lessonForm.video_url}
+                                  onChange={e => setLessonForm({ ...lessonForm, video_url: e.target.value })}
+                                  placeholder={t("instructor.videoUrlPlaceholder", "https://www.youtube.com/watch?v=...")}
+                                  className="flex-1 w-full px-3 py-2 bg-navy-800 border border-navy-600 rounded text-white text-sm" />
+                                <label className={`shrink-0 inline-flex items-center gap-2 px-3 py-2 bg-navy-800 border border-navy-600 rounded text-xs text-gray-300 hover:border-gold-500 cursor-pointer ${uploadingVideo ? "opacity-50 pointer-events-none" : ""}`}>
+                                  {uploadingVideo ? t("instructor.uploading", "Uploading...") : t("instructor.uploadVideo", "Upload Video")}
+                                  <input type="file" accept="video/*" className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      setUploadingVideo(true);
+                                      uploadLessonVideo(file, "create");
+                                    }} />
+                                </label>
+                              </div>
                             </div>
                             <div className="flex gap-2">
                               <button type="submit" disabled={savingLesson}
@@ -532,15 +577,17 @@ export default function ModulesPage() {
           <div className="space-y-4">
             {viewLesson.video_url && (
               <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                <iframe
-                  src={viewLesson.video_url.includes('youtube.com') || viewLesson.video_url.includes('youtu.be')
-                    ? `https://www.youtube.com/embed/${(viewLesson.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/) || [])[1] || ''}`
-                    : viewLesson.video_url}
-                  title="Lesson video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                />
+                {viewLesson.video_url.includes('youtube.com') || viewLesson.video_url.includes('youtu.be') ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${(viewLesson.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/) || [])[1] || ''}`}
+                    title="Lesson video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                ) : (
+                  <video src={viewLesson.video_url} controls className="absolute inset-0 w-full h-full" />
+                )}
               </div>
             )}
             <div className="bg-navy-900 border border-navy-700 rounded-lg p-4 max-h-96 overflow-y-auto">

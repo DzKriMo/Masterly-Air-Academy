@@ -23,7 +23,7 @@ export type CrudOptions = CrudOption[] | ((lookups: CrudLookups) => CrudOption[]
 export interface CrudField {
   name: string;
   label: string;
-  type: "text" | "select" | "textarea" | "datetime" | "date" | "time" | "checkbox";
+  type: "text" | "select" | "textarea" | "datetime" | "date" | "time" | "checkbox" | "file";
   span?: "full" | "half";
   required?: boolean;
   requiredForSubmit?: boolean;
@@ -31,6 +31,12 @@ export interface CrudField {
   mono?: boolean;
   options?: CrudOptions;
   rows?: number;
+  uploadEndpoint?: string;
+  accept?: string;
+  uploadErrorKey?: string;
+  uploadErrorFallback?: string;
+  uploadSuccessKey?: string;
+  uploadSuccessFallback?: string;
 }
 
 export interface CrudFilterField {

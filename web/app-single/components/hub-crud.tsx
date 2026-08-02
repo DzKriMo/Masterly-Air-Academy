@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "@/lib/use-translation";
+import { api } from "@/lib/api";
+import { useToast } from "@/components/toast";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -40,6 +42,9 @@ function FormField({
   onChange: (value: any) => void;
   lookups: CrudLookups;
 }) {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
+  const [uploading, setUploading] = useState(false);
   const label = (
     <label className="block text-sm text-gray-400 mb-1">
       {field.label}
@@ -107,6 +112,63 @@ function FormField({
         <div>
           {label}
           <input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={INPUT_BASE} />
+        </div>
+      );
+    case "file":
+      return (
+        <div>
+          {label}
+          <div className="flex items-center gap-3">
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-sm text-gray-200 hover:border-gold-500 cursor-pointer ${
+                uploading ? "opacity-60 pointer-events-none" : ""
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-gold-500" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  {t("uploading", "Uploading...")}
+                </>
+              ) : (
+                <span>{t("choose_file", "Choose file")}</span>
+              )}
+              <input
+                type="file"
+                accept={field.accept}
+                className="hidden"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    const res = await api.upload(field.uploadEndpoint ?? "", fd);
+                    const url = res?.file_url || res?.video_url;
+                    if (!url) throw new Error("No URL returned");
+                    onChange(url);
+                    showToast("success", t(field.uploadSuccessKey ?? "", field.uploadSuccessFallback ?? "Uploaded"));
+                  } catch {
+                    showToast("error", t(field.uploadErrorKey ?? "", field.uploadErrorFallback ?? "Upload failed"));
+                  } finally {
+                    setUploading(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </label>
+            {value ? (
+              <span className="text-sm text-gold-400 truncate max-w-[40%]" title={String(value)}>
+                {String(value)}
+              </span>
+            ) : (
+              <span className="text-sm text-gray-500">{field.placeholder}</span>
+            )}
+          </div>
         </div>
       );
     default:

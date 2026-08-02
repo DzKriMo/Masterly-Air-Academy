@@ -153,6 +153,15 @@ class ApiClient {
   async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
+
+  /** Multipart upload request (no JSON Content-Type; body set as FormData). */
+  async upload<T = any>(endpoint: string, formData: FormData): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: formData,
+      headers: { Accept: 'application/json' },
+    });
+  }
 }
 
 export function unwrapResults<T>(response: any, fallback: T[] = []): T[] {
