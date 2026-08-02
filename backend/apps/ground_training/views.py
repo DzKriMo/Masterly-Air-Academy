@@ -96,7 +96,7 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        file_url = _store_upload(file, 'module_docs', module_id)
+        file_url = _store_upload('module_docs', file, module_id)
 
         doc = ModuleDocument.objects.create(
             module_id=module_id,
