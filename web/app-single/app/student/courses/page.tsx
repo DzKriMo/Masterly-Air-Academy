@@ -31,6 +31,11 @@ interface Lesson {
   title: string;
   content: string;
   video_url: string | null;
+  is_mandatory?: boolean;
+  has_video?: boolean;
+  video_status?: string | null;
+  video_watched_seconds?: number;
+  video_duration?: number;
 }
 
 interface Doc {
@@ -109,9 +114,9 @@ export default function StudentCoursesPage() {
     return (
       <div className="min-h-screen bg-navy-900 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 py-8"><LoadingSkeleton type="card" rows={4} /></div>
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
   const toggleModule = (subjectId: string, moduleId?: string) => {
     setExpanded(prev => {
@@ -207,8 +212,7 @@ function ModulesView({ groups, expanded, toggle, router, t }: {
   toggle: (subjectId: string, moduleId?: string) => void;
   router: any;
   t: any;
-}) {
-  const visible = groups.filter(g => g.subject.has_modules || g.modules.length > 0);
+}) {  const visible = groups.filter(g => g.subject.has_modules || g.modules.length > 0);
   if (visible.length === 0) {
     return <div className="py-12"><EmptyState message={t("student.noModulesTab", "No module content available yet.")} /></div>;
   }
@@ -243,7 +247,10 @@ function ModulesView({ groups, expanded, toggle, router, t }: {
                           <div className="space-y-2">
                             {m.lessons.map(l => (
                               <div key={l.id} className="flex items-center justify-between bg-navy-800 rounded-lg px-4 py-2.5 border border-navy-700">
-                                <span className="text-sm text-white">{l.lesson_no}. {l.title || t("student.untitled", "Untitled")}</span>
+                                <span className="flex items-center gap-2 text-sm text-white min-w-0">
+                                  <LessonStatusBadge lesson={l} />
+                                  <span className="truncate">{l.lesson_no}. {l.title || t("student.untitled", "Untitled")}</span>
+                                </span>
                                 <button onClick={() => router.push(`/student/courses/lesson/${l.id}`)} className="text-xs text-gold-500 hover:text-gold-400 border border-gold-500/30 px-3 py-1.5 rounded-lg transition-colors font-medium shrink-0 ml-2">{t("student.openLesson", "Open Lesson")} →</button>
                               </div>
                             ))}
@@ -288,4 +295,27 @@ function ModulesView({ groups, expanded, toggle, router, t }: {
       ))}
     </div>
   );
+}
+
+function LessonStatusBadge({ lesson }: { lesson: Lesson }) {
+  const { t } = useTranslation();
+  if (lesson.video_status === "completed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-400 bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded-full shrink-0">
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        {t("student.watched", "Watched")}
+      </span>
+    );
+  }
+  const watched = lesson.video_watched_seconds || 0;
+  const duration = lesson.video_duration || 0;
+  const progress = duration > 0 ? Math.min(100, Math.round((watched / duration) * 100)) : 0;
+  if (lesson.has_video && lesson.is_mandatory && progress > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gold-500 bg-gold-500/10 border border-gold-500/30 px-2 py-0.5 rounded-full shrink-0">
+        {progress}%
+      </span>
+    );
+  }
+  return null;
 }

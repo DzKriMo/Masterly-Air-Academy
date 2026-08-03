@@ -13,6 +13,7 @@ class ModuleLessonSerializer(serializers.ModelSerializer):
     video_status = serializers.SerializerMethodField()
     video_watched_seconds = serializers.SerializerMethodField()
     video_tab_switches = serializers.SerializerMethodField()
+    video_duration = serializers.SerializerMethodField()
 
     class Meta:
         model = ModuleLesson
@@ -20,6 +21,7 @@ class ModuleLessonSerializer(serializers.ModelSerializer):
             'id', 'module', 'lesson_no', 'title', 'content', 'video_url',
             'is_mandatory', 'has_video', 'module_title', 'subject_code',
             'video_status', 'video_watched_seconds', 'video_tab_switches',
+            'video_duration',
         ]
 
     def get_module_title(self, obj):
@@ -57,6 +59,10 @@ class ModuleLessonSerializer(serializers.ModelSerializer):
     def get_video_tab_switches(self, obj):
         view = self._student_view(obj)
         return view.tab_switches if view else 0
+
+    def get_video_duration(self, obj):
+        view = self._student_view(obj)
+        return view.duration if view else 0
 
 
 class ModuleDocumentSerializer(serializers.ModelSerializer):

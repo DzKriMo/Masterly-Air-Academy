@@ -24,6 +24,15 @@ interface Lesson {
   has_video?: boolean;
 }
 
+interface VideoStats {
+  status: string | null;
+  watched_seconds: number;
+  duration: number;
+  tab_switches: number;
+  progress: number;
+  completed: boolean;
+}
+
 export default function LessonViewPage() {
   const { isAuthenticated, isLoading: authLoading, token } = useAuth();
   const router = useRouter();
@@ -34,6 +43,14 @@ export default function LessonViewPage() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isMandatory, setIsMandatory] = useState(false);
+  const [videoStats, setVideoStats] = useState<VideoStats>({
+    status: null,
+    watched_seconds: 0,
+    duration: 0,
+    tab_switches: 0,
+    progress: 0,
+    completed: false,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +79,7 @@ export default function LessonViewPage() {
             title="Video"
             className="absolute inset-0 w-full h-full"
             allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           />
         </div>
       );
@@ -70,8 +88,9 @@ export default function LessonViewPage() {
       <video
         ref={videoRef}
         controls
-        className="w-full rounded-xl"
+        playsInline
         preload="metadata"
+        className="w-full h-full object-contain bg-black"
         onTimeUpdate={onVideoTimeUpdate}
         onPause={onVideoPause}
         onEnded={onVideoEnded}
@@ -91,6 +110,20 @@ export default function LessonViewPage() {
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lessonIdRef = useRef<string | null>(null);
 
+  const updateStatsFromResponse = useCallback((r: any) => {
+    if (!r) return;
+    const watched = r.watched_seconds ?? videoStats.watched_seconds;
+    const duration = r.duration ?? videoStats.duration;
+    setVideoStats({
+      status: r.status ?? videoStats.status,
+      watched_seconds: watched,
+      duration,
+      tab_switches: r.tab_switches ?? videoStats.tab_switches,
+      progress: duration > 0 ? Math.min(100, Math.round((watched / duration) * 100)) : 0,
+      completed: r.status === "completed",
+    });
+  }, [videoStats]);
+
   const flushTracking = useCallback(() => {
     if (!lessonIdRef.current) return;
     const vid = videoRef.current;
@@ -104,10 +137,11 @@ export default function LessonViewPage() {
         duration,
         tab_switches: tabSwitches,
       })
+      .then(updateStatsFromResponse)
       .catch(() => {
         /* tracking is best-effort; never block the learner */
       });
-  }, []);
+  }, [updateStatsFromResponse]);
 
   const onVideoPlay = useCallback(() => {
     if (!isMandatory || !lessonIdRef.current) return;
@@ -224,6 +258,16 @@ export default function LessonViewPage() {
             ? `${streamBase}${token ? `?token=${encodeURIComponent(token)}` : ""}`
             : null
         );
+        const watched = d.video_watched_seconds || 0;
+        const duration = d.video_duration || 0;
+        setVideoStats({
+          status: d.video_status || null,
+          watched_seconds: watched,
+          duration,
+          tab_switches: d.video_tab_switches || 0,
+          progress: duration > 0 ? Math.min(100, Math.round((watched / duration) * 100)) : 0,
+          completed: d.video_status === "completed",
+        });
         setError(null);
       })
       .catch(err => {
@@ -262,20 +306,34 @@ export default function LessonViewPage() {
               </p>
               <h1 className="text-3xl font-bold text-white">{lesson.title}</h1>
               {lesson.module_title && <p className="text-sm text-gray-400 mt-2">{lesson.module_title}</p>}
-              {isMandatory && (
+              {isMandatory && !videoStats.completed && (
                 <p className="text-xs text-gold-500/80 mt-2 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-gold-500 inline-block" />
                   {t("student.mandatoryVideo", "Mandatory video — progress is tracked")}
+                </p>
+              )}
+              {isMandatory && videoStats.completed && (
+                <p className="text-xs text-green-400/90 mt-2 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  {t("student.videoWatched", "Watched")} — {t("student.mandatoryVideoDone", "mandatory video completed")}
                 </p>
               )}
             </div>
 
             {videoUrl && (
               <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
-                  {t("student.videoContent", "Video Content")}
-                </h3>
-                {renderVideoPlayer(videoUrl)}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gold-500 uppercase tracking-wider">
+                    {t("student.videoContent", "Video Content")}
+                  </h3>
+                  {isMandatory && <ProgressBadge stats={videoStats} />}
+                </div>
+                <div className="w-full rounded-xl overflow-hidden bg-black aspect-video max-h-[70vh]">
+                  {renderVideoPlayer(videoUrl)}
+                </div>
+                {isMandatory && videoStats.watched_seconds > 0 && (
+                  <ProgressBar stats={videoStats} />
+                )}
               </div>
             )}
 
@@ -306,6 +364,64 @@ export default function LessonViewPage() {
           </article>
         )}
       </main>
+    </div>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function ProgressBadge({ stats }: { stats: VideoStats }) {
+  const { t } = useTranslation();
+  if (stats.completed) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 border border-green-500/30 px-2.5 py-1 rounded-full">
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        {t("student.videoWatched", "Watched")}
+      </span>
+    );
+  }
+  if (stats.progress > 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-500 bg-gold-500/10 border border-gold-500/30 px-2.5 py-1 rounded-full">
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        {stats.progress}%
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 bg-navy-700 border border-navy-600 px-2.5 py-1 rounded-full">
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+      {t("student.videoNotStarted", "Not started")}
+    </span>
+  );
+}
+
+function ProgressBar({ stats }: { stats: VideoStats }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+        <span>{t("student.watchProgress", "Watch progress")}</span>
+        <span className="font-mono">
+          {formatDuration(stats.watched_seconds)} / {formatDuration(stats.duration)}
+          {stats.tab_switches > 0 && (
+            <span className="ml-2 text-yellow-500/80" title={t("student.tabSwitches", "Times you left the tab — video pauses when you switch away")}>
+              {stats.tab_switches}× {t("student.tabSwitch", "tab switch")}{stats.tab_switches !== 1 ? "es" : ""}
+            </span>
+          )}
+        </span>
+      </div>
+      <div className="w-full h-2 bg-navy-700 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${stats.completed ? "bg-green-500" : "bg-gold-500"}`}
+          style={{ width: `${Math.max(stats.progress, 2)}%` }}
+        />
+      </div>
     </div>
   );
 }

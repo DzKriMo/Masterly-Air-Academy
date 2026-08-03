@@ -434,6 +434,16 @@ class CourseViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
         today = timezone.localdate()
 
+        # Per-student lesson video progress, so the module list can flag
+        # completed / partially-watched mandatory videos.
+        student = getattr(user, 'student_profile', None)
+        student_views = {}
+        if student is not None:
+            student_views = {
+                v.lesson_id: v
+                for v in LessonVideoView.objects.filter(student=student)
+            }
+
         groups = []
         for subj in subjects:
             modules = []
@@ -444,8 +454,18 @@ class CourseViewSet(viewsets.ModelViewSet):
                     'description': m.description,
                     'status': m.status,
                     'lessons': [
-                        {'id': str(l.id), 'lesson_no': l.lesson_no, 'title': l.title, 'content': l.content,
-                         'video_url': l.video_url}
+                        {
+                            'id': str(l.id),
+                            'lesson_no': l.lesson_no,
+                            'title': l.title,
+                            'content': l.content,
+                            'video_url': l.video_url,
+                            'is_mandatory': l.is_mandatory,
+                            'has_video': bool(l.video_url),
+                            'video_status': student_views[l.id].status if l.id in student_views else None,
+                            'video_watched_seconds': student_views[l.id].watched_seconds if l.id in student_views else 0,
+                            'video_duration': student_views[l.id].duration if l.id in student_views else 0,
+                        }
                         for l in m.lessons.all()
                     ],
                     'documents': [
