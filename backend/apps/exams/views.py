@@ -36,7 +36,10 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
     search_fields = ['question_text']
 
     def get_serializer_class(self):
-        if self.request.user.role in ('system_admin', 'chief_ground_instructor', 'chief_flight_instructor'):
+        if self.request.user.role in (
+            'system_admin', 'training_admin',
+            'chief_ground_instructor', 'chief_flight_instructor',
+        ):
             return QuestionWithAnswerSerializer
         return QuestionSerializer
 

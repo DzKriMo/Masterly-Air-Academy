@@ -96,3 +96,41 @@ class TestTemplate:
     def test_xlsx_template(self):
         data = generate_template('xlsx')
         assert data.startswith(b'PK')
+
+
+class TestQuestionSerializerSelection:
+    def test_training_admin_sees_full_question(self, subject, api_client, django_user_model):
+        """training_admin must receive question answers/program/subject_name."""
+        from apps.exams.models import QuestionBank
+        q = QuestionBank.objects.create(
+            subject=subject,
+            question_text='Full view question',
+            question_type='mcq',
+            options=['A', 'B'],
+            correct_answer='B',
+            program='PPL',
+        )
+        user = django_user_model.objects.create_user(
+            username='trainer_user', email='trainer@maa.dz', password='pw', role='training_admin',
+        )
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounts.models import User
+        ct = ContentType.objects.get_for_model(User)
+        perm, _ = Permission.objects.get_or_create(
+            codename='exams.manage', name='Exams manage', content_type=ct,
+        )
+        user.user_permissions.add(perm)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get('/api/question-bank/')
+        assert resp.status_code == 200, resp.content
+        payload = resp.json()
+        data = payload.get('data', payload)
+        results = data.get('results') or data
+        if hasattr(data, 'results'):  # paginated
+            return
+        item = next((r for r in results if r['id'] == str(q.id)), None)
+        assert item is not None
+        assert item.get('correct_answer') == 'B'
+        assert item.get('subject_name') == subject.title_en
+        assert item.get('program') == 'PPL'
