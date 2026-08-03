@@ -36,10 +36,14 @@ class ModuleExerciseSerializer(serializers.ModelSerializer):
 class ModuleSerializer(serializers.ModelSerializer):
     lessons = ModuleLessonSerializer(many=True, read_only=True)
     documents = ModuleDocumentSerializer(many=True, read_only=True)
+    subject_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Module
-        fields = ['id', 'subject', 'title', 'title_ar', 'title_fr', 'description', 'description_ar', 'description_fr', 'duration', 'order', 'status', 'lessons', 'documents']
+        fields = ['id', 'subject', 'subject_name', 'title', 'title_ar', 'title_fr', 'description', 'description_ar', 'description_fr', 'duration', 'order', 'status', 'lessons', 'documents']
+
+    def get_subject_name(self, obj):
+        return obj.subject.title_en if obj.subject else ''
 
 
 class SubjectSerializer(serializers.ModelSerializer):

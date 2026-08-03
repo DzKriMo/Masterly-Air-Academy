@@ -16,6 +16,7 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+  const [pendingEvents, setPendingEvents] = useState(0);
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -27,6 +28,13 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
         .catch(() => {});
       api.get("/messages/unread-count/")
         .then((d: any) => setUnreadMsgCount(d.count ?? 0))
+        .catch(() => {});
+      api.get("/safety-events/")
+        .then((d: any) => {
+          const all = d?.results || [];
+          const pending = all.filter((e: any) => ["reported", "investigating", "analyzed"].includes(e.status)).length;
+          setPendingEvents(pending);
+        })
         .catch(() => {});
     };
     fetchUnread();
@@ -78,6 +86,19 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
           <p className="text-white font-bold text-center mt-2 text-sm">{t("layout.qualityPortal")}</p>
           <p className="text-xs text-gold-500 text-center truncate">{user?.name||user?.email}</p>
         </div>
+        {pendingEvents > 0 && (
+          <a
+            href="/quality/safety"
+            onClick={closeSidebar}
+            className="mx-3 mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs leading-snug hover:bg-red-500/20 transition-colors"
+          >
+            <Shield className="w-4 h-4 mt-0.5 shrink-0"/>
+            <span>
+              <strong className="block text-red-300 font-semibold">{pendingEvents} {t("quality.pendingEventsTitle", "safety event(s) pending")}</strong>
+              <span>{t("quality.pendingEventsBody", "awaiting investigation and resolution.")}</span>
+            </span>
+          </a>
+        )}
         <nav className="p-2 flex-1 overflow-y-auto">
           {NAV.map(item => (
             <a key={item.href} href={item.href} onClick={closeSidebar} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm mb-1 transition-colors ${pathname===item.href?"bg-gold-500/20 text-gold-500 font-medium":"text-gray-400 hover:text-white hover:bg-navy-700"}`}>

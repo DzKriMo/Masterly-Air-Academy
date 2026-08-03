@@ -1,4 +1,6 @@
 from django.db.models import Count
+import os
+import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -22,32 +24,41 @@ from .serializers import (
 )
 
 
+def _stream_from_storage(key, content_type='application/octet-stream', filename='file', inline=True):
+    """Stream a stored (MinIO) file as a StreamingHttpResponse, or None if unresolvable."""
+    from django.core.files.storage import default_storage
+    from django.http import StreamingHttpResponse
+
+    if not key:
+        return None
+    if key.startswith(('http://', 'https://')):
+        return None
+    # A "/media/..." prefix refers to the same MinIO object with the prefix stripped.
+    if key.startswith('/media/'):
+        key = key[len('/media/'):]
+    if not default_storage.exists(key):
+        return None
+    try:
+        f = default_storage.open(key, 'rb')
+        response = StreamingHttpResponse(f, content_type=content_type)
+        disposition = 'inline' if inline else 'attachment'
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        return response
+    except Exception:
+        return None
+
+
 def _store_upload(folder, file, module_id=None):
-    """Persist an uploaded file and return its public /media/ URL."""
-    import os
-    import uuid
-    from django.conf import settings
+    """Persist an uploaded file to the default (MinIO) storage and return its key."""
     from django.core.files.storage import default_storage
 
-    ext = os.path.splitext(file.name)[1].lower()
+    ext = os.path.splitext(file.name)[1].lower() or '.bin'
     local_name = f'{uuid.uuid4().hex}{ext}'
-    try:
-        rel = f'{folder}/{local_name}'
-        if module_id:
-            rel = f'{folder}/{module_id}/{local_name}'
-        path = default_storage.save(rel, file)
-        return f'/media/{path}'
-    except Exception:
-        base = os.path.join(settings.MEDIA_ROOT, folder, str(module_id) if module_id else '')
-        os.makedirs(base, exist_ok=True)
-        local_path = os.path.join(base, local_name)
-        with open(local_path, 'wb+') as dest:
-            for chunk in file.chunks():
-                dest.write(chunk)
-        url = f'/media/{folder}/{local_name}'
-        if module_id:
-            url = f'/media/{folder}/{module_id}/{local_name}'
-        return url
+    rel = f'{folder}/{local_name}'
+    if module_id:
+        rel = f'{folder}/{module_id}/{local_name}'
+    key = default_storage.save(rel, file)
+    return key
 
 
 class ModuleLessonViewSet(viewsets.ModelViewSet):
@@ -63,8 +74,22 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
         module_id = request.data.get('module')
-        video_url = _store_upload('module_videos', file, module_id)
-        return Response({'video_url': video_url}, status=status.HTTP_201_CREATED)
+        video_key = _store_upload('module_videos', file, module_id)
+        return Response({'video_url': video_key}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='video')
+    def video(self, request, pk=None):
+        lesson = self.get_object()
+        response = _stream_from_storage(
+            lesson.video_url,
+            content_type='video/mp4',
+            filename=f'lesson_{lesson.lesson_no}.mp4',
+        )
+        if response is None:
+            if lesson.video_url and (lesson.video_url.startswith('http') or lesson.video_url.startswith('/media/')):
+                return Response({'video_url': lesson.video_url})
+            return Response({'error': 'No video attached'}, status=status.HTTP_404_NOT_FOUND)
+        return response
 
 
 class ModuleDocumentViewSet(viewsets.ModelViewSet):
@@ -80,8 +105,22 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
         module_id = request.data.get('module')
-        file_url = _store_upload('module_docs', file, module_id)
-        return Response({'file_url': file_url}, status=status.HTTP_201_CREATED)
+        file_key = _store_upload('module_docs', file, module_id)
+        return Response({'file_url': file_key}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='download')
+    def download(self, request, pk=None):
+        doc = self.get_object()
+        response = _stream_from_storage(
+            doc.file_url,
+            content_type='application/octet-stream',
+            filename=doc.name or 'document',
+        )
+        if response is None:
+            if doc.file_url and (doc.file_url.startswith('http') or doc.file_url.startswith('/media/')):
+                return Response({'file_url': doc.file_url})
+            return Response({'error': 'No file attached'}, status=status.HTTP_404_NOT_FOUND)
+        return response
 
     @action(detail=False, methods=['post'])
     def upload(self, request):
@@ -217,6 +256,14 @@ class CourseViewSet(viewsets.ModelViewSet):
             return CourseCreateSerializer
         return CourseSerializer
 
+    def perform_create(self, serializer):
+        course = serializer.save()
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.course_scheduled(course)
+        except Exception:
+            pass
+
     @action(detail=True, methods=['post'])
     def attendance(self, request, pk=None):
         course = self.get_object()
@@ -274,6 +321,82 @@ class CourseViewSet(viewsets.ModelViewSet):
             })
         return Response({'course_id': str(course.id), 'modules': materials})
 
+    @action(detail=False, methods=['get'])
+    def curriculum(self, request):
+        """Group the student's enrolled subjects with their modules (lessons/
+        documents/exercises) and the course sessions associated with each subject."""
+        user = request.user
+        if user.role == 'student':
+            courses = Course.objects.filter(
+                enrollments__student__user=user
+            ).select_related('subject', 'instructor', 'room').distinct()
+        elif user.role == 'ground_instructor':
+            courses = Course.objects.filter(
+                instructor__user=user
+            ).select_related('subject', 'instructor', 'room').distinct()
+        else:
+            courses = Course.objects.select_related('subject', 'instructor', 'room').distinct()
+
+        subject_ids = set(courses.values_list('subject_id', flat=True))
+        subjects = Subject.objects.filter(id__in=subject_ids).prefetch_related(
+            'modules__lessons', 'modules__documents', 'modules__exercises',
+            'courses__enrollments', 'courses__instructor', 'courses__room',
+        ).order_by('code')
+
+        from datetime import date as _date
+        from django.utils import timezone
+        today = timezone.localdate()
+
+        groups = []
+        for subj in subjects:
+            modules = []
+            for m in subj.modules.all().order_by('order'):
+                modules.append({
+                    'id': str(m.id),
+                    'title': m.title,
+                    'description': m.description,
+                    'status': m.status,
+                    'lessons': [
+                        {'id': str(l.id), 'lesson_no': l.lesson_no, 'title': l.title, 'content': l.content,
+                         'video_url': l.video_url}
+                        for l in m.lessons.all()
+                    ],
+                    'documents': [
+                        {'id': str(d.id), 'name': d.name, 'file_url': d.file_url, 'type': d.type}
+                        for d in m.documents.all()
+                    ],
+                    'exercises': [
+                        {'id': str(e.id), 'title': e.title, 'instructions': e.instructions, 'due_date': str(e.due_date) if e.due_date else None}
+                        for e in m.exercises.all()
+                    ],
+                })
+            sessions = []
+            for c in subj.courses.all():
+                past = c.scheduled_date < today
+                sessions.append({
+                    'id': str(c.id),
+                    'title': c.title,
+                    'scheduled_date': str(c.scheduled_date),
+                    'start_time': str(c.start_time)[:5] if c.start_time else None,
+                    'end_time': str(c.end_time)[:5] if c.end_time else None,
+                    'room_name': c.room.name if c.room else None,
+                    'instructor_name': f'{c.instructor.first_name} {c.instructor.last_name}' if c.instructor else None,
+                    'status': c.status,
+                    'is_past': past,
+                })
+            groups.append({
+                'subject': {
+                    'id': str(subj.id),
+                    'code': subj.code,
+                    'title_en': subj.title_en,
+                    'has_modules': bool(modules),
+                    'has_sessions': bool(sessions),
+                },
+                'modules': modules,
+                'sessions': sessions,
+            })
+        return Response(groups)
+
     @action(detail=True, methods=['post'])
     def evaluate(self, request, pk=None):
         course = self.get_object()
@@ -316,6 +439,20 @@ class CourseEnrollmentViewSet(viewsets.ModelViewSet):
             return qs.filter(course__instructor__user=self.request.user)
         return qs
 
+    def perform_create(self, serializer):
+        enrollment = serializer.save()
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.notify(
+                enrollment.student.user,
+                'enrollment',
+                'Enrolled in Course',
+                f'You have been enrolled in "{enrollment.course.title}".',
+                {'course_id': str(enrollment.course_id), 'enrollment_id': str(enrollment.id)}
+            )
+        except Exception:
+            pass
+
     @action(detail=False, methods=['post'])
     def bulk_enroll(self, request):
         course_id = request.data.get('course_id')
@@ -327,12 +464,28 @@ class CourseEnrollmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        from apps.notifications.services import NotificationService
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
+
         enrolled = []
         for sid in student_ids:
             enrollment, _ = CourseEnrollment.objects.get_or_create(
                 student_id=sid,
                 course_id=course_id,
             )
+            try:
+                NotificationService.notify(
+                    enrollment.student.user,
+                    'enrollment',
+                    'Enrolled in Course',
+                    f'You have been enrolled in "{course.title}".',
+                    {'course_id': str(course_id), 'enrollment_id': str(enrollment.id)}
+                )
+            except Exception:
+                pass
             enrolled.append(enrollment)
 
         return Response(

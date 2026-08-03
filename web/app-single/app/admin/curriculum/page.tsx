@@ -5,6 +5,7 @@ import { HubCrud } from "@/components/hub-crud";
 import { PROGRAMS, SUBJECT_STATUSES, STATUS_COLORS, TYPE_COLORS } from "@/lib/format-utils";
 import { fmtLabel } from "@/lib/format-utils";
 import { formatDate } from "@/lib/format-utils";
+import { downloadBlob, moduleDocDownloadUrl, withExt } from "@/lib/download";
 
 const badge = (color?: string) =>
   ({ className: color || "bg-gray-500/10 text-gray-400", capitalize: true });
@@ -233,7 +234,7 @@ function LessonsTab() {
       buildForm={(l) => ({ module: l.module || "", lesson_no: l.lesson_no != null ? String(l.lesson_no) : "", title: l.title || "", content: l.content || "", video_url: l.video_url || "" })}
       buildPayload={(f) => ({ module: f.module, lesson_no: f.lesson_no ? Number(f.lesson_no) : 0, title: f.title || null, content: f.content || null, video_url: f.video_url || null })}
       fields={(mode) => [
-        { name: "module", label: "Module", type: "select", required: true, options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
+        { name: "module", label: "Module", type: "select", required: true, placeholder: "Select a module...", options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
         { name: "lesson_no", label: "Lesson No.", type: "text", span: "half" },
         { name: "title", label: "Title", type: "text", span: "half" },
         { name: "content", label: "Content", type: "textarea", rows: 3 },
@@ -286,7 +287,7 @@ function DocsTab() {
       buildForm={(d) => ({ module: d.module || "", name: d.name || "", type: d.type || "", file_url: d.file_url || "" })}
       buildPayload={(f) => ({ module: f.module, name: f.name || null, type: f.type || null, file_url: f.file_url || null })}
       fields={(mode) => [
-        { name: "module", label: "Module", type: "select", required: true, options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
+        { name: "module", label: "Module", type: "select", required: true, placeholder: "Select a module...", options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
         { name: "name", label: "Name", type: "text", span: "half" },
         { name: "type", label: "Type", type: "text", placeholder: "pdf, doc, etc.", span: "half" },
         { name: "file_url", label: "Document File", type: "file", uploadEndpoint: "/module-documents/upload_file/", accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip", placeholder: "Upload file or enter URL" },
@@ -294,7 +295,9 @@ function DocsTab() {
       columns={[
         { key: "name", header: "Name", render: (d) => <span className="text-sm font-semibold text-white">{d.name || "—"}</span> },
         { key: "type", header: "Type", render: (d) => <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-300">{d.type || "—"}</span> },
-        { key: "file_url", header: "File", render: (d) => (d.file_url ? <a href={d.file_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-gold-500 hover:underline">Open</a> : <span className="text-sm text-gray-500">—</span>) },
+        { key: "file_url", header: "File", render: (d) => (d.file_url ? (
+          <button onClick={(e) => { e.stopPropagation(); downloadBlob(moduleDocDownloadUrl(d.id), withExt(d.name, d.type)); }} className="text-xs text-gold-500 hover:underline">Open</button>
+        ) : <span className="text-sm text-gray-500">—</span>) },
       ]}
       detailTitle="Document Details"
       detailFields={(d) => [

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { LayoutDashboard, Bell, Menu, X } from "lucide-react";
+import { LayoutDashboard, Bell, MessageSquare, Menu, X } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function DirectorLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +15,7 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -23,6 +24,9 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
     const fetchUnread = () => {
       api.get("/notifications/unread-count/")
         .then((d: any) => setUnreadNotifCount(d.count ?? 0))
+        .catch(() => {});
+      api.get("/messages/unread-count/")
+        .then((d: any) => setUnreadMsgCount(d.count ?? 0))
         .catch(() => {});
     };
     fetchUnread();
@@ -33,6 +37,7 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
   const NAV = [
     { href: "/director/dashboard", label: t("director.dashboard"), Icon: LayoutDashboard },
     { href: "/director/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
+    { href: "/director/messages", label: t("director.messages", "Messages"), Icon: MessageSquare, badge: unreadMsgCount },
   ];
 
   useEffect(() => {

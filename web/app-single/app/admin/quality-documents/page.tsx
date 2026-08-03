@@ -16,6 +16,7 @@ import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { DetailField } from "@/components/detail-field";
 import { fmtLabel, formatDate } from "@/lib/format-utils";
+import { downloadBlob } from "@/lib/download";
 
 interface QualityDocument {
   id: string;
@@ -75,6 +76,7 @@ export default function AdminQualityDocumentsPage() {
     issue_date: "", revision_date: "", author: "", approver: "",
     status: "draft", file_url: "",
   });
+  const [createFile, setCreateFile] = useState<File | null>(null);
   const [createError, setCreateError] = useState("");
 
   const [editItem, setEditItem] = useState<QualityDocument | null>(null);
@@ -83,6 +85,7 @@ export default function AdminQualityDocumentsPage() {
     issue_date: "", revision_date: "", author: "", approver: "",
     status: "draft", file_url: "",
   });
+  const [editFile, setEditFile] = useState<File | null>(null);
   const [editError, setEditError] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<QualityDocument | null>(null);
@@ -111,7 +114,15 @@ export default function AdminQualityDocumentsPage() {
       issue_date: "", revision_date: "", author: "", approver: "",
       status: "draft", file_url: "",
     });
+    setCreateFile(null);
     setCreateError("");
+  };
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    const data = await api.upload<any>("/quality-documents/upload/", form);
+    return data?.file_url;
   };
 
   const buildPayload = (form: typeof createForm) => ({
@@ -128,8 +139,14 @@ export default function AdminQualityDocumentsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: ReturnType<typeof buildPayload>) =>
-      api.post("/quality-documents/", payload),
+    mutationFn: async (payload: ReturnType<typeof buildPayload>) => {
+      let p = payload;
+      if (createFile) {
+        const url = await uploadFile(createFile);
+        p = { ...payload, file_url: url || payload.file_url };
+      }
+      return api.post("/quality-documents/", p);
+    },
     onSuccess: () => {
       showToast("success", "Quality document created");
       setCreateOpen(false);
@@ -143,8 +160,14 @@ export default function AdminQualityDocumentsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: ReturnType<typeof buildPayload> }) =>
-      api.patch(`/quality-documents/${id}/`, payload),
+    mutationFn: async ({ id, payload }: { id: string; payload: ReturnType<typeof buildPayload> }) => {
+      let p = payload;
+      if (editFile) {
+        const url = await uploadFile(editFile);
+        p = { ...payload, file_url: url || payload.file_url };
+      }
+      return api.patch(`/quality-documents/${id}/`, p);
+    },
     onSuccess: () => {
       showToast("success", "Quality document updated");
       setEditItem(null);
@@ -244,6 +267,7 @@ export default function AdminQualityDocumentsPage() {
             <button
               onClick={() => {
                 setEditItem(d);
+                setEditFile(null);
                 setEditForm({
                   number: d.number, title: d.title, type: d.type || "",
                   version: d.version || "", issue_date: d.issue_date || "",
@@ -373,15 +397,24 @@ export default function AdminQualityDocumentsPage() {
               <DetailField label="Approver" value={selected.approver_name || "—"} />
               {selected.file_url ? (
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">File URL</p>
-                  <a
-                    href={selected.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-gold-500 hover:text-gold-400 underline break-all"
-                  >
-                    {selected.file_url}
-                  </a>
+                  <p className="text-xs text-gray-500 mb-0.5">File</p>
+                  {selected.file_url.startsWith("http") ? (
+                    <a
+                      href={selected.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gold-500 hover:text-gold-400 underline break-all"
+                    >
+                      {selected.file_url}
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => downloadBlob(`/quality-documents/${selected.id}/download/`, `${selected.number || selected.title}.pdf`)}
+                      className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900"
+                    >
+                      Download file
+                    </button>
+                  )}
                 </div>
               ) : (
                 <DetailField label="File URL" value="—" />
@@ -533,14 +566,14 @@ export default function AdminQualityDocumentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">File URL</label>
+                <label className="block text-sm text-gray-400 mb-1">Document File</label>
                 <input
-                  type="text"
-                  value={createForm.file_url}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, file_url: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
-                  placeholder="https://..."
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setCreateFile(e.target.files?.[0] || null)}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
                 />
+                {createFile && <p className="mt-1 text-xs text-gold-500 truncate">{createFile.name}</p>}
               </div>
             </div>
           </div>
@@ -680,13 +713,17 @@ export default function AdminQualityDocumentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">File URL</label>
+                <label className="block text-sm text-gray-400 mb-1">Document File</label>
                 <input
-                  type="text"
-                  value={editForm.file_url}
-                  onChange={(e) => setEditForm((f) => ({ ...f, file_url: e.target.value }))}
-                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
                 />
+                {editForm.file_url && !editFile && (
+                  <p className="mt-1 text-xs text-gray-500 truncate">Leave empty to keep current file ({editForm.file_url.split("/").pop()})</p>
+                )}
+                {editFile && <p className="mt-1 text-xs text-gold-500 truncate">{editFile.name}</p>}
               </div>
             </div>
           </div>

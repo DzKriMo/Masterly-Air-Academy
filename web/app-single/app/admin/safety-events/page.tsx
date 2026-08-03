@@ -15,6 +15,10 @@ import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { DetailField } from "@/components/detail-field";
 import { formatDate } from "@/lib/format-utils";
+import { downloadBlob } from "@/lib/download";
+import SecureImage from "@/components/SecureImage";
+
+const ACCEPTED = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt";
 
 interface SafetyEvent {
   id: string;
@@ -24,6 +28,7 @@ interface SafetyEvent {
   reported_by: string | null;
   reporter_name: string;
   confidential: boolean;
+  attachments: string[];
   analysis: string | null;
   status: string;
   closed_at: string | null;
@@ -63,6 +68,7 @@ export default function AdminSafetyEventsPage() {
   const [selected, setSelected] = useState<SafetyEvent | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ title: "", type: "incident", description: "", confidential: false });
+  const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [createError, setCreateError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<SafetyEvent | null>(null);
 
@@ -78,8 +84,17 @@ export default function AdminSafetyEventsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (p: typeof createForm) => api.post("/safety-events/", p),
-    onSuccess: () => { showToast("success", "Safety event reported"); setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateError(""); queryClient.invalidateQueries({ queryKey: ["admin-safety-events"] }); },
+    mutationFn: async (p: typeof createForm) => {
+      const attachments: string[] = [];
+      for (const f of createFiles) {
+        const fd = new FormData();
+        fd.append("file", f);
+        const r = await api.upload<any>("/safety-events/upload/", fd);
+        if (r?.file_url) attachments.push(r.file_url);
+      }
+      return api.post("/safety-events/", { ...p, attachments });
+    },
+    onSuccess: () => { showToast("success", "Safety event reported"); setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateFiles([]); setCreateError(""); queryClient.invalidateQueries({ queryKey: ["admin-safety-events"] }); },
     onError: (err: any) => { setCreateError(err?.data ? Object.values(err.data).flat().join(", ") : err.message); },
   });
 
@@ -142,6 +157,24 @@ export default function AdminSafetyEventsPage() {
                   <DetailField label="Confidential" value={selected.confidential ? "Yes" : "No"} />
                   <div className="col-span-2"><DetailField label="Description" value={selected.description} /></div>
                   {selected.analysis && <div className="col-span-2"><DetailField label="Analysis" value={selected.analysis} /></div>}
+                  {selected.attachments?.length > 0 && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-2">Attachments</p>
+                      <div className="space-y-2">
+                        {selected.attachments.map((u: string, i: number) => {
+                          const name = decodeURIComponent(u.split("/").pop() || `attachment-${i + 1}`);
+                          const isImg = /\.(png|jpe?g|gif|webp)$/i.test(name);
+                          return (
+                            <div key={i} className="flex items-center gap-2 text-sm">
+                              {isImg ? <SecureImage src={`/safety-events/attachment/?url=${encodeURIComponent(u)}`} alt={name} className="w-12 h-12 object-cover rounded-lg border border-navy-600" /> : <span className="w-12 h-12 flex items-center justify-center rounded-lg border border-navy-600 text-gold-500 text-lg">📄</span>}
+                              <span className="text-gray-300 truncate flex-1">{name}</span>
+                              <button onClick={() => downloadBlob(`/safety-events/attachment/?url=${encodeURIComponent(u)}`, name)} className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded">Download</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
               <section>
@@ -179,13 +212,14 @@ export default function AdminSafetyEventsPage() {
         </ModalForm>
 
         {/* Create Modal */}
-        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateError(""); }} title="Report Safety Event" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.title || !createForm.description} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Submitting..." : "Submit Report"}</button></>}>
+        <ModalForm open={createOpen} onClose={() => { setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateFiles([]); setCreateError(""); }} title="Report Safety Event" footer={<><button onClick={() => { setCreateOpen(false); setCreateForm({ title: "", type: "incident", description: "", confidential: false }); setCreateFiles([]); setCreateError(""); }} disabled={createMutation.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50">{t('common.cancel')}</button><button onClick={() => createMutation.mutate(createForm)} disabled={createMutation.isPending || !createForm.title || !createForm.description} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50">{createMutation.isPending ? "Submitting..." : "Submit Report"}</button></>}>
           <div className="space-y-4">
             {createError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{createError}</div>}
             <div><label className="block text-sm text-gray-400 mb-1">Title <span className="text-red-400">*</span></label><input type="text" value={createForm.title} onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none" /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Type <span className="text-red-400">*</span></label><select value={createForm.type} onChange={(e) => setCreateForm((f) => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none">{EVENT_TYPES.map((t) => <option key={t} value={t}>{fmtStatus(t)}</option>)}</select></div>
             <div><label className="block text-sm text-gray-400 mb-1">Description <span className="text-red-400">*</span></label><textarea value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))} rows={4} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none resize-none" placeholder="Describe what happened..." /></div>
             <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={createForm.confidential} onChange={(e) => setCreateForm((f) => ({ ...f, confidential: e.target.checked }))} className="w-4 h-4 rounded bg-navy-900 border-navy-700 text-gold-500 focus:ring-gold-500/30" /><span className="text-sm text-gray-300">Report anonymously (confidential)</span></label>
+            <div><label className="block text-sm text-gray-400 mb-1">Attachments (optional) — photos, documents</label><input type="file" multiple accept={ACCEPTED} onChange={(e) => setCreateFiles(Array.from(e.target.files || []))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:text-xs" />{createFiles.length > 0 && <ul className="mt-2 space-y-1">{createFiles.map((f, i) => <li key={i} className="text-xs text-gray-400 flex items-center gap-2"><span className="truncate flex-1">{f.name}</span><span className="text-gray-600 shrink-0">{(f.size / 1024).toFixed(0)} KB</span><button type="button" onClick={() => setCreateFiles(createFiles.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300 shrink-0">Remove</button></li>)}</ul>}</div>
           </div>
         </ModalForm>
 

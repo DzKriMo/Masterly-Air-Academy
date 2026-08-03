@@ -25,6 +25,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     emergency_phone = serializers.SerializerMethodField()
     notes = serializers.SerializerMethodField()
     promotion_code = serializers.CharField(read_only=True)
+    main_instructor = serializers.PrimaryKeyRelatedField(queryset=FlightInstructor.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Student
@@ -33,7 +34,8 @@ class StudentListSerializer(serializers.ModelSerializer):
             'full_name', 'email', 'phone', 'address', 'date_of_birth',
             'nationality', 'program', 'status', 'enrollment_date',
             'promotion', 'promotion_code',
-            'instructor_name', 'medical_certificate', 'medical_expiry',
+            'main_instructor', 'instructor_name',
+            'medical_certificate', 'medical_expiry',
             'emergency_contact', 'emergency_phone', 'notes',
         ]
 
@@ -68,7 +70,7 @@ class MedicalCertificateSerializer(serializers.ModelSerializer):
 class FlightInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     email = serializers.CharField(source='user.email', read_only=True)
-    phone = serializers.CharField(source='user.phone', read_only=True, allow_null=True)
+    phone = serializers.CharField(source='user.phone', required=False, allow_blank=True, allow_null=True)
     student_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -78,13 +80,21 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
             'license_number', 'qualifications', 'status',
             'total_flight_hours', 'instruction_hours', 'student_count',
         ]
-        read_only_fields = ['id', 'name', 'email', 'phone', 'student_count']
+        read_only_fields = ['id', 'name', 'email', 'student_count']
 
     def get_name(self, obj):
         return f'{obj.first_name} {obj.last_name}'
 
     def get_student_count(self, obj):
         return obj.assigned_students.count()
+
+    def update(self, instance, validated_data):
+        phone = validated_data.pop('phone', None)
+        instance = super().update(instance, validated_data)
+        if phone is not None and instance.user:
+            instance.user.phone = phone
+            instance.user.save(update_fields=['phone'])
+        return instance
 
 
 class GroundInstructorSerializer(serializers.Serializer):

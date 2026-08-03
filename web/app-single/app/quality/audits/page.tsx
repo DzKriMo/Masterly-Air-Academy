@@ -11,6 +11,7 @@ import type { FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
+import { downloadBlob } from "@/lib/download";
 
 const AUDIT_TYPES = [
   { value: "internal", label: "Internal" },
@@ -140,7 +141,7 @@ export default function AuditsPage() {
       render: (a) => (
         <div className="flex gap-2">
           <button onClick={(e) => { e.stopPropagation(); openEdit(a); }} className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">{t('common.edit', 'Edit')}</button>
-          <a href={`/api/audits/${a.id}/pdf/`} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</a>
+          <button onClick={(e) => { e.stopPropagation(); downloadBlob(`/audits/${a.id}/pdf/`, `${(a.title || a.id)}.pdf`); }} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
         </div>
       ),
     },

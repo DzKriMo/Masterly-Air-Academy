@@ -77,7 +77,8 @@ class SafetyEventSerializer(serializers.ModelSerializer):
         model = SafetyEvent
         fields = [
             'id', 'title', 'type', 'description', 'reported_by',
-            'reporter_name', 'confidential', 'status', 'analysis', 'created_at',
+            'reporter_name', 'confidential', 'attachments', 'status',
+            'analysis', 'created_at',
         ]
 
     def get_reporter_name(self, obj):

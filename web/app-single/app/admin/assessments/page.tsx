@@ -367,38 +367,94 @@ function ExamPreview({ examId }: { examId: string }) {
 
 function AttemptsTab() {
   return (
-    <HubCrud<Attempt>
-      queryKey={["admin-qa"]}
-      endpoint="/quiz-attempts/"
-      titleFallback="Quiz Attempts"
-      emptyTitle="No attempts yet"
-      emptyMessage="Student quiz attempts will appear here."
-      searchPlaceholder="Search student..."
-      searchFields={["student_name"]}
-      showFilterBar={false}
-      allowCreate={false}
-      allowEdit={false}
-      allowDelete={false}
-      columns={[
-        { key: "student_name", header: "Student", render: (a) => <span className="text-sm font-semibold text-white">{a.student_name}</span> },
-        { key: "score", header: "Score", render: (a) => <span className="text-sm text-gold-500 font-semibold">{a.score}</span> },
-        { key: "started_at", header: "Started", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.started_at)}</span> },
-        { key: "completed_at", header: "Completed", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.completed_at)}</span> },
-      ]}
-      detailTitle="Quiz Attempt Details"
-      detailFields={(a) => [
-        { label: "Student", value: a.student_name },
-        { label: "Score", value: a.score },
-        { label: "Started", value: formatDate(a.started_at) },
-        { label: "Completed", value: formatDate(a.completed_at) },
-      ]}
-    />
+    <div className="space-y-8">
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Quiz Attempts</h2>
+          <span className="text-xs text-gray-600">Student answers to module quizzes</span>
+        </div>
+        <HubCrud<Attempt>
+          queryKey={["admin-qa"]}
+          endpoint="/quiz-attempts/"
+          titleFallback="Quiz Attempts"
+          emptyTitle="No attempts yet"
+          emptyMessage="Student quiz attempts will appear here."
+          searchPlaceholder="Search student..."
+          searchFields={["student_name"]}
+          showFilterBar={false}
+          allowCreate={false}
+          allowEdit={false}
+          allowDelete={false}
+          columns={[
+            { key: "student_name", header: "Student", render: (a) => <span className="text-sm font-semibold text-white">{a.student_name}</span> },
+            { key: "score", header: "Score", render: (a) => <span className="text-sm text-gold-500 font-semibold">{a.score}</span> },
+            { key: "started_at", header: "Started", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.started_at)}</span> },
+            { key: "completed_at", header: "Completed", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.completed_at)}</span> },
+          ]}
+          detailTitle="Quiz Attempt Details"
+          detailFields={(a) => [
+            { label: "Student", value: a.student_name },
+            { label: "Score", value: a.score },
+            { label: "Started", value: formatDate(a.started_at) },
+            { label: "Completed", value: formatDate(a.completed_at) },
+          ]}
+        />
+      </section>
+
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Exam Attempts</h2>
+          <span className="text-xs text-gray-600">Scheduled and past exams</span>
+        </div>
+        <HubCrud<ExamAttempt>
+          queryKey={["admin-ea"]}
+          endpoint="/exam-attempts/"
+          titleFallback="Exam Attempts"
+          emptyTitle="No attempts yet"
+          emptyMessage="Student exam attempts will appear here."
+          searchPlaceholder="Search student..."
+          searchFields={["student_name", "exam_code"]}
+          showFilterBar={false}
+          allowCreate={false}
+          allowEdit={false}
+          allowDelete={false}
+          columns={[
+            { key: "student_name", header: "Student", render: (a) => <span className="text-sm font-semibold text-white">{a.student_name}</span> },
+            { key: "exam_code", header: "Exam", render: (a) => <span className="text-xs px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono">{a.exam_code || "—"}</span> },
+            { key: "attempt", header: "Att.", render: (a) => <span className="text-sm text-gray-400 font-mono">{a.attempt}</span> },
+            { key: "score", header: "Score", render: (a) => <span className="text-sm text-gold-500 font-semibold">{a.is_passed ? "✓ " : ""}{a.score}</span> },
+            { key: "is_passed", header: "Result", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${a.is_passed ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>{a.is_passed ? "Passed" : "Failed"}</span> },
+            { key: "started_at", header: "Started", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.started_at)}</span> },
+            { key: "completed_at", header: "Completed", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.completed_at)}</span> },
+          ]}
+          detailTitle="Exam Attempt Details"
+          detailFields={(a) => [
+            { label: "Student", value: a.student_name },
+            { label: "Exam", value: a.exam_code || "—" },
+            { label: "Attempt", value: String(a.attempt) },
+            { label: "Score", value: `${a.score} ${a.is_passed ? "(Passed)" : "(Failed)"}` },
+            { label: "Started", value: formatDate(a.started_at) },
+            { label: "Completed", value: formatDate(a.completed_at) },
+          ]}
+        />
+      </section>
+    </div>
   );
 }
 interface Attempt {
   id: string;
   student_name: string;
   score: string;
+  started_at: string;
+  completed_at: string | null;
+}
+interface ExamAttempt {
+  id: string;
+  exam_code: string | null;
+  student_name: string;
+  attempt: number;
+  score: string;
+  is_passed: boolean;
   started_at: string;
   completed_at: string | null;
 }

@@ -60,6 +60,22 @@ class ExamViewSet(viewsets.ModelViewSet):
                 return qs.none()
         return qs
 
+    def perform_create(self, serializer):
+        exam = serializer.save()
+        self._notify_if_published(exam)
+
+    def perform_update(self, serializer):
+        exam = serializer.save()
+        self._notify_if_published(exam)
+
+    def _notify_if_published(self, exam):
+        try:
+            if exam.status == 'active':
+                from apps.notifications.services import NotificationService
+                NotificationService.exam_published(exam)
+        except Exception:
+            pass
+
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         exam = self.get_object()

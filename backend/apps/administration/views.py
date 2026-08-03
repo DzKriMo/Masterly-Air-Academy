@@ -230,6 +230,19 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if not student_id or not invoice_id:
             raise ValidationError({'detail': 'student and invoice are required'})
         payment = serializer.save(student_id=student_id, invoice_id=invoice_id)
+        # Notify the student that a payment was recorded
+        try:
+            NotificationService.notify(
+                payment.student.user,
+                'payment_received',
+                'Payment Recorded',
+                f'A payment of {payment.amount} {payment.currency or "DZD"} has been recorded'
+                + (f' for invoice #{payment.invoice.invoice_number}' if payment.invoice else '') + '.',
+                {'payment_id': str(payment.id), 'amount': str(payment.amount),
+                 'invoice_id': str(payment.invoice_id) if payment.invoice_id else None}
+            )
+        except Exception:
+            pass
         # Auto-update invoice status
         invoice = payment.invoice
         if invoice:
@@ -357,7 +370,18 @@ class ContractViewSet(viewsets.ModelViewSet):
                 except (ValueError, IndexError):
                     num = 1
             try:
-                serializer.save(contract_number=f'{prefix}{num:04d}')
+                contract = serializer.save(contract_number=f'{prefix}{num:04d}')
+                try:
+                    from apps.notifications.services import NotificationService
+                    NotificationService.notify(
+                        contract.student.user,
+                        'contract_signed',
+                        'Contract Signed',
+                        f'Contract #{contract.contract_number} has been signed and recorded.',
+                        {'contract_id': str(contract.id), 'number': contract.contract_number}
+                    )
+                except Exception:
+                    pass
                 return
             except IntegrityError:
                 if attempt == max_attempts - 1:

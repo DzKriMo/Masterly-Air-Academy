@@ -12,11 +12,14 @@ const EVENT_TYPES = [
   "System Failure", "Turbulence", "Weather Related", "Other",
 ];
 
+const ACCEPTED = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt";
+
 export default function StudentSafetyReport() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [form, setForm] = useState({ title: "", type: "", description: "", confidential: false });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +30,14 @@ export default function StudentSafetyReport() {
     }
     setSubmitting(true);
     try {
-      await api.post("/safety-events/report/", form);
+      const attachments: string[] = [];
+      for (const f of files) {
+        const fd = new FormData();
+        fd.append("file", f);
+        const r = await api.upload<any>("/safety-events/upload/", fd);
+        if (r?.file_url) attachments.push(r.file_url);
+      }
+      await api.post("/safety-events/report/", { ...form, attachments });
       showToast("success", "Safety report submitted successfully");
       router.push("/student/dashboard");
     } catch {
@@ -89,6 +99,35 @@ export default function StudentSafetyReport() {
                 Submit anonymously (your identity will not be revealed)
               </span>
             </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                Attachments (optional) — photos, documents
+              </label>
+              <input
+                type="file"
+                multiple
+                accept={ACCEPTED}
+                onChange={e => setFiles(Array.from(e.target.files || []))}
+                className="w-full bg-navy-700 border border-navy-600 rounded-lg px-4 py-2.5 text-sm text-gray-300 file:mr-4 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:text-xs focus:outline-none focus:border-gold-500/50"
+              />
+              {files.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {files.map((f, i) => (
+                    <li key={i} className="text-xs text-gray-400 flex items-center gap-2">
+                      <span className="truncate flex-1">{f.name}</span>
+                      <span className="text-gray-600 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        type="button"
+                        onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                        className="text-red-400 hover:text-red-300 shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"

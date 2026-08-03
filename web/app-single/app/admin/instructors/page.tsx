@@ -49,6 +49,7 @@ interface EditForm {
   first_name: string;
   last_name: string;
   email: string;
+  phone: string;
   license_number: string;
   qualifications: string;
   status: string;
@@ -60,6 +61,7 @@ const INIT_EDIT: EditForm = {
   first_name: "",
   last_name: "",
   email: "",
+  phone: "",
   license_number: "",
   qualifications: "",
   status: "active",
@@ -137,6 +139,7 @@ export default function AdminInstructorsPage() {
       first_name: first,
       last_name: rest.join(" "),
       email: i.email || "",
+      phone: i.phone || "",
       license_number: i.license_number || "",
       qualifications: quals,
       status: i.status || "active",
@@ -181,6 +184,7 @@ export default function AdminInstructorsPage() {
       first_name: editForm.first_name,
       last_name: editForm.last_name,
       status: editForm.status,
+      phone: editForm.phone || null,
     };
     if (activeTab === "ground") {
       payload.email = editForm.email;
@@ -508,14 +512,25 @@ export default function AdminInstructorsPage() {
             </div>
           </div>
           {activeTab === "ground" ? (
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Email</label>
-              <input
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -525,6 +540,15 @@ export default function AdminInstructorsPage() {
                   type="text"
                   value={editForm.license_number}
                   onChange={(e) => setEditForm((f) => ({ ...f, license_number: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 />
               </div>

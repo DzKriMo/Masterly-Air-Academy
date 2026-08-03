@@ -6,7 +6,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
 import { api, unwrapResults } from "@/lib/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -35,6 +35,7 @@ interface Student {
   enrollment_date: string;
   promotion?: string;
   promotion_code?: string;
+  main_instructor?: string;
   instructor_name: string;
   nationality: string;
   medical_certificate: string;
@@ -84,6 +85,15 @@ export default function AdminStudentsPage() {
   // ── Lifecycle action state ──
   const [confirmAction, setConfirmAction] = useState<{ student: Student; action: "suspend" | "reactivate" | "archive" } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // ── Edit modal state ──
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({
+    promotion: "",
+    main_instructor: "",
+    status: "",
+  });
+  const [editError, setEditError] = useState("");
 
   const downloadDossier = useCallback(async (student: Student) => {
     try {
@@ -157,6 +167,51 @@ export default function AdminStudentsPage() {
     },
     enabled: isAuthenticated,
   });
+
+  // ── Flight instructors query ──
+  const { data: instructors = [] } = useQuery<any[]>({
+    queryKey: ["admin-students-instructors"],
+    queryFn: async () => {
+      const d = await api.get<any>("/flight-instructors/");
+      return (d as any)?.results || (d as any) || [];
+    },
+    enabled: isAuthenticated,
+  });
+
+  // ── Edit student mutation ──
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+      api.patch(`/students/${id}/`, payload),
+    onSuccess: () => {
+      showToast("success", "Student updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      setEditStudent(null);
+    },
+    onError: (err: any) => {
+      const msg = err?.data ? Object.values(err.data).flat().join(", ") : err.message;
+      setEditError(msg || "Failed to update student");
+    },
+  });
+
+  const openEdit = (student: Student) => {
+    setEditForm({
+      promotion: student.promotion || "",
+      main_instructor: student.main_instructor || "",
+      status: student.status || "active",
+    });
+    setEditError("");
+    setEditStudent(student);
+  };
+
+  const saveEdit = () => {
+    if (!editStudent) return;
+    const payload: Record<string, unknown> = {
+      promotion: editForm.promotion || null,
+      main_instructor: editForm.main_instructor || null,
+      status: editForm.status || "active",
+    };
+    updateMutation.mutate({ id: editStudent.id, payload });
+  };
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -252,6 +307,12 @@ export default function AdminStudentsPage() {
               className="px-2 py-1 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-colors"
             >
               Dossier
+            </button>
+            <button
+              onClick={() => openEdit(s)}
+              className="px-2 py-1 text-xs bg-gold-500/10 text-gold-400 border border-gold-500/30 rounded-md hover:bg-gold-500/20 transition-colors"
+            >
+              Edit
             </button>
             {s.status === "active" && (
               <button
@@ -556,6 +617,75 @@ export default function AdminStudentsPage() {
               )}
             </div>
           )}
+        </ModalForm>
+
+        {/* Edit Student Modal */}
+        <ModalForm
+          open={!!editStudent}
+          onClose={() => setEditStudent(null)}
+          title={`Edit Student: ${editStudent?.full_name || ""}`}
+          footer={
+            <>
+              <button
+                onClick={() => setEditStudent(null)}
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white disabled:opacity-50"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save"}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            {editError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>
+            )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Promotion</label>
+              <select
+                value={editForm.promotion}
+                onChange={(e) => setEditForm((f) => ({ ...f, promotion: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              >
+                <option value="">—</option>
+                {promotions.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.code || p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Main Instructor</label>
+              <select
+                value={editForm.main_instructor}
+                onChange={(e) => setEditForm((f) => ({ ...f, main_instructor: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              >
+                <option value="">—</option>
+                {instructors.map((i: any) => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Status</label>
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </ModalForm>
 
         {/* Lifecycle Action Confirm Dialog */}

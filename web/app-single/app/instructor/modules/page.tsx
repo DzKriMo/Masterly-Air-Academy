@@ -502,7 +502,7 @@ export default function ModulesPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {d.file_url && (
-                                    <a href={d.file_url} target="_blank" className="text-xs text-gold-500 hover:underline">{t("instructor.view", "View")}</a>
+                                    <a href={`/api/module-documents/${d.id}/download/`} target="_blank" className="text-xs text-gold-500 hover:underline">{t("instructor.view", "View")}</a>
                                   )}
                                   <button onClick={() => setDeleteDocId(d.id)}
                                     className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">
@@ -586,7 +586,12 @@ export default function ModulesPage() {
                     className="absolute inset-0 w-full h-full"
                   />
                 ) : (
-                  <video src={viewLesson.video_url} controls className="absolute inset-0 w-full h-full" />
+                  <video
+                    src={viewLesson.video_url.startsWith("/media/") || viewLesson.video_url.startsWith("http")
+                      ? viewLesson.video_url
+                      : `/api/module-lessons/${viewLesson.id}/video/`}
+                    controls className="absolute inset-0 w-full h-full"
+                  />
                 )}
               </div>
             )}

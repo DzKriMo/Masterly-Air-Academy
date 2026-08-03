@@ -105,7 +105,14 @@ export default function InstructorLessonViewPage() {
           module_title: d.module_title || "",
           subject_code: d.subject_code || "",
         });
-        setVideoUrl(d.video_url || null);
+        const raw = d.video_url || null;
+        setVideoUrl(
+          raw && (raw.startsWith("http") || raw.startsWith("/media/"))
+            ? raw
+            : raw
+            ? `/api/module-lessons/${lessonId}/video/`
+            : null
+        );
         setError(null);
       })
       .catch(err => {

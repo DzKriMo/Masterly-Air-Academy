@@ -18,7 +18,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   const NAV = [
     { href: "/student/dashboard", label: t("student.dashboard"), Icon: LayoutDashboard },
-    { href: "/student/exams", label: t("student.exams"), Icon: ClipboardCheck },
+    { href: "/student/exams", label: t("student.exams_quizzes"), Icon: ClipboardCheck },
     { href: "/student/flights", label: t("student.flightLog"), Icon: Plane },
     { href: "/student/courses", label: t("student.myCourses"), Icon: BookOpen },
     { href: "/student/schedule", label: t("student.schedule"), Icon: Calendar },

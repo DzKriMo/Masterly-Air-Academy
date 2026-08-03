@@ -278,8 +278,8 @@ function PrepsTab() {
       createTitle="New Preparation"
       editTitle="Edit Preparation"
       createLabel="+ New Preparation"
-      searchPlaceholder="Search objectives..."
-      searchFields={["lesson_objectives"]}
+      searchPlaceholder="Search student, aircraft, objectives..."
+      searchFields={["student_name", "aircraft_reg", "lesson_objectives"]}
       lookup={{ key: "lessons", queryKey: ["admin-fp-lessons"], endpoint: "/flight-lessons/" }}
       initialCreate={{ flight_lesson: "", weather_check: false, notam_check: false, performance_check: false, document_check: false, medical_check: false, lesson_objectives: "", briefing_notes: "" }}
       buildForm={(p) => ({ flight_lesson: p.flight_lesson, weather_check: p.weather_check, notam_check: p.notam_check, performance_check: p.performance_check, document_check: p.document_check, medical_check: p.medical_check, lesson_objectives: p.lesson_objectives || "", briefing_notes: p.briefing_notes || "" })}
@@ -304,6 +304,8 @@ function PrepsTab() {
         { name: "briefing_notes", label: "Briefing Notes", type: "textarea", rows: 2 },
       ]}
       columns={[
+        { key: "student_name", header: "Student", render: (p) => <span className="text-sm font-semibold text-white">{p.student_name || "—"}</span> },
+        { key: "aircraft_reg", header: "Aircraft", render: (p) => <span className="text-sm text-gray-300">{p.aircraft_reg || "—"}</span> },
         { key: "weather_check", header: "Weather", render: (p) => <CheckBadge ok={p.weather_check} /> },
         { key: "notam_check", header: "NOTAM", render: (p) => <CheckBadge ok={p.notam_check} /> },
         { key: "performance_check", header: "Perf.", render: (p) => <CheckBadge ok={p.performance_check} /> },
@@ -313,6 +315,8 @@ function PrepsTab() {
       ]}
       detailTitle="Preparation Details"
       detailFields={(p) => [
+        { label: "Student", value: p.student_name || "—" },
+        { label: "Aircraft", value: p.aircraft_reg || "—" },
         { label: "Weather Check", value: p.weather_check ? "Yes" : "No" },
         { label: "NOTAM Check", value: p.notam_check ? "Yes" : "No" },
         { label: "Performance Check", value: p.performance_check ? "Yes" : "No" },
@@ -330,6 +334,8 @@ function CheckBadge({ ok }: { ok: boolean }) {
 interface Prep {
   id: string;
   flight_lesson: string;
+  student_name?: string;
+  aircraft_reg?: string;
   weather_check: boolean;
   notam_check: boolean;
   performance_check: boolean;

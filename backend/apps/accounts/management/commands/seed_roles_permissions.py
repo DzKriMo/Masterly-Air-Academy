@@ -29,6 +29,7 @@ PERMISSION_DOMAINS = {
     'academic_years': ['view', 'create', 'update', 'delete', 'manage'],
     'promotions': ['view', 'create', 'update', 'delete', 'manage'],
     'settings': ['view', 'manage'],
+    'notifications': ['view', 'broadcast', 'manage'],
 }
 
 # 19 roles with their assigned permission domains + actions
@@ -49,6 +50,7 @@ ROLE_DEFINITIONS = {
             'quality': ['view'], 'safety': ['view'],
             'academic_years': ['view'], 'promotions': ['view'], 'settings': ['view'],
             'audit_logs': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'head_of_training': {
@@ -130,6 +132,7 @@ ROLE_DEFINITIONS = {
             'applications': ['manage'],
             'academic_years': ['view'], 'promotions': ['view'],
             'audit_logs': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'admin_agent': {
@@ -141,6 +144,7 @@ ROLE_DEFINITIONS = {
             'documents': ['view', 'create', 'update'],
             'applications': ['view', 'create', 'update'],
             'academic_years': ['view'], 'promotions': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'finance_responsible': {
@@ -188,6 +192,7 @@ ROLE_DEFINITIONS = {
             'exams': ['view'],
             'academic_years': ['view'], 'promotions': ['view'],
             'audit_logs': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'compliance_monitoring_manager': {
@@ -209,6 +214,7 @@ ROLE_DEFINITIONS = {
             'documents': ['view', 'create'],
             'students': ['view'],
             'audit_logs': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'training_admin': {
@@ -236,6 +242,7 @@ ROLE_DEFINITIONS = {
             'students': ['view'],
             'ground_training': ['view'], 'flight_training': ['view'],
             'academic_years': ['view'], 'promotions': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'student': {

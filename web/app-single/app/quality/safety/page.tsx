@@ -13,12 +13,17 @@ import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
+import { downloadBlob } from "@/lib/download";
+import SecureImage from "@/components/SecureImage";
+
+const ACCEPTED = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt";
 
 export default function SafetyPage() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [show, setShow] = useState(false);
   const [form, setForm] = useState({ title: "", type: "incident", description: "", confidential: false });
+  const [files, setFiles] = useState<File[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const { t } = useTranslation();
@@ -38,10 +43,20 @@ export default function SafetyPage() {
   const events = (eventsData as any)?.results || [];
 
   const reportEvent = useMutation({
-    mutationFn: (data: typeof form) => api.post("/safety-events/", data),
+    mutationFn: async (data: typeof form) => {
+      const attachments: string[] = [];
+      for (const f of files) {
+        const fd = new FormData();
+        fd.append("file", f);
+        const r = await api.upload<any>("/safety-events/upload/", fd);
+        if (r?.file_url) attachments.push(r.file_url);
+      }
+      return api.post("/safety-events/", { ...data, attachments });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["quality-safety"] });
       setShow(false);
+      setFiles([]);
       setForm({ title: "", type: "incident", description: "", confidential: false });
       showToast("success", t('quality.eventReported', 'Safety event reported.'));
     },
@@ -102,6 +117,34 @@ export default function SafetyPage() {
       closed: "bg-gray-500/10 text-gray-400",
     };
     return colors[status] || "bg-gray-500/10 text-gray-400";
+  };
+
+  const renderAttachments = (atts: any) => {
+    if (!atts || !Array.isArray(atts) || atts.length === 0) return null;
+    return (
+      <div className="space-y-2">
+        {atts.map((u: string, i: number) => {
+          const name = decodeURIComponent(u.split("/").pop() || `attachment-${i + 1}`);
+          const isImg = /\.(png|jpe?g|gif|webp)$/i.test(name);
+          return (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              {isImg ? (
+                <SecureImage src={`/safety-events/attachment/?url=${encodeURIComponent(u)}`} alt={name} className="w-12 h-12 object-cover rounded-lg border border-navy-600" />
+              ) : (
+                <span className="w-12 h-12 flex items-center justify-center rounded-lg border border-navy-600 text-gold-500 text-lg">📄</span>
+              )}
+              <span className="text-gray-300 truncate flex-1">{name}</span>
+              <button
+                onClick={() => downloadBlob(`/safety-events/attachment/?url=${encodeURIComponent(u)}`, name)}
+                className="px-2 py-1 text-xs text-gold-500 hover:bg-gold-500/10 rounded"
+              >
+                {t('common.download', 'Download')}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const columns: Column<any>[] = [
@@ -170,6 +213,27 @@ export default function SafetyPage() {
             <input type="checkbox" id="conf" checked={form.confidential} onChange={e=>setForm({...form,confidential:e.target.checked})}/>
             <label htmlFor="conf" className="text-sm text-gray-400">{t('quality.reportAnonymously', 'Report anonymously')}</label>
           </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">{t('quality.attachments', 'Attachments (optional)')}</label>
+            <input
+              type="file"
+              multiple
+              accept={ACCEPTED}
+              onChange={e => setFiles(Array.from(e.target.files || []))}
+              className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gold-500 file:text-navy-900 file:font-semibold file:text-xs"
+            />
+            {files.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {files.map((f, i) => (
+                  <li key={i} className="text-xs text-gray-400 flex items-center gap-2">
+                    <span className="truncate flex-1">{f.name}</span>
+                    <span className="text-gray-600 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300 shrink-0">Remove</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </form>
       </ModalForm>
 
@@ -226,6 +290,7 @@ export default function SafetyPage() {
           <div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selectedEvent.status}</p></div>
           <div><p className="text-xs text-gray-500 mb-0.5">Reported At</p><p className="text-sm text-white">{selectedEvent.created_at?.slice(0,10)||'—'}</p></div>
           <div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Description</p><p className="text-sm text-white">{selectedEvent.description||'—'}</p></div>
+          {selectedEvent.attachments?.length > 0 && <div className="col-span-2"><p className="text-xs text-gray-500 mb-2">Attachments</p>{renderAttachments(selectedEvent.attachments)}</div>}
           {selectedEvent.analysis&&<div className="col-span-2"><p className="text-xs text-gray-500 mb-0.5">Analysis</p><p className="text-sm text-white">{selectedEvent.analysis}</p></div>}
         </div></div>)}
       </ModalForm>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
@@ -26,7 +26,6 @@ export default function LessonViewPage() {
   const router = useRouter();
   const params = useParams();
   const { t } = useTranslation();
-  const courseId = params?.id as string;
   const lessonId = params?.lessonId as string;
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -38,59 +37,33 @@ export default function LessonViewPage() {
 
   const getYouTubeEmbedUrl = (url: string): string | null => {
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/,
-      /^([a-zA-Z0-9_-]{11})$/,
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/,
     ];
-    for (const p of patterns) {
-      const m = url.match(p);
+    for (const re of patterns) {
+      const m = url.match(re);
       if (m) return `https://www.youtube.com/embed/${m[1]}`;
     }
     return null;
   };
-
-  const getVimeoEmbedUrl = (url: string): string | null => {
-    const m = url.match(/vimeo\.com\/(\d+)/);
-    return m ? `https://player.vimeo.com/video/${m[1]}` : null;
-  };
+  // Alias kept for parity with the prior course-scoped page.
+  const getYoutubeEmbedUrl = getYouTubeEmbedUrl;
 
   const renderVideoPlayer = (url: string) => {
-    const youtubeUrl = getYouTubeEmbedUrl(url);
-    if (youtubeUrl) {
+    const embedUrl = getYoutubeEmbedUrl(url);
+    if (embedUrl) {
       return (
         <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
           <iframe
-            src={youtubeUrl}
-            title="Video lesson"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
+            src={embedUrl}
+            title="Video"
             className="absolute inset-0 w-full h-full"
+            allowFullScreen
           />
         </div>
       );
     }
-
-    const vimeoUrl = getVimeoEmbedUrl(url);
-    if (vimeoUrl) {
-      return (
-        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
-          <iframe
-            src={vimeoUrl}
-            title="Video lesson"
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0 w-full h-full"
-          />
-        </div>
-      );
-    }
-
-    // Fallback: HTML5 video tag for direct video files
     return (
-      <video
-        controls
-        className="w-full rounded-xl"
-        preload="metadata"
-      >
+      <video controls className="w-full rounded-xl" preload="metadata">
         <source src={url} />
         {t("student.videoNotSupported", "Your browser does not support the video tag.")}
       </video>
@@ -136,7 +109,7 @@ export default function LessonViewPage() {
     <div className="min-h-screen bg-navy-900">
       <PageHeader
         title={lesson?.title || t("student.lesson", "Lesson")}
-        backHref={`/student/courses/${courseId}`}
+        backHref="/student/courses?tab=modules"
         backLabel={t("student.backToCourses", "Back to Courses")}
         maxWidth="max-w-4xl"
         actions={lesson && (
@@ -156,9 +129,9 @@ export default function LessonViewPage() {
                 {t("student.lessonNum", "Lesson")} {lesson.lesson_no}
               </p>
               <h1 className="text-3xl font-bold text-white">{lesson.title}</h1>
+              {lesson.module_title && <p className="text-sm text-gray-400 mt-2">{lesson.module_title}</p>}
             </div>
 
-            {/* Video Player — shown if video_url is present */}
             {videoUrl && (
               <div className="mb-8">
                 <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">
@@ -168,7 +141,6 @@ export default function LessonViewPage() {
               </div>
             )}
 
-            {/* Lesson Content */}
             {lesson.content ? (
               <div className="prose prose-invert prose-gold max-w-none
                 prose-headings:text-white prose-headings:font-bold
@@ -183,17 +155,13 @@ export default function LessonViewPage() {
                 prose-blockquote:border-l-gold-500 prose-blockquote:bg-navy-900/50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
                 prose-table:border-separate prose-th:bg-navy-900 prose-th:text-gold-500 prose-th:px-4 prose-th:py-2 prose-td:px-4 prose-td:py-2 prose-td:border-navy-700
                 prose-a:text-gold-500 prose-a:no-underline hover:prose-a:underline
-                prose-img:rounded-xl
-                [&_summary]:cursor-pointer [&_summary]:text-gold-500 [&_summary]:font-semibold [&_details]:bg-navy-900 [&_details]:rounded-xl [&_details]:p-4 [&_details]:mb-4">
+                prose-img:rounded-xl">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {lesson.content}
                 </ReactMarkdown>
               </div>
             ) : (
               <div className="text-center py-16">
-                <svg className="w-16 h-16 text-navy-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
                 <p className="text-gray-500">{t("student.noLessonContent", "No content has been added to this lesson yet.")}</p>
               </div>
             )}

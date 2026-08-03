@@ -1,8 +1,16 @@
 "use client";
-import { Calendar, GraduationCap, ClipboardCheck, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, GraduationCap, ClipboardCheck, Users, ChevronDown, Search } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
 import { formatDate, formatTime, fmtLabel, todayLocal } from "@/lib/format-utils";
+import { api, unwrapResults } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorCard } from "@/components/error-card";
 
 const TABS: HubTab[] = [
   { id: "courses", label: "Courses", icon: Calendar },
@@ -138,45 +146,22 @@ const ENROLLMENT_COLORS: Record<string, string> = {
 
 function EnrollmentsTab() {
   return (
-    <HubCrud<Enrollment>
+    <CourseGroupedList
       queryKey={["admin-enrollments"]}
       endpoint="/course-enrollments/"
       titleFallback="Enrollments"
       emptyTitle="No enrollments yet"
       emptyMessage="Enroll students into courses."
-      emptyActionLabel="+ Enroll Student"
-      createTitle="New Enrollment"
-      editTitle="Edit Enrollment"
-      createLabel="+ Enroll Student"
       searchPlaceholder="Search student..."
-      searchFields={["student_name"]}
-      filterFields={[
-        { key: "status", label: "All Statuses", options: ENROLLMENT_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
-        { key: "course", label: "All Courses", options: (lk) => (lk.courses || []).map((c: any) => ({ value: c.id, label: c.title })) },
-      ]}
-      lookups={[
-        { key: "students", queryKey: ["admin-enrollments-students"], endpoint: "/students/" },
-        { key: "courses", queryKey: ["admin-enrollments-courses"], endpoint: "/courses/" },
-      ]}
-      initialCreate={{ student: "", course: "", status: "active" }}
-      buildForm={(e) => ({ student: e.student, course: e.course, status: e.status })}
-      buildPayload={(f) => ({ student: f.student, course: f.course, status: f.status })}
-      fields={(mode) => [
-        { name: "student", label: "Student", type: "select", required: true, placeholder: "Select student", options: (lk) => (lk.students || []).map((s: any) => ({ value: s.id, label: s.full_name || `${s.first_name} ${s.last_name}` })) },
-        { name: "course", label: "Course", type: "select", required: true, placeholder: "Select course", options: (lk) => (lk.courses || []).map((c: any) => ({ value: c.id, label: c.title })) },
-        { name: "status", label: "Status", type: "select", options: ENROLLMENT_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
-      ]}
-      columns={[
-        { key: "student_name", header: "Student", render: (e) => <span className="text-sm font-semibold text-white">{e.student_name}</span> },
-        { key: "status", header: "Status", render: (e) => <span className={`text-xs px-2 py-0.5 rounded ${ENROLLMENT_COLORS[e.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(e.status)}</span> },
-        { key: "enrolled_at", header: "Enrolled", render: (e) => <span className="text-sm text-gray-400">{formatDate(e.enrolled_at)}</span> },
-      ]}
-      detailTitle="Enrollment Details"
-      detailFields={(e) => [
-        { label: "Student", value: e.student_name },
-        { label: "Status", value: fmtLabel(e.status) },
-        { label: "Enrolled", value: formatDate(e.enrolled_at) },
-      ]}
+      coursesQueryKey={["admin-enrollments-courses"]}
+      coursesEndpoint="/courses/"
+      renderRow={(e) => ({
+        key: e.id,
+        course: e.course,
+        badge: { label: fmtLabel(e.status), className: ENROLLMENT_COLORS[e.status] || "bg-gray-500/10 text-gray-400" },
+        title: e.student_name,
+        subtitle: formatDate(e.enrolled_at),
+      })}
     />
   );
 }
@@ -199,49 +184,22 @@ const ATTENDANCE_COLORS: Record<string, string> = {
 
 function AttendanceTab() {
   return (
-    <HubCrud<Attendance>
+    <CourseGroupedList
       queryKey={["admin-attendance"]}
       endpoint="/attendance/"
       titleFallback="Attendance"
       emptyTitle="No attendance records yet"
       emptyMessage="Record attendance per student, course and date."
-      emptyActionLabel="+ Record Attendance"
-      createTitle="Record Attendance"
-      editTitle="Edit Attendance"
-      createLabel="+ Record Attendance"
       searchPlaceholder="Search student..."
-      searchFields={["student_name"]}
-      filterFields={[
-        { key: "status", label: "All Statuses", options: ATTENDANCE_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
-        { key: "course", label: "All Courses", options: (lk) => (lk.courses || []).map((c: any) => ({ value: c.id, label: c.title })) },
-      ]}
-      lookups={[
-        { key: "students", queryKey: ["admin-attendance-students"], endpoint: "/students/" },
-        { key: "courses", queryKey: ["admin-attendance-courses"], endpoint: "/courses/" },
-      ]}
-      initialCreate={{ student: "", course: "", date: "", status: "present", notes: "" }}
-      buildForm={(a) => ({ student: a.student, course: a.course, date: a.date, status: a.status, notes: a.notes || "" })}
-      buildPayload={(f) => ({ student: f.student, course: f.course, date: f.date, status: f.status, notes: f.notes || null })}
-      fields={(mode) => [
-        { name: "student", label: "Student", type: "select", required: true, placeholder: "Select student", options: (lk) => (lk.students || []).map((s: any) => ({ value: s.id, label: s.full_name || `${s.first_name} ${s.last_name}` })) },
-        { name: "course", label: "Course", type: "select", required: true, placeholder: "Select course", options: (lk) => (lk.courses || []).map((c: any) => ({ value: c.id, label: c.title })) },
-        { name: "date", label: "Date", type: "date", required: true },
-        { name: "status", label: "Status", type: "select", options: ATTENDANCE_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
-        { name: "notes", label: "Notes", type: "text" },
-      ]}
-      columns={[
-        { key: "student_name", header: "Student", render: (a) => <span className="text-sm font-semibold text-white">{a.student_name}</span> },
-        { key: "date", header: "Date", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.date)}</span> },
-        { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${ATTENDANCE_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(a.status)}</span> },
-      ]}
-      detailTitle="Attendance Details"
-      detailFields={(a) => [
-        { label: "Student", value: a.student_name },
-        { label: "Date", value: formatDate(a.date) },
-        { label: "Status", value: fmtLabel(a.status) },
-        ...(a.notes ? [{ label: "Notes", value: a.notes }] : []),
-        { label: "Recorded At", value: formatDate(a.recorded_at) },
-      ]}
+      coursesQueryKey={["admin-attendance-courses"]}
+      coursesEndpoint="/courses/"
+      renderRow={(a) => ({
+        key: a.id,
+        course: a.course,
+        badge: { label: fmtLabel(a.status), className: ATTENDANCE_COLORS[a.status] || "bg-gray-500/10 text-gray-400" },
+        title: a.student_name,
+        subtitle: formatDate(a.date),
+      })}
     />
   );
 }
@@ -254,4 +212,154 @@ interface Attendance {
   status: string;
   notes: string | null;
   recorded_at: string;
+}
+
+interface GroupRow {
+  key: string;
+  course: string;
+  badge: { label: string; className: string };
+  title: string;
+  subtitle: string;
+}
+
+interface CourseGroupedListProps {
+  queryKey: string[];
+  endpoint: string;
+  coursesQueryKey: string[];
+  coursesEndpoint: string;
+  titleFallback: string;
+  emptyTitle: string;
+  emptyMessage: string;
+  searchPlaceholder: string;
+  renderRow: (item: any) => GroupRow;
+}
+
+function CourseGroupedList(props: CourseGroupedListProps) {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  useAuthGuard(isAuthenticated, authLoading);
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const recordsQuery = useQuery<any[]>({
+    queryKey: props.queryKey,
+    queryFn: async () => {
+      const d = await api.get<any>(props.endpoint);
+      return unwrapResults<any>(d);
+    },
+    enabled: isAuthenticated,
+  });
+
+  const coursesQuery = useQuery<any[]>({
+    queryKey: props.coursesQueryKey,
+    queryFn: async () => {
+      const d = await api.get<any>(props.coursesEndpoint);
+      return unwrapResults<any>(d);
+    },
+    enabled: isAuthenticated,
+  });
+
+  const courseMap = useMemo(() => {
+    const m: Record<string, any> = {};
+    (coursesQuery.data ?? []).forEach((c) => { m[c.id] = c; });
+    return m;
+  }, [coursesQuery.data]);
+
+  const rows = useMemo(() => {
+    if (!recordsQuery.data) return [];
+    let r = recordsQuery.data.map(props.renderRow);
+    if (search) {
+      const q = search.toLowerCase();
+      r = r.filter((row) => row.title.toLowerCase().includes(q));
+    }
+    return r;
+  }, [recordsQuery.data, search, props.renderRow]);
+
+  const groups = useMemo(() => {
+    const byCourse: Record<string, GroupRow[]> = {};
+    for (const row of rows) {
+      (byCourse[row.course] = byCourse[row.course] || []).push(row);
+    }
+    return Object.entries(byCourse).map(([courseId, items]) => ({
+      id: courseId,
+      course: courseMap[courseId],
+      items,
+      title: courseMap[courseId]?.title || "Unassigned Course",
+      subtitle: courseMap[courseId]
+        ? `${courseMap[courseId]?.subject_code || ""} • ${formatDate(courseMap[courseId]?.scheduled_date)}`.trim()
+        : "",
+    }));
+  }, [rows, courseMap]);
+
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const toggle = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-lg font-semibold text-white">{props.titleFallback}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {total} record{total === 1 ? "" : "s"} across {groups.length} course{groups.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={props.searchPlaceholder}
+            className="w-64 pl-9 pr-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {recordsQuery.error && <ErrorCard message="Failed to load" onRetry={recordsQuery.refetch} />}
+      {recordsQuery.isLoading ? (
+        <LoadingSkeleton type="table" rows={8} />
+      ) : groups.length === 0 ? (
+        <EmptyState
+          title={search ? "No matches" : props.emptyTitle}
+          message={search ? "No records match your search." : props.emptyMessage}
+        />
+      ) : (
+        <div className="space-y-4">
+          {groups.map((g) => (
+            <div key={g.id} className="bg-navy-800 border border-navy-700 rounded-xl overflow-hidden">
+              <button
+                onClick={() => toggle(g.id)}
+                className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-navy-700/40 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${collapsed[g.id] ? "-rotate-90" : ""}`}
+                  />
+                  <div className="min-w-0 text-left">
+                    <p className="text-sm font-semibold text-white truncate">{g.title}</p>
+                    {g.subtitle && <p className="text-xs text-gray-500 truncate">{g.subtitle}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-mono text-gray-400">{g.items.length}</span>
+                </div>
+              </button>
+              {!collapsed[g.id] && (
+                <div className="border-t border-navy-700 divide-y divide-navy-700/60">
+                  {g.items.map((row) => (
+                    <div key={row.key} className="flex items-center justify-between gap-4 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-white">{row.title}</p>
+                        <p className="text-xs text-gray-500">{row.subtitle}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${row.badge.className}`}>{row.badge.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

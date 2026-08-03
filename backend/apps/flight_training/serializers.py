@@ -131,13 +131,28 @@ class FlightLessonCreateSerializer(serializers.ModelSerializer):
 
 
 class FlightPreparationSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    student = serializers.UUIDField(source='flight_lesson.student_id', read_only=True)
+    aircraft = serializers.UUIDField(source='flight_lesson.aircraft_id', read_only=True)
+    aircraft_reg = serializers.SerializerMethodField()
+
     class Meta:
         model = FlightPreparation
         fields = [
-            'id', 'flight_lesson', 'weather_check', 'notam_check',
-            'performance_check', 'document_check', 'medical_check',
+            'id', 'flight_lesson', 'student', 'student_name',
+            'aircraft', 'aircraft_reg',
+            'weather_check', 'notam_check', 'performance_check',
+            'document_check', 'medical_check',
             'lesson_objectives', 'briefing_notes', 'prepared_at',
         ]
+
+    def get_student_name(self, obj):
+        lesson = obj.flight_lesson
+        return lesson.student.full_name if lesson and lesson.student else ''
+
+    def get_aircraft_reg(self, obj):
+        lesson = obj.flight_lesson
+        return lesson.aircraft.registration if lesson and lesson.aircraft else ''
 
 
 class FlightEvaluationSerializer(serializers.Serializer):
@@ -156,9 +171,26 @@ class FlightEvaluationSerializer(serializers.Serializer):
 
 
 class ResourceBookingSerializer(serializers.ModelSerializer):
+    resource_name = serializers.SerializerMethodField()
+
     class Meta:
         model = ResourceBooking
-        fields = ['id', 'resource_type', 'resource_id', 'start_time', 'end_time', 'activity_type', 'activity_id', 'status', 'notes']
+        fields = ['id', 'resource_type', 'resource_id', 'resource_name', 'start_time', 'end_time', 'activity_type', 'activity_id', 'status', 'notes']
+
+    def get_resource_name(self, obj):
+        if obj.resource_type == 'aircraft':
+            from .models import Aircraft
+            a = Aircraft.objects.filter(id=obj.resource_id).first()
+            return a.registration if a else ''
+        if obj.resource_type == 'simulator':
+            from .models import Simulator
+            s = Simulator.objects.filter(id=obj.resource_id).first()
+            return s.name if s else ''
+        if obj.resource_type == 'room':
+            from apps.ground_training.models import Room
+            r = Room.objects.filter(id=obj.resource_id).first()
+            return r.name if r else ''
+        return ''
 
 
 class InstructorAvailabilitySerializer(serializers.ModelSerializer):
@@ -168,9 +200,11 @@ class InstructorAvailabilitySerializer(serializers.ModelSerializer):
 
 
 class MaintenanceRecordSerializer(serializers.ModelSerializer):
+    aircraft_registration = serializers.CharField(source='aircraft.registration', read_only=True, default='')
+
     class Meta:
         model = MaintenanceRecord
-        fields = ['id', 'aircraft', 'type', 'description', 'start_date', 'end_date', 'status', 'notes', 'created_at']
+        fields = ['id', 'aircraft', 'aircraft_registration', 'type', 'description', 'start_date', 'end_date', 'status', 'notes', 'created_at']
 
 
 class SimulatorSerializer(serializers.ModelSerializer):

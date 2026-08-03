@@ -1,10 +1,11 @@
 "use client";
-import { Wrench, CalendarClock, Users } from "lucide-react";
+import { Wrench, CalendarClock, Users, Plane } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
 import { fmtLabel, formatDate, formatDateTime } from "@/lib/format-utils";
 
 const TABS: HubTab[] = [
+  { id: "aircraft", label: "Aircraft", icon: Plane },
   { id: "maintenance", label: "Maintenance", icon: Wrench },
   { id: "bookings", label: "Resource Bookings", icon: CalendarClock },
   { id: "availability", label: "Instructor Availability", icon: Users },
@@ -12,15 +13,99 @@ const TABS: HubTab[] = [
 
 export default function FlightResourcesHubPage() {
   return (
-    <HubLayout title="Flight Resources" tabs={TABS} defaultTab="maintenance">
+    <HubLayout title="Flight Resources" tabs={TABS} defaultTab="aircraft">
       {(active) => (
         <>
+          {active === "aircraft" && <AircraftTab />}
           {active === "maintenance" && <MaintenanceTab />}
           {active === "bookings" && <BookingsTab />}
           {active === "availability" && <AvailabilityTab />}
         </>
       )}
     </HubLayout>
+  );
+}
+
+const AIRCRAFT_STATUSES = ["available", "in_maintenance", "reserved", "retired"];
+const AIRCRAFT_COLORS: Record<string, string> = {
+  available: "bg-green-500/10 text-green-400",
+  active: "bg-blue-500/10 text-blue-400",
+  in_maintenance: "bg-amber-500/10 text-amber-400",
+  reserved: "bg-purple-500/10 text-purple-400",
+  retired: "bg-gray-500/10 text-gray-400",
+};
+
+interface Aircraft {
+  id: string;
+  registration: string;
+  manufacturer: string | null;
+  model: string | null;
+  serial_number?: string;
+  year_of_manufacture?: number;
+  status: string;
+  airframe_hours?: number;
+  engine_hours?: number;
+  total_hours?: number;
+  next_maintenance?: string;
+}
+
+function AircraftTab() {
+  return (
+    <HubCrud<Aircraft>
+      queryKey={["admin-resources-aircraft"]}
+      endpoint="/aircraft/"
+      titleFallback="Aircraft"
+      emptyTitle="No aircraft yet"
+      emptyMessage="Add your fleet."
+      emptyActionLabel="+ New Aircraft"
+      createTitle="New Aircraft"
+      editTitle="Edit Aircraft"
+      createLabel="+ New Aircraft"
+      searchPlaceholder="Search registration, model..."
+      searchFields={["registration", "model", "manufacturer"]}
+      filterFields={[
+        { key: "status", label: "All Statuses", options: AIRCRAFT_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })) },
+        { key: "manufacturer", label: "All Manufacturers", options: ["Cessna", "Piper", "Beechcraft", "Diamond", "Cirrus", "Mooney", "Other"].map((m) => ({ value: m, label: m })) },
+      ]}
+      initialCreate={{ registration: "", manufacturer: "", model: "", serial_number: "", year: "", status: "active" }}
+      buildForm={(a) => ({ registration: a.registration, manufacturer: a.manufacturer || "", model: a.model || "", serial_number: a.serial_number || "", year: a.year_of_manufacture != null ? String(a.year_of_manufacture) : "", status: a.status })}
+      buildPayload={(f) => ({
+        registration: f.registration,
+        manufacturer: f.manufacturer || null,
+        model: f.model || null,
+        serial_number: f.serial_number || null,
+        year_of_manufacture: f.year ? parseInt(f.year, 10) : null,
+        status: f.status,
+      })}
+      fields={(mode) => [
+        { name: "registration", label: "Registration", type: "text", required: true, mono: true, placeholder: "e.g. 7T-MAA" },
+        { name: "manufacturer", label: "Manufacturer", type: "select", placeholder: "Select manufacturer", options: ["Cessna", "Piper", "Beechcraft", "Diamond", "Cirrus", "Mooney", "Other"].map((m) => ({ value: m, label: m })) },
+        { name: "model", label: "Model", type: "text", span: "half" },
+        { name: "serial_number", label: "Serial Number", type: "text", span: "half" },
+        { name: "year", label: "Year", type: "text", span: "half" },
+        { name: "status", label: "Status", type: "select", options: AIRCRAFT_STATUSES.map((s) => ({ value: s, label: fmtLabel(s) })), span: "half" },
+      ]}
+      columns={[
+        { key: "registration", header: "Registration", render: (a) => <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono font-semibold">{a.registration}</span> },
+        { key: "manufacturer", header: "Manufacturer" },
+        { key: "model", header: "Model" },
+        { key: "status", header: "Status", render: (a) => <span className={`text-xs px-2 py-0.5 rounded ${AIRCRAFT_COLORS[a.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(a.status)}</span> },
+        { key: "total_hours", header: "Hours", render: (a) => <span className="text-sm text-gray-400 font-mono">{a.total_hours ?? "—"}</span> },
+        { key: "next_maintenance", header: "Next Maint.", render: (a) => <span className="text-sm text-gray-400">{formatDate(a.next_maintenance)}</span> },
+      ]}
+      detailTitle="Aircraft Details"
+      detailFields={(a) => [
+        { label: "Registration", value: a.registration },
+        { label: "Manufacturer", value: a.manufacturer || "—" },
+        { label: "Model", value: a.model || "—" },
+        { label: "Serial Number", value: a.serial_number || "—" },
+        { label: "Year", value: a.year_of_manufacture != null ? String(a.year_of_manufacture) : "—" },
+        { label: "Status", value: fmtLabel(a.status) },
+        { label: "Airframe Hours", value: a.airframe_hours != null ? String(a.airframe_hours) : "—" },
+        { label: "Engine Hours", value: a.engine_hours != null ? String(a.engine_hours) : "—" },
+        { label: "Next Maintenance", value: formatDate(a.next_maintenance) },
+      ]}
+    />
   );
 }
 
@@ -130,6 +215,7 @@ interface Booking {
   id: string;
   resource_type: string;
   resource_id: string;
+  resource_name?: string;
   start_time: string;
   end_time: string;
   activity_type: string | null;
@@ -180,7 +266,13 @@ function BookingsTab() {
       ]}
       columns={[
         { key: "resource_type", header: "Type", render: (b) => <span className={`text-xs px-2 py-0.5 rounded ${RESOURCE_COLORS[b.resource_type] || "bg-gray-500/10 text-gray-400"}`}>{cap(b.resource_type)}</span> },
-        { key: "resource_id", header: "Resource", render: (b) => <span className="text-sm font-mono text-gray-300">{b.resource_id.slice(0, 8)}…</span> },
+        { key: "resource_id", header: "Resource", render: (b) => <div className="flex items-center gap-2">
+            {b.resource_name ? (
+              <span className="text-sm font-semibold text-white">{b.resource_name}</span>
+            ) : (
+              <span className="text-sm font-mono text-gray-300">{b.resource_id.slice(0, 8)}…</span>
+            )}
+          </div> },
         { key: "start_time", header: "Start", render: (b) => <span className="text-sm text-gray-300">{formatDateTime(b.start_time)}</span> },
         { key: "end_time", header: "End", render: (b) => <span className="text-sm text-gray-300">{formatDateTime(b.end_time)}</span> },
         { key: "status", header: "Status", render: (b) => <span className={`text-xs px-2 py-0.5 rounded ${BOOKING_COLORS[b.status] || "bg-gray-500/10 text-gray-400"}`}>{cap(b.status)}</span> },

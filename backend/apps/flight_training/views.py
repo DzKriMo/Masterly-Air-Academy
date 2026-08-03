@@ -89,6 +89,14 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
             return FlightLessonCreateSerializer
         return FlightLessonSerializer
 
+    def perform_create(self, serializer):
+        lesson = serializer.save()
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.flight_scheduled(lesson)
+        except Exception:
+            pass
+
     @action(detail=True, methods=['get', 'post'])
     def preparation(self, request, pk=None):
         lesson = self.get_object()
@@ -135,6 +143,12 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         lesson.status = FlightStatus.COMPLETED
         lesson.end_time = __import__('django.utils.timezone').utils.timezone.now()
         lesson.save()
+
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.flight_evaluated(lesson)
+        except Exception:
+            pass
 
         return Response(FlightLessonSerializer(lesson).data)
 

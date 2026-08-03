@@ -277,12 +277,14 @@ export default function AdminDashboard() {
 
             {/* ═══ QUICK ACTIONS ═══════════════════════════════════ */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <QuickActionCard
-                href="/admin/users"
-                label={t("admin.users", "Users")}
-                desc={t("admin.usersDesc", "Manage system users")}
-                color="border-l-blue-500"
-              />
+              {!isTrainingAdmin && (
+                <QuickActionCard
+                  href="/admin/users"
+                  label={t("admin.users", "Users")}
+                  desc={t("admin.usersDesc", "Manage system users")}
+                  color="border-l-blue-500"
+                />
+              )}
               <QuickActionCard
                 href="/admin/applications"
                 label={t("admin.applications", "Applications")}

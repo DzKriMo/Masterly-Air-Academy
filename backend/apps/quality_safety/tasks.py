@@ -21,9 +21,10 @@ def check_upcoming_deadlines():
             user = User.objects.filter(email=d['responsible']).first()
             if user:
                 type_label = d['type'].replace('_', ' ').title()
+                notif_type = 'capa_due' if d['type'] == 'capa' else 'deadline'
                 NotificationService.notify(
                     user,
-                    'deadline_approaching',
+                    notif_type,
                     f'{type_label} Approaching',
                     f"{d['item_name']} — {d['days_remaining']} day(s) remaining",
                     {'deadline': d},

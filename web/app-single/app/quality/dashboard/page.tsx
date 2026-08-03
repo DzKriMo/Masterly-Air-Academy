@@ -11,6 +11,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ExportButton } from "@/components/export-button";
 import { StatsCard } from "@/components/stats-card";
 import { useTranslation } from "@/lib/use-translation";
+import { downloadBlob } from "@/lib/download";
 
 const NCR_COLORS = ["#ef4444", "#f59e0b", "#3b82f6"];
 const STATUS_COLORS: Record<string, string> = {
@@ -429,10 +430,10 @@ export default function QualityDashboard() {
                     <p className="text-sm text-gray-400">
                       <strong className="text-gray-300">{t('quality.scope', 'Scope:')}</strong> {a.scope || t('common.na', 'N/A')}
                     </p>
-                    <a href={`/api/audits/${a.id}/pdf/`}
+                    <button onClick={() => downloadBlob(`/audits/${a.id}/pdf/`, `${(a.title || a.id)}.pdf`)}
                       className="inline-block px-4 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900">
                       {t('quality.downloadPdf', 'Download PDF')}
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

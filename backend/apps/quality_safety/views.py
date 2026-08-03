@@ -234,14 +234,69 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
     def report(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(reported_by=request.user, status='reported')
+        event = serializer.save(reported_by=request.user, status='reported')
+        # Notify safety roles of the new event
+        try:
+            NotificationService.notify_roles(
+                ['safety_manager', 'quality_manager', 'compliance_monitoring_manager'],
+                'safety_event',
+                'New Safety Event',
+                f'Safety event reported: {event.title}',
+                {'event_id': str(event.id)},
+            )
+        except Exception:
+            pass
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def upload(self, request):
+        """Upload an attachment (image/document) and return its /media/ URL."""
+        from apps.ground_training.views import _store_upload
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        key = _store_upload('safety_events', file)
+        return Response({'file_url': f'/media/{key}'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], url_path='attachment')
+    def attachment(self, request):
+        """Stream a stored safety-event attachment by its /media/ URL."""
+        from apps.ground_training.views import _stream_from_storage
+        url = request.query_params.get('url')
+        if not url:
+            return Response({'error': 'No url provided'}, status=status.HTTP_400_BAD_REQUEST)
+        name = url.rsplit('/', 1)[-1]
+        content_type = {
+            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
+            '.doc': 'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.xls': 'application/vnd.ms-excel',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.txt': 'text/plain',
+        }.get(name.lower().rsplit('.', 1)[-1], 'application/octet-stream')
+        response = _stream_from_storage(url, content_type=content_type, filename=name)
+        if response is None:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+        return response
 
     @action(detail=True, methods=['post'])
     def investigate(self, request, pk=None):
         event = self.get_object()
         event.status = 'investigating'
         event.save()
+        # Notify the reporter that investigation has started
+        try:
+            if event.reported_by:
+                NotificationService.notify(
+                    event.reported_by,
+                    'safety_event',
+                    'Safety Event Under Investigation',
+                    f'Safety event "{event.title}" is now under investigation.',
+                    {'event_id': str(event.id)},
+                )
+        except Exception:
+            pass
         return Response({'status': 'investigating'})
 
     @action(detail=True, methods=['post'])
@@ -267,6 +322,59 @@ class QualityDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'quality.view'
     filterset_fields = ['type', 'status']
+
+    def perform_update(self, serializer):
+        doc = serializer.save()
+        try:
+            if doc.status == 'approved':
+                # Notify author + quality roles
+                NotificationService.notify(
+                    doc.author,
+                    'quality_doc_approved',
+                    'Quality Document Approved',
+                    f'Your document "{doc.title or doc.number}" has been approved.',
+                    {'doc_id': str(doc.id), 'number': doc.number},
+                )
+                NotificationService.notify_roles(
+                    ['quality_manager', 'compliance_monitoring_manager'],
+                    'quality_doc_approved',
+                    'Quality Document Approved',
+                    f'Quality document "{doc.title or doc.number}" has been approved.',
+                    {'doc_id': str(doc.id), 'number': doc.number},
+                )
+        except Exception:
+            pass
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        from django.core.files.storage import default_storage
+        from django.http import StreamingHttpResponse
+        doc = self.get_object()
+        if not doc.file_url:
+            return Response({'error': 'No file attached'}, status=404)
+        try:
+            url = doc.file_url
+            if url.startswith('http://') or url.startswith('https://'):
+                return Response({'file_url': doc.file_url}, status=200)
+            key = url.lstrip('/')
+            if key.startswith('media/'):
+                key = key[len('media/'):]
+            f = default_storage.open(key, 'rb')
+            filename = doc.title or doc.number or 'quality-document'
+            response = StreamingHttpResponse(f, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{filename}.pdf"'
+            return response
+        except Exception:
+            return Response({'error': 'File not found'}, status=404)
+
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'quality/{file.name}', file)
+        return Response({'file_url': f'/media/{path}'}, status=status.HTTP_201_CREATED)
 
 
 class QualityDashboardView(APIView):

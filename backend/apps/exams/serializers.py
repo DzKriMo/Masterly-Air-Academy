@@ -77,9 +77,18 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class QuestionWithAnswerSerializer(serializers.ModelSerializer):
     """Admin view - includes correct answer and explanation."""
+    subject_name = serializers.SerializerMethodField()
+    module_name = serializers.SerializerMethodField()
+
     class Meta:
         model = QuestionBank
-        fields = ['id', 'subject', 'question_text', 'question_type', 'options', 'correct_answer', 'explanation', 'reference', 'difficulty']
+        fields = ['id', 'subject', 'subject_name', 'program', 'module', 'module_name', 'question_text', 'question_type', 'options', 'correct_answer', 'explanation', 'reference', 'difficulty']
+
+    def get_subject_name(self, obj):
+        return obj.subject.title_en if obj.subject else ''
+
+    def get_module_name(self, obj):
+        return obj.module.title if obj.module else ''
 
 
 class ExamSerializer(serializers.ModelSerializer):
@@ -142,9 +151,14 @@ class ExamAttemptSerializer(serializers.ModelSerializer):
 
 
 class QuizSerializer(serializers.ModelSerializer):
+    module_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Quiz
-        fields = ['id', 'module', 'title', 'description', 'duration', 'passing_grade', 'max_attempts', 'is_open']
+        fields = ['id', 'module', 'module_name', 'title', 'description', 'duration', 'passing_grade', 'max_attempts', 'is_open']
+
+    def get_module_name(self, obj):
+        return obj.module.title if obj.module else ''
 
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
