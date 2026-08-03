@@ -82,7 +82,7 @@ class ExamViewSet(viewsets.ModelViewSet):
             from apps.students.models import Student
             try:
                 student = Student.objects.get(user=self.request.user)
-                return qs.filter(program=student.program)
+                return qs.filter(program=student.program, status='active')
             except Student.DoesNotExist:
                 return qs.none()
         return qs

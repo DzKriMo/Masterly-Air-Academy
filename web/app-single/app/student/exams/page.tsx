@@ -57,7 +57,7 @@ export default function StudentExamsPage() {
 
   const getAttemptCount = (examId: string) => attempts.filter(a => a.exam_code === exams.find(e => e.id === examId)?.code).length;
 
-  const availableExams = exams.filter(e => e.status === 'published' || e.status === 'active');
+  const availableExams = exams.filter(e => e.status === 'active');
   const openQuizzes = quizzes.filter(q => q.is_open);
 
   const filterOptions: FilterOption[] = [
