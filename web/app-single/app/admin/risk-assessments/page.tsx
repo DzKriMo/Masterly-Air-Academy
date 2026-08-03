@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -70,7 +70,7 @@ export default function AdminRiskAssessmentsPage() {
 
   const { data: assessments, isLoading, error, refetch } = useQuery<RiskAssessment[]>({
     queryKey: ["admin-risk-assessments"],
-    queryFn: async () => { const d = await api.get<any>("/risk-assessments/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/risk-assessments/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 

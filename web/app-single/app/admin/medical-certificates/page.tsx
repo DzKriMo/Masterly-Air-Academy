@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -49,13 +49,13 @@ export default function AdminMedicalCertificatesPage() {
 
   const { data: records, isLoading, error, refetch } = useQuery<MC[]>({
     queryKey: ["admin-mc"],
-    queryFn: async () => { const d = await api.get<any>("/medical-certificates/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/medical-certificates/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: students = [] } = useQuery<any[]>({
     queryKey: ["admin-mc-students"],
-    queryFn: async () => { const d = await api.get<any>("/students/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/students/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 

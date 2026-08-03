@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -142,7 +142,7 @@ export default function AdminStudentsPage() {
   } = useQuery<Student[]>({
     queryKey: ["admin-students"],
     queryFn: async () => {
-      const d = await api.get<any>("/students/");
+      const d = await api.get<any>(withFullLimit("/students/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
@@ -162,7 +162,7 @@ export default function AdminStudentsPage() {
   const { data: promotions = [] } = useQuery<any[]>({
     queryKey: ["admin-students-promotions"],
     queryFn: async () => {
-      const d = await api.get<any>("/promotions/");
+      const d = await api.get<any>(withFullLimit("/promotions/"));
       return (d as any)?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
@@ -172,7 +172,7 @@ export default function AdminStudentsPage() {
   const { data: instructors = [] } = useQuery<any[]>({
     queryKey: ["admin-students-instructors"],
     queryFn: async () => {
-      const d = await api.get<any>("/flight-instructors/");
+      const d = await api.get<any>(withFullLimit("/flight-instructors/"));
       return (d as any)?.results || (d as any) || [];
     },
     enabled: isAuthenticated,

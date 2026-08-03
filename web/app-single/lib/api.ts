@@ -186,6 +186,17 @@ export function unwrapResults<T>(response: any, fallback: T[] = []): T[] {
   return fallback;
 }
 
+/**
+ * Build a list endpoint URL that requests every record in a single page.
+ * The backend's PageLimitPagination honours `?limit=` up to its max page size
+ * (1000). Independent GETs without this would only return the first PAGE_SIZE
+ * (20) records, silently caping list endpoints.
+ */
+export function withFullLimit(endpoint: string): string {
+  const sep = endpoint.includes('?') ? '&' : '?';
+  return `${endpoint}${sep}limit=1000`;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,

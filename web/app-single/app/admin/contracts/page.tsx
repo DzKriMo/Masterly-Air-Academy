@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -90,7 +90,7 @@ export default function AdminContractsPage() {
   } = useQuery<Contract[]>({
     queryKey: ["admin-contracts"],
     queryFn: async () => {
-      const d = await api.get<any>("/contracts/");
+      const d = await api.get<any>(withFullLimit("/contracts/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
@@ -99,7 +99,7 @@ export default function AdminContractsPage() {
   const { data: students } = useQuery<Student[]>({
     queryKey: ["admin-students-dropdown"],
     queryFn: async () => {
-      const d = await api.get<any>("/students/");
+      const d = await api.get<any>(withFullLimit("/students/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated && createOpen,

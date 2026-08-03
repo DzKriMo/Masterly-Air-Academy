@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -98,7 +98,7 @@ export default function AdminDocumentsPage() {
   } = useQuery<Document[]>({
     queryKey: ["admin-documents"],
     queryFn: async () => {
-      const d = await api.get<any>("/documents/");
+      const d = await api.get<any>(withFullLimit("/documents/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,

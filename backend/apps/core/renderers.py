@@ -6,7 +6,25 @@ Architecture.md §6.2 specifies:
 Error responses are handled by the custom exception handler in exceptions.py.
 """
 
-from rest_framework.renderers import JSONRenderer
+from rest_framework.renderers import JSONRenderer, BaseRenderer
+
+
+class SSEEventRenderer(BaseRenderer):
+    """Renderer satisfying Accept: text/event-stream for SSE endpoints.
+
+    DRF performs content negotiation before an action runs, so streaming
+    endpoints must advertise a renderer matching the browser's Accept header
+    (text/event-stream) or requests are rejected with HTTP 406. The actual
+    streamed bytes come from a plain StreamingHttpResponse, so this renderer
+    is only used to pass negotiation.
+    """
+
+    media_type = 'text/event-stream'
+    format = 'sse'
+    charset = 'utf-8'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 class ApiResponseRenderer(JSONRenderer):

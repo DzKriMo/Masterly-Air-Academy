@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -101,7 +101,7 @@ export default function AdminInstructorsPage() {
   const groundQuery = useQuery<GroundInstructor[]>({
     queryKey: ["admin-ground-instructors"],
     queryFn: async () => {
-      const d = await api.get<any>("/ground-instructors/");
+      const d = await api.get<any>(withFullLimit("/ground-instructors/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,
@@ -110,7 +110,7 @@ export default function AdminInstructorsPage() {
   const flightQuery = useQuery<FlightInstructor[]>({
     queryKey: ["admin-flight-instructors"],
     queryFn: async () => {
-      const d = await api.get<any>("/flight-instructors/");
+      const d = await api.get<any>(withFullLimit("/flight-instructors/"));
       return (d as any) ?.results || (d as any) || [];
     },
     enabled: isAuthenticated,

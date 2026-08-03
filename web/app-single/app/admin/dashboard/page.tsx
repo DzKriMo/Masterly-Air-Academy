@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -28,11 +28,11 @@ export default function AdminDashboard() {
     queryFn: () =>
       Promise.all([
         api.get<any>("/dashboard/kpis/").catch(() => ({})),
-        api.get<any>("/users/").catch(() => ({ results: [] })),
-        api.get<any>("/invoices/").catch(() => ({ results: [] })),
-        api.get<any>("/courses/").catch(() => ({ results: [] })),
-        api.get<any>("/flight-lessons/").catch(() => ({ results: [] })),
-        api.get<any>("/applications/").catch(() => ({ results: [] })),
+        api.get<any>(withFullLimit("/users/")).catch(() => ({ results: [] })),
+        api.get<any>(withFullLimit("/invoices/")).catch(() => ({ results: [] })),
+        api.get<any>(withFullLimit("/courses/")).catch(() => ({ results: [] })),
+        api.get<any>(withFullLimit("/flight-lessons/")).catch(() => ({ results: [] })),
+        api.get<any>(withFullLimit("/applications/")).catch(() => ({ results: [] })),
       ]),
     enabled: isAuthenticated,
   });

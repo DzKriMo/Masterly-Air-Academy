@@ -2,10 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.renderers import BrowsableAPIRenderer
 from django.utils import timezone
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from apps.accounts.permissions import HasRolePermission
+from apps.core.renderers import ApiResponseRenderer, SSEEventRenderer
 from .models import Notification, Message, NotificationPreference
 from .serializers import NotificationSerializer, MessageSerializer, NotificationPreferenceSerializer
 from .services import NotificationService, get_redis_client, publish_message_event, serialize_message
@@ -47,6 +49,11 @@ class NotificationBroadcastViewSet(viewsets.ViewSet):
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    renderer_classes = [
+        ApiResponseRenderer,
+        BrowsableAPIRenderer,
+        SSEEventRenderer,
+    ]
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
@@ -173,6 +180,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
+    renderer_classes = [
+        ApiResponseRenderer,
+        BrowsableAPIRenderer,
+        SSEEventRenderer,
+    ]
 
     def get_queryset(self):
         user = self.request.user

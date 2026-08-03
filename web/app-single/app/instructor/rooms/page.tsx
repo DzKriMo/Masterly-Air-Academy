@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -50,7 +50,7 @@ export default function InstructorRoomsPage() {
 
   const load = () => {
     setLoading(true); setError(null);
-    api.get<any>("/rooms/")
+    api.get<any>(withFullLimit("/rooms/"))
       .then(d => {
         const list = unwrapResults(d).map((r: any) => ({
           ...r,

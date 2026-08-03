@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { useToast } from "@/components/toast";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import type { Column } from "@/components/data-table";
 
 // ── Shared types ────────────────────────────────────────
@@ -184,7 +184,7 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
 
   const query = useQuery<T[]>({
     queryKey: config.queryKey,
-    queryFn: async () => { const d = await api.get<any>(config.endpoint); return unwrapResults<T>(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit(config.endpoint)); return unwrapResults<T>(d); },
     enabled: isAuthenticated,
   });
   const records = query.data;
@@ -193,7 +193,7 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
   const lookupResults = useQueries({
     queries: lookupDefs.map((l) => ({
       queryKey: l.queryKey,
-      queryFn: async () => { const d = await api.get<any>(l.endpoint); return unwrapResults<any>(d); },
+      queryFn: async () => { const d = await api.get<any>(withFullLimit(l.endpoint)); return unwrapResults<any>(d); },
       enabled: isAuthenticated,
     })),
   });

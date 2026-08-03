@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -63,7 +63,7 @@ export default function InstructorExamsPage() {
   const { data: exams, isLoading, error, refetch } = useQuery<Exam[]>({
     queryKey: ["instructor-exams"],
     queryFn: async () => {
-      const d = await api.get<any>("/exams/");
+      const d = await api.get<any>(withFullLimit("/exams/"));
       return unwrapResults(d);
     },
     enabled: isAuthenticated,

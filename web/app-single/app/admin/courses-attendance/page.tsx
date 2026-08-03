@@ -5,7 +5,7 @@ import { Calendar, GraduationCap, ClipboardCheck, Users, ChevronDown, Search } f
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
 import { formatDate, formatTime, fmtLabel, todayLocal } from "@/lib/format-utils";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
@@ -243,7 +243,7 @@ function CourseGroupedList(props: CourseGroupedListProps) {
   const recordsQuery = useQuery<any[]>({
     queryKey: props.queryKey,
     queryFn: async () => {
-      const d = await api.get<any>(props.endpoint);
+      const d = await api.get<any>(withFullLimit(props.endpoint));
       return unwrapResults<any>(d);
     },
     enabled: isAuthenticated,
@@ -252,7 +252,7 @@ function CourseGroupedList(props: CourseGroupedListProps) {
   const coursesQuery = useQuery<any[]>({
     queryKey: props.coursesQueryKey,
     queryFn: async () => {
-      const d = await api.get<any>(props.coursesEndpoint);
+      const d = await api.get<any>(withFullLimit(props.coursesEndpoint));
       return unwrapResults<any>(d);
     },
     enabled: isAuthenticated,

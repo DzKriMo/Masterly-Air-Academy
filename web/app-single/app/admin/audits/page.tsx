@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -69,13 +69,13 @@ export default function AdminAuditsPage() {
 
   const { data: audits, isLoading, error, refetch } = useQuery<Audit[]>({
     queryKey: ["admin-audits"],
-    queryFn: async () => { const d = await api.get<any>("/audits/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/audits/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["admin-audit-users"],
-    queryFn: async () => { const d = await api.get<any>("/users/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/users/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 

@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
 import { PageHeader } from "@/components/page-header";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -61,19 +61,19 @@ export default function AdminCAPAsPage() {
 
   const { data: capas, isLoading, error, refetch } = useQuery<CAPA[]>({
     queryKey: ["admin-capas"],
-    queryFn: async () => { const d = await api.get<any>("/capas/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/capas/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: ncrs = [] } = useQuery<any[]>({
     queryKey: ["admin-capa-ncrs"],
-    queryFn: async () => { const d = await api.get<any>("/non-conformities/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/non-conformities/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["admin-capa-users"],
-    queryFn: async () => { const d = await api.get<any>("/users/"); return unwrapResults(d); },
+    queryFn: async () => { const d = await api.get<any>(withFullLimit("/users/")); return unwrapResults(d); },
     enabled: isAuthenticated,
   });
 

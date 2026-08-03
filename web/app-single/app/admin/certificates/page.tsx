@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
-import { api, unwrapResults } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
@@ -66,7 +66,7 @@ export default function AdminCertificatesPage() {
   const { data: certificates, isLoading, error, refetch } = useQuery<Certificate[]>({
     queryKey: ["admin-certificates"],
     queryFn: async () => {
-      const d = await api.get<any>("/certificates/");
+      const d = await api.get<any>(withFullLimit("/certificates/"));
       return unwrapResults(d);
     },
     enabled: isAuthenticated,
