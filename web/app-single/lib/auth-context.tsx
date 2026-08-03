@@ -5,7 +5,7 @@
 // Token stored in sessionStorage (cleared on browser close)
 // ============================================================
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { useAuthStore } from './auth-store';
 
@@ -80,6 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef<AuthUser | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Restore session on mount
   useEffect(() => {
@@ -96,11 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Register forced-logout redirect handler on mount
   useEffect(() => {
     api.onLogout(() => {
+      const role = userRef.current?.role;
       setToken(null);
       setUser(null);
       clearSession();
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        const studentRoles = ['student', 'candidate', 'graduate'];
+        window.location.href = role && studentRoles.includes(role) ? '/student/login' : '/login';
       }
     });
   }, []);
