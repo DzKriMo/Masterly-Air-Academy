@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-change-me')
 
 DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,api,172.20.10.2').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,api,172.20.10.2,185.185.80.188,185.185.80.188.nip.io').split(',')
 
 INSTALLED_APPS = [
     'unfold',
@@ -129,11 +129,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost,http://127.0.0.1').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost,http://127.0.0.1,http://185.185.80.188:7788,https://185.185.80.188.nip.io').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # Security (relaxed for LAN-only deployment)
-CSRF_TRUSTED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost,https://185.185.80.188.nip.io')).split(',')
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
@@ -204,6 +204,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     'check-upcoming-deadlines': {
         'task': 'apps.quality_safety.tasks.check_upcoming_deadlines',
+        'schedule': 86400.0,  # daily
+    },
+    'cleanup-old-notifications': {
+        'task': 'apps.notifications.tasks.cleanup_old_notifications',
         'schedule': 86400.0,  # daily
     },
 }
