@@ -5,7 +5,10 @@ import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from apps.accounts.authentication import QueryTokenAuthentication
 from apps.accounts.permissions import HasRolePermission
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise, Room,
@@ -68,6 +71,11 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
     serializer_class = ModuleLessonSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
+    authentication_classes = [
+        QueryTokenAuthentication,
+        JWTAuthentication,
+        SessionAuthentication,
+    ]
     filterset_fields = ['module']
 
     def get_serializer_context(self):

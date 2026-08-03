@@ -25,7 +25,7 @@ interface Lesson {
 }
 
 export default function LessonViewPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, token } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { t } = useTranslation();
@@ -216,11 +216,12 @@ export default function LessonViewPage() {
           has_video: !!d.has_video,
         });
         const raw = d.video_url || null;
+        const streamBase = `/api/module-lessons/${lessonId}/video/`;
         setVideoUrl(
           raw && (raw.startsWith("http") || raw.startsWith("/media/"))
             ? raw
             : raw
-            ? `/api/module-lessons/${lessonId}/video/`
+            ? `${streamBase}${token ? `?token=${encodeURIComponent(token)}` : ""}`
             : null
         );
         setError(null);
@@ -230,7 +231,7 @@ export default function LessonViewPage() {
         setError(t("student.lessonLoadError", "Failed to load lesson."));
       })
       .finally(() => setLoading(false));
-  }, [isAuthenticated, lessonId]);
+  }, [isAuthenticated, lessonId, token]);
 
   useEffect(() => { loadLesson(); }, [loadLesson]);
 

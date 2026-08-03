@@ -113,3 +113,17 @@ class TestLessonVideoTracking:
         assert data['has_video'] is True
         assert data['video_watched_seconds'] == 40
         assert data['video_status'] == 'in_progress'
+
+    def test_video_stream_requires_auth_without_token(self, api_client, mandatory_lesson):
+        resp = api_client.get(f'/api/module-lessons/{mandatory_lesson.id}/video/')
+        assert resp.status_code in (401, 403)
+
+    def test_video_stream_accepts_query_token(self, api_client, student_ground_user, mandatory_lesson):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = str(RefreshToken.for_user(student_ground_user).access_token)
+        resp = api_client.get(
+            f'/api/module-lessons/{mandatory_lesson.id}/video/?token={token}',
+        )
+        # The fixture video key does not exist in storage, so the endpoint
+        # returns 404, but it must NOT be an auth failure.
+        assert resp.status_code == 404, resp.content
