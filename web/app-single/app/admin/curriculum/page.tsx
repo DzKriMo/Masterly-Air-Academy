@@ -230,20 +230,22 @@ function LessonsTab() {
       searchFields={["title", "module_title"]}
       filterFields={[{ key: "module", label: "All Modules", options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) }]}
       lookup={{ key: "modules", queryKey: ["admin-lessons-modules"], endpoint: "/modules/" }}
-      initialCreate={{ module: "", lesson_no: "", title: "", content: "", video_url: "" }}
-      buildForm={(l) => ({ module: l.module || "", lesson_no: l.lesson_no != null ? String(l.lesson_no) : "", title: l.title || "", content: l.content || "", video_url: l.video_url || "" })}
-      buildPayload={(f) => ({ module: f.module, lesson_no: f.lesson_no ? Number(f.lesson_no) : 0, title: f.title || null, content: f.content || null, video_url: f.video_url || null })}
+      initialCreate={{ module: "", lesson_no: "", title: "", content: "", video_url: "", is_mandatory: false }}
+      buildForm={(l) => ({ module: l.module || "", lesson_no: l.lesson_no != null ? String(l.lesson_no) : "", title: l.title || "", content: l.content || "", video_url: l.video_url || "", is_mandatory: !!l.is_mandatory })}
+      buildPayload={(f) => ({ module: f.module, lesson_no: f.lesson_no ? Number(f.lesson_no) : 0, title: f.title || null, content: f.content || null, video_url: f.video_url || null, is_mandatory: !!f.is_mandatory })}
       fields={(mode) => [
         { name: "module", label: "Module", type: "select", required: true, placeholder: "Select a module...", options: (lk) => (lk.modules || []).map((m: any) => ({ value: m.id, label: m.title })) },
         { name: "lesson_no", label: "Lesson No.", type: "text", span: "half" },
         { name: "title", label: "Title", type: "text", span: "half" },
         { name: "content", label: "Content", type: "textarea", rows: 3 },
+        { name: "is_mandatory", label: "Mandatory video (tracking enabled)", type: "checkbox" },
         { name: "video_url", label: "Lesson Video", type: "file", uploadEndpoint: "/module-lessons/upload_video/", accept: "video/*", placeholder: "Upload video or enter URL" },
       ]}
       columns={[
         { key: "lesson_no", header: "#", render: (l) => <span className="text-sm text-white font-mono">{l.lesson_no}</span> },
         { key: "title", header: "Title", render: (l) => <span className="text-sm font-semibold text-white">{l.title || "—"}</span> },
         { key: "module_title", header: "Module", render: (l) => <span className="text-sm text-gray-300">{l.module_title}</span> },
+        { key: "is_mandatory", header: "Tracked", render: (l) => l.is_mandatory ? <span className="text-xs px-2 py-0.5 rounded bg-gold-500/10 text-gold-500">Mandatory</span> : <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-400">Optional</span> },
       ]}
       detailTitle="Lesson Details"
       detailFields={(l) => [
@@ -252,6 +254,7 @@ function LessonsTab() {
         { label: "Module", value: l.module_title },
         ...(l.content ? [{ label: "Content", value: l.content }] : []),
         ...(l.video_url ? [{ label: "Video URL", value: l.video_url }] : []),
+        { label: "Tracking", value: l.is_mandatory ? "Mandatory (tracked)" : "Optional" },
       ]}
     />
   );
@@ -264,6 +267,8 @@ interface Lesson {
   title: string | null;
   content: string | null;
   video_url: string | null;
+  is_mandatory?: boolean;
+  has_video?: boolean;
 }
 
 // ── Module Docs ───────────────────────────────────────────

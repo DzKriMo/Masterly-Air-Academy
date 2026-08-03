@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
@@ -19,6 +19,9 @@ interface Lesson {
   content: string;
   module_title: string;
   subject_code: string;
+  video_url?: string | null;
+  is_mandatory?: boolean;
+  has_video?: boolean;
 }
 
 export default function LessonViewPage() {
@@ -30,6 +33,7 @@ export default function LessonViewPage() {
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isMandatory, setIsMandatory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,12 +67,134 @@ export default function LessonViewPage() {
       );
     }
     return (
-      <video controls className="w-full rounded-xl" preload="metadata">
+      <video
+        ref={videoRef}
+        controls
+        className="w-full rounded-xl"
+        preload="metadata"
+        onTimeUpdate={onVideoTimeUpdate}
+        onPause={onVideoPause}
+        onEnded={onVideoEnded}
+        onPlay={onVideoPlay}
+      >
         <source src={url} />
         {t("student.videoNotSupported", "Your browser does not support the video tag.")}
       </video>
     );
   };
+
+  // ── Video view tracking (only for mandatory uploaded videos) ──────────────
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const lastReportedRef = useRef<number>(0);
+  const tabSwitchesRef = useRef<number>(0);
+  const seenHiddenRef = useRef(false);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lessonIdRef = useRef<string | null>(null);
+
+  const flushTracking = useCallback(() => {
+    if (!lessonIdRef.current) return;
+    const vid = videoRef.current;
+    const position = vid ? Math.round(vid.currentTime || 0) : 0;
+    const duration = vid ? Math.round(vid.duration || 0) : 0;
+    const tabSwitches = tabSwitchesRef.current;
+    lastReportedRef.current = position;
+    api
+      .post(`/module-lessons/${lessonIdRef.current}/track_view/`, {
+        position,
+        duration,
+        tab_switches: tabSwitches,
+      })
+      .catch(() => {
+        /* tracking is best-effort; never block the learner */
+      });
+  }, []);
+
+  const onVideoPlay = useCallback(() => {
+    if (!isMandatory || !lessonIdRef.current) return;
+    seenHiddenRef.current = false;
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    heartbeatRef.current = setInterval(flushTracking, 15000);
+  }, [isMandatory, flushTracking]);
+
+  const onVideoPause = useCallback(() => {
+    if (!isMandatory || !lessonIdRef.current) return;
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    flushTracking();
+  }, [isMandatory, flushTracking]);
+
+  const onVideoEnded = useCallback(() => {
+    if (!isMandatory || !lessonIdRef.current) return;
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    const vid = videoRef.current;
+    const duration = vid ? Math.round(vid.duration || 0) : 0;
+    flushTracking();
+    api
+      .post(`/module-lessons/${lessonIdRef.current}/track_view/`, {
+        position: duration,
+        duration,
+        tab_switches: tabSwitchesRef.current,
+      })
+      .catch(() => {});
+  }, [isMandatory, flushTracking]);
+
+  const onVideoTimeUpdate = useCallback(() => {
+    if (!isMandatory || !lessonIdRef.current) return;
+    const vid = videoRef.current;
+    if (!vid) return;
+    const pos = Math.round(vid.currentTime || 0);
+    if (pos - lastReportedRef.current >= 5) {
+      lastReportedRef.current = pos;
+      flushTracking();
+    }
+  }, [isMandatory, flushTracking]);
+
+  // Tab-switch detection: pause the video and record the switch.
+  useEffect(() => {
+    if (!isMandatory || !lessonIdRef.current) return;
+    const handleHidden = () => {
+      if (!document.hidden || seenHiddenRef.current) return;
+      seenHiddenRef.current = true;
+      tabSwitchesRef.current += 1;
+      const vid = videoRef.current;
+      if (vid && !vid.paused) {
+        vid.pause();
+      } else {
+        flushTracking();
+      }
+    };
+    document.addEventListener("visibilitychange", handleHidden);
+    window.addEventListener("blur", handleHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", handleHidden);
+      window.removeEventListener("blur", handleHidden);
+    };
+  }, [isMandatory, flushTracking]);
+
+  // Final flush on unmount.
+  useEffect(() => {
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      if (lessonIdRef.current && isMandatory) {
+        const vid = videoRef.current;
+        api
+          .post(`/module-lessons/${lessonIdRef.current}/track_view/`, {
+            position: vid ? Math.round(vid.currentTime || 0) : 0,
+            duration: vid ? Math.round(vid.duration || 0) : 0,
+            tab_switches: tabSwitchesRef.current,
+          })
+          .catch(() => {});
+      }
+    };
+  }, [isMandatory]);
 
   const loadLesson = useCallback(() => {
     if (!isAuthenticated || !lessonId) return;
@@ -76,6 +202,8 @@ export default function LessonViewPage() {
     api.get<any>(`/module-lessons/${lessonId}/`)
       .then(data => {
         const d = data as unknown as any;
+        lessonIdRef.current = d.id;
+        setIsMandatory(!!d.is_mandatory);
         setLesson({
           id: d.id,
           lesson_no: d.lesson_no,
@@ -83,6 +211,9 @@ export default function LessonViewPage() {
           content: d.content || "",
           module_title: d.module_title || "",
           subject_code: d.subject_code || "",
+          video_url: d.video_url || null,
+          is_mandatory: !!d.is_mandatory,
+          has_video: !!d.has_video,
         });
         const raw = d.video_url || null;
         setVideoUrl(
@@ -130,6 +261,12 @@ export default function LessonViewPage() {
               </p>
               <h1 className="text-3xl font-bold text-white">{lesson.title}</h1>
               {lesson.module_title && <p className="text-sm text-gray-400 mt-2">{lesson.module_title}</p>}
+              {isMandatory && (
+                <p className="text-xs text-gold-500/80 mt-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-500 inline-block" />
+                  {t("student.mandatoryVideo", "Mandatory video — progress is tracked")}
+                </p>
+              )}
             </div>
 
             {videoUrl && (

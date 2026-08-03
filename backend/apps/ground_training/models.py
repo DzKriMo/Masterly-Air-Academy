@@ -63,6 +63,11 @@ class ModuleLesson(models.Model):
     title = models.CharField(max_length=255, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     video_url = models.CharField(max_length=500, blank=True, null=True)
+    is_mandatory = models.BooleanField(
+        default=False,
+        help_text='When a lesson video is marked mandatory it is tracked:'
+                  ' view progress is recorded and playback pauses when the tab switches.',
+    )
 
     class Meta:
         db_table = 'module_lessons'
@@ -71,6 +76,37 @@ class ModuleLesson(models.Model):
 
     def __str__(self):
         return f'Lesson {self.lesson_no}: {self.title or "Untitled"}'
+
+
+class LessonVideoView(models.Model):
+    """Per-student view tracking for a lesson's (mandatory) video.
+
+    Records how much of the video a student actually watched and flags tab
+    switching (pausing when the student leaves the window), so a mandatory
+    lesson cannot simply be scrubbed to the end.
+    """
+
+    class Status(models.TextChoices):
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lesson = models.ForeignKey(ModuleLesson, on_delete=models.CASCADE, related_name='video_views')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='lesson_video_views')
+    watched_seconds = models.IntegerField(default=0, help_text='Per-second time actually watched (accreted while tab is active).')
+    duration = models.IntegerField(default=0, help_text='Video duration in seconds.')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.IN_PROGRESS)
+    tab_switches = models.IntegerField(default=0, help_text='Number of times the student left the tab during the video.')
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'lesson_video_views'
+        unique_together = ['lesson', 'student']
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.student.full_name} - {self.lesson.title} ({self.watched_seconds}s)'
 
 
 class ModuleExercise(models.Model):

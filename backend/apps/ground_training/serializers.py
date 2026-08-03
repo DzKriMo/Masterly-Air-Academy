@@ -9,16 +9,54 @@ from .models import (
 class ModuleLessonSerializer(serializers.ModelSerializer):
     module_title = serializers.SerializerMethodField()
     subject_code = serializers.SerializerMethodField()
+    has_video = serializers.SerializerMethodField()
+    video_status = serializers.SerializerMethodField()
+    video_watched_seconds = serializers.SerializerMethodField()
+    video_tab_switches = serializers.SerializerMethodField()
 
     class Meta:
         model = ModuleLesson
-        fields = ['id', 'module', 'lesson_no', 'title', 'content', 'video_url', 'module_title', 'subject_code']
+        fields = [
+            'id', 'module', 'lesson_no', 'title', 'content', 'video_url',
+            'is_mandatory', 'has_video', 'module_title', 'subject_code',
+            'video_status', 'video_watched_seconds', 'video_tab_switches',
+        ]
 
     def get_module_title(self, obj):
         return obj.module.title if obj.module else ''
 
     def get_subject_code(self, obj):
         return obj.module.subject.code if obj.module and obj.module.subject else ''
+
+    def get_has_video(self, obj):
+        return bool(obj.video_url)
+
+    def _student_view(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+            return None
+        student = getattr(request.user, 'student_profile', None)
+        if student is None:
+            return None
+        view = self.context.get('_lesson_video_views', {}).get((obj.id, student.id))
+        if view is not None:
+            return view
+        view = obj.video_views.filter(student=student).first()
+        if self.context.get('_cache_lesson_views'):
+            self.context.setdefault('_lesson_video_views', {})[(obj.id, student.id)] = view
+        return view
+
+    def get_video_status(self, obj):
+        view = self._student_view(obj)
+        return view.status if view else None
+
+    def get_video_watched_seconds(self, obj):
+        view = self._student_view(obj)
+        return view.watched_seconds if view else 0
+
+    def get_video_tab_switches(self, obj):
+        view = self._student_view(obj)
+        return view.tab_switches if view else 0
 
 
 class ModuleDocumentSerializer(serializers.ModelSerializer):

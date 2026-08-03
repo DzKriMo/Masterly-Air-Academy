@@ -1,4 +1,5 @@
 from django.db.models import Count
+from django.db.models.functions import Coalesce
 import os
 import uuid
 from rest_framework import viewsets, status
@@ -9,6 +10,7 @@ from apps.accounts.permissions import HasRolePermission
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise, Room,
     Course, CourseEnrollment, AttendanceRecord, GroundEvaluation, TimeEntry,
+    LessonVideoView,
 )
 from .serializers import (
     SubjectSerializer, SubjectListSerializer,
@@ -62,11 +64,23 @@ def _store_upload(folder, file, module_id=None):
 
 
 class ModuleLessonViewSet(viewsets.ModelViewSet):
-    queryset = ModuleLesson.objects.all()
+    queryset = ModuleLesson.objects.select_related('module__subject').all()
     serializer_class = ModuleLessonSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
     filterset_fields = ['module']
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['_cache_lesson_views'] = True
+        return context
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        student = getattr(self.request.user, 'student_profile', None)
+        if student is not None:
+            qs = qs.prefetch_related('video_views')
+        return qs
 
     @action(detail=False, methods=['post'])
     def upload_video(self, request):
@@ -90,6 +104,71 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
                 return Response({'video_url': lesson.video_url})
             return Response({'error': 'No video attached'}, status=status.HTTP_404_NOT_FOUND)
         return response
+
+    @action(detail=True, methods=['post'], url_path='track_view')
+    def track_view(self, request, pk=None):
+        """Record video view progress for the authenticated student.
+
+        Body: {position: int (seconds), duration: int, tab_switches: int (optional)}
+        Increments the student's watched time only while the tab was active; the
+        frontend pauses playback on tab switch, so `tab_switches` flags cheating.
+        """
+        lesson = self.get_object()
+        student = getattr(request.user, 'student_profile', None)
+        if student is None:
+            return Response({'error': 'Student profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        position = request.data.get('position')
+        duration = request.data.get('duration')
+        tab_switches = request.data.get('tab_switches')
+
+        def _to_int(v):
+            try:
+                return max(0, int(float(v)))
+            except (TypeError, ValueError):
+                return None
+
+        position = _to_int(position)
+        duration = _to_int(duration)
+        tab_switches = _to_int(tab_switches)
+
+        view, created = LessonVideoView.objects.get_or_create(
+            lesson=lesson,
+            student=student,
+            defaults={
+                'watched_seconds': 0,
+                'duration': duration or 0,
+                'status': LessonVideoView.Status.IN_PROGRESS,
+                'tab_switches': tab_switches or 0,
+            },
+        )
+
+        if position is not None:
+            if position > view.watched_seconds:
+                view.watched_seconds = min(position, view.duration or position)
+            if duration is not None:
+                view.duration = max(view.duration, duration)
+        # On a subsequent heartbeat, tab switches are cumulative (the defaults
+        # above already seeded the count when the row was first created).
+        if tab_switches is not None and not created:
+            view.tab_switches += tab_switches
+
+        # Completion: watched at least 90% of the video OR position reached end.
+        if duration:
+            if (view.watched_seconds >= int(duration * 0.9)) or (position is not None and position >= duration):
+                view.status = LessonVideoView.Status.COMPLETED
+
+        view.save()
+
+        return Response({
+            'lesson': str(lesson.id),
+            'is_mandatory': lesson.is_mandatory,
+            'watched_seconds': view.watched_seconds,
+            'duration': view.duration,
+            'status': view.status,
+            'tab_switches': view.tab_switches,
+            'tracking': lesson.is_mandatory,
+        })
 
 
 class ModuleDocumentViewSet(viewsets.ModelViewSet):
