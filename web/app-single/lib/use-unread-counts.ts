@@ -35,7 +35,15 @@ export function useUnreadCounts(options?: {
 
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
+    const onChanged = () => fetchUnread();
+    window.addEventListener("maa:notifications-changed", onChanged);
+    const onMsgChanged = () => fetchUnread();
+    window.addEventListener("maa:messages-changed", onMsgChanged);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("maa:notifications-changed", onChanged);
+      window.removeEventListener("maa:messages-changed", onMsgChanged);
+    };
   }, [includeMessages, enabled]);
 
   return { notifications, messages, applicationsPending };

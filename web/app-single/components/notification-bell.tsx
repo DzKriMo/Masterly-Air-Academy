@@ -2,11 +2,14 @@
 import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
 import { useTranslation } from "@/lib/use-translation";
+import { useNotificationStream, type StreamNotification } from "@/lib/use-notification-stream";
+import { useToast } from "@/components/toast";
 
 interface Notif { id: string; type: string; title: string; message: string; is_read: boolean; created_at: string; }
 
 export function NotificationBell() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -24,20 +27,28 @@ export function NotificationBell() {
     return () => clearInterval(interval);
   }, []);
 
+  useNotificationStream((n: StreamNotification) => {
+    setNotifs(prev => [{ ...n, is_read: false } as Notif, ...prev]);
+    if (n.title) {
+      showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
+    }
+    try { window.dispatchEvent(new CustomEvent("maa:notifications-changed")); } catch {}
+  }, { enabled: api.isAuthenticated() });
+
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
 
   const unread = notifs.filter(n => !n.is_read).length;
 
   const markRead = async (id: string) => {
     try {
-      await api.put(`/notifications/${id}/mark_read/`);
+      await api.post(`/notifications/${id}/mark_read/`);
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch {}
   };
 
   const markAllRead = async () => {
     try {
-      await api.put("/notifications/mark_all_read/");
+      await api.post("/notifications/mark_all_read/");
       setNotifs(notifs.map(n => ({ ...n, is_read: true })));
     } catch {}
   };

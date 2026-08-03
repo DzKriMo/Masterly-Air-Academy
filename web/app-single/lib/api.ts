@@ -44,8 +44,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE}/api${endpoint}`;
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'Accept': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
     };
@@ -161,6 +162,21 @@ class ApiClient {
       body: formData,
       headers: { Accept: 'application/json' },
     });
+  }
+
+  /**
+   * Authenticated download. Fetches the endpoint with the Bearer token and
+   * returns the response (caller can read blob). Throws on non-OK.
+   */
+  async download(endpoint: string): Promise<Response> {
+    const headers: Record<string, string> = {};
+    const token = this.accessToken || this.getAccessToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api${endpoint}`, { headers });
+    if (!res.ok) {
+      throw new ApiError(`Download failed (${res.status})`, res.status);
+    }
+    return res;
   }
 }
 

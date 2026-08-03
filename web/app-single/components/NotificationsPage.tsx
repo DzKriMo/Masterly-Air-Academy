@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { useTranslation } from "@/lib/use-translation";
@@ -13,8 +14,10 @@ import { ErrorCard } from "@/components/error-card";
 import { ModalForm } from "@/components/modal-form";
 import { useToast } from "@/components/toast";
 import { PageHeader } from "@/components/page-header";
+import { useNotificationStream, type StreamNotification } from "@/lib/use-notification-stream";
+import { NotificationPreferencesModal } from "@/components/notification-preferences";
 
-export type NotificationsRole = "admin" | "finance" | "quality" | "director" | "student";
+export type NotificationsRole = "admin" | "finance" | "quality" | "director" | "student" | "instructor" | "scheduler";
 
 interface Notif {
   id: string;
@@ -109,7 +112,7 @@ const ROLES: Record<NotificationsRole, RoleConfig> = {
   student: {
     queryKey: "student-notifications",
     guard: { loginPath: "/student/login" },
-    markReadMethod: "PUT",
+    markReadMethod: "POST",
     paginate: true,
     layout: "cards",
     header: "pageheader",
@@ -119,6 +122,42 @@ const ROLES: Record<NotificationsRole, RoleConfig> = {
     titleKey: "student.notifications",
     titleFallback: "Notifications",
     backHref: "/student/dashboard",
+    markAllReadSuccessText: "All notifications marked as read.",
+  },
+  instructor: {
+    queryKey: "instructor-notifications",
+    guard: { loginPath: "/login" },
+    markReadMethod: "POST",
+    paginate: true,
+    layout: "table",
+    refetchInterval: 30000,
+    header: "pageheader",
+    headerMaxWidth: "max-w-5xl",
+    contentMaxWidth: "max-w-5xl",
+    wrapperClass: "flex-1 min-w-0",
+    titleKey: "instructor.notifications",
+    titleFallback: "Notifications",
+    backHref: "/instructor/dashboard",
+    backLabelKey: "instructor.backToDashboard",
+    backLabelFallback: "Back to Dashboard",
+    markAllReadSuccessText: "All notifications marked as read.",
+  },
+  scheduler: {
+    queryKey: "scheduler-notifications",
+    guard: { loginPath: "/login" },
+    markReadMethod: "POST",
+    paginate: true,
+    layout: "table",
+    refetchInterval: 30000,
+    header: "pageheader",
+    headerMaxWidth: "max-w-5xl",
+    contentMaxWidth: "max-w-5xl",
+    wrapperClass: "flex-1 min-w-0",
+    titleKey: "scheduler.notifications",
+    titleFallback: "Notifications",
+    backHref: "/scheduler/dashboard",
+    backLabelKey: "scheduler.dashboard",
+    backLabelFallback: "Back to Dashboard",
     markAllReadSuccessText: "All notifications marked as read.",
   },
 };
@@ -137,6 +176,7 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Notif | null>(null);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [extra, setExtra] = useState<Notif[]>([]);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -154,6 +194,23 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
   const hasMore = config.paginate ? !!notifData?.next : false;
   const allNotifs = useMemo(() => [...notifications, ...extra], [notifications, extra]);
 
+  useNotificationStream((n: StreamNotification) => {
+    qc.setQueryData<any>([config.queryKey], (old: any) => {
+      if (!old) return old;
+      if (config.paginate && Array.isArray(old.results)) {
+        const exists = old.results.some((x: any) => x.id === n.id);
+        if (exists) return old;
+        return { ...old, results: [n, ...old.results] };
+      }
+      if (Array.isArray(old)) {
+        const exists = old.some((x: any) => x.id === n.id);
+        return exists ? old : [n, ...old];
+      }
+      return old;
+    });
+    if (n.title) showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
+  }, { enabled: config.guard ? isAuthenticated : undefined });
+
   const loadMore = async () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -168,15 +225,12 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
   };
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) =>
-      config.markReadMethod === "POST"
-        ? api.post(`/notifications/${id}/mark_read/`)
-        : api.put(`/notifications/${id}/mark_read/`),
+    mutationFn: (id: string) => api.post(`/notifications/${id}/mark_read/`),
     onSuccess: () => qc.invalidateQueries({ queryKey: [config.queryKey] }),
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => api.put("/notifications/mark_all_read/"),
+    mutationFn: () => api.post("/notifications/mark_all_read/"),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [config.queryKey] });
       showToast("success", config.markAllReadSuccessText);
@@ -204,9 +258,14 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
   ];
 
   const markAllButton = (
-    <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
-      {t("common.markAllRead", "Mark All Read")}
-    </button>
+    <div className="flex items-center gap-2">
+      <button onClick={() => setPrefsOpen(true)} title={t("notification.preferences", "Notification Preferences")} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
+        ⚙
+      </button>
+      <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="px-3 py-1.5 text-xs bg-navy-700 text-gray-300 rounded-lg hover:bg-navy-600 transition-colors">
+        {t("common.markAllRead", "Mark All Read")}
+      </button>
+    </div>
   );
 
   return (
@@ -254,6 +313,7 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
             {selected.data && Object.keys(selected.data).length > 0 && <div className="bg-navy-900 border border-navy-700 rounded-lg p-4"><pre className="text-xs text-gray-500 whitespace-pre-wrap">{JSON.stringify(selected.data, null, 2)}</pre></div>}
           </div>)}
         </ModalForm>
+        <NotificationPreferencesModal open={prefsOpen} onClose={() => setPrefsOpen(false)} />
       </main>
     </div>
   );
@@ -266,6 +326,36 @@ const TYPE_ICONS: Record<string, string> = {
   error: "✗",
   announcement: "📢",
   reminder: "⏰",
+  broadcast: "📣",
+  flight_scheduled: "🛫",
+  flight_evaluated: "📝",
+  solo_authorized: "🛫",
+  course_scheduled: "📚",
+  exam_published: "📋",
+  exam_result: "🎯",
+  quiz_result: "📊",
+  module_published: "📄",
+  enrollment: "🎓",
+  progress_check: "📈",
+  skill_test: "🪪",
+  certificate_issued: "🏅",
+  document_expiring: "⏳",
+  application: "📮",
+  contact_form: "📬",
+  invoice_created: "🧾",
+  invoice_overdue: "💸",
+  payment_received: "💳",
+  contract_signed: "📜",
+  ncr_opened: "🛑",
+  ncr_closed: "✅",
+  audit_planned: "🗓️",
+  audit_completed: "✔️",
+  capa_assigned: "🛠️",
+  capa_due: "⏰",
+  safety_event: "🚨",
+  quality_doc_approved: "📑",
+  deadline: "📅",
+  task_assigned: "📌",
 };
 
 const TYPE_BG: Record<string, string> = {
@@ -275,6 +365,36 @@ const TYPE_BG: Record<string, string> = {
   error: "bg-red-500/10 border-red-500/20",
   announcement: "bg-purple-500/10 border-purple-500/20",
   reminder: "bg-yellow-500/10 border-yellow-500/20",
+  broadcast: "bg-purple-500/10 border-purple-500/20",
+  flight_scheduled: "bg-sky-500/10 border-sky-500/20",
+  flight_evaluated: "bg-indigo-500/10 border-indigo-500/20",
+  solo_authorized: "bg-sky-500/10 border-sky-500/20",
+  course_scheduled: "bg-emerald-500/10 border-emerald-500/20",
+  exam_published: "bg-violet-500/10 border-violet-500/20",
+  exam_result: "bg-teal-500/10 border-teal-500/20",
+  quiz_result: "bg-teal-500/10 border-teal-500/20",
+  module_published: "bg-cyan-500/10 border-cyan-500/20",
+  enrollment: "bg-emerald-500/10 border-emerald-500/20",
+  progress_check: "bg-blue-500/10 border-blue-500/20",
+  skill_test: "bg-indigo-500/10 border-indigo-500/20",
+  certificate_issued: "bg-amber-500/10 border-amber-500/20",
+  document_expiring: "bg-yellow-500/10 border-yellow-500/20",
+  application: "bg-rose-500/10 border-rose-500/20",
+  contact_form: "bg-rose-500/10 border-rose-500/20",
+  invoice_created: "bg-orange-500/10 border-orange-500/20",
+  invoice_overdue: "bg-red-500/10 border-red-500/20",
+  payment_received: "bg-green-500/10 border-green-500/20",
+  contract_signed: "bg-slate-500/10 border-slate-500/20",
+  ncr_opened: "bg-red-500/10 border-red-500/20",
+  ncr_closed: "bg-green-500/10 border-green-500/20",
+  audit_planned: "bg-sky-500/10 border-sky-500/20",
+  audit_completed: "bg-emerald-500/10 border-emerald-500/20",
+  capa_assigned: "bg-amber-500/10 border-amber-500/20",
+  capa_due: "bg-orange-500/10 border-orange-500/20",
+  safety_event: "bg-red-500/10 border-red-500/20",
+  quality_doc_approved: "bg-cyan-500/10 border-cyan-500/20",
+  deadline: "bg-slate-500/10 border-slate-500/20",
+  task_assigned: "bg-blue-500/10 border-blue-500/20",
 };
 
 const TYPE_ICON_COLORS: Record<string, string> = {
@@ -284,11 +404,43 @@ const TYPE_ICON_COLORS: Record<string, string> = {
   error: "text-red-400",
   announcement: "text-purple-400",
   reminder: "text-yellow-400",
+  broadcast: "text-purple-400",
+  flight_scheduled: "text-sky-400",
+  flight_evaluated: "text-indigo-400",
+  solo_authorized: "text-sky-400",
+  course_scheduled: "text-emerald-400",
+  exam_published: "text-violet-400",
+  exam_result: "text-teal-400",
+  quiz_result: "text-teal-400",
+  module_published: "text-cyan-400",
+  enrollment: "text-emerald-400",
+  progress_check: "text-blue-400",
+  skill_test: "text-indigo-400",
+  certificate_issued: "text-amber-400",
+  document_expiring: "text-yellow-400",
+  application: "text-rose-400",
+  contact_form: "text-rose-400",
+  invoice_created: "text-orange-400",
+  invoice_overdue: "text-red-400",
+  payment_received: "text-green-400",
+  contract_signed: "text-slate-400",
+  ncr_opened: "text-red-400",
+  ncr_closed: "text-green-400",
+  audit_planned: "text-sky-400",
+  audit_completed: "text-emerald-400",
+  capa_assigned: "text-amber-400",
+  capa_due: "text-orange-400",
+  safety_event: "text-red-400",
+  quality_doc_approved: "text-cyan-400",
+  deadline: "text-slate-400",
+  task_assigned: "text-blue-400",
 };
 
 function StudentNotificationsView({ config }: { config: RoleConfig }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notif[]>([]);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -313,6 +465,11 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
 
   useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
+  useNotificationStream((n: StreamNotification) => {
+    setNotifications(prev => [{ ...n, is_read: false } as Notif, ...prev]);
+    if (n.title) showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
+  }, { enabled: isAuthenticated });
+
   const loadMore = () => {
     api.get<any>(`/notifications/?page=${page + 1}`)
       .then((d: any) => {
@@ -325,14 +482,14 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.put(`/notifications/${id}/mark_read/`);
+      await api.post(`/notifications/${id}/mark_read/`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch { showToast("error", t('student.markReadError', 'Failed to mark as read')); }
   };
 
   const markAllRead = async () => {
     try {
-      await api.put("/notifications/mark_all_read/");
+      await api.post("/notifications/mark_all_read/");
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       showToast("success", t('student.allRead', 'All notifications marked as read.'));
     } catch { showToast("error", t('student.markAllReadError', 'Failed to mark all as read')); }
@@ -368,6 +525,18 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
     return true;
   });
 
+  // Group filtered notifications by day for a timeline layout
+  const grouped = useMemo(() => {
+    const map = new Map<string, Notif[]>();
+    for (const n of filtered) {
+      const d = new Date(n.created_at);
+      const key = d.toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(n);
+    }
+    return Array.from(map.entries());
+  }, [filtered]);
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -382,6 +551,24 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
     return d.toLocaleDateString();
   };
 
+  // Deep-link resolution: notification data may carry an entity id we can use
+  // to navigate to the relevant portal page.
+  const deepLink = (n: Notif): string | null => {
+    if (!n.data) return null;
+    const d = n.data;
+    const id = d.exam_id || d.course_id || d.flight_id || d.invoice_id || d.certificate_id || d.ncr_id || d.capa_id || d.audit_id || d.contract_id || d.payment_id || d.doc_id || d.event_id;
+    if (!id) return null;
+    if (d.exam_id) return `/student/exams`;
+    if (d.course_id) return `/student/courses`;
+    if (d.flight_id) return `/student/flights`;
+    if (d.invoice_id) return `/student/invoices`;
+    if (d.certificate_id) return `/student/certificates`;
+    if (d.ncr_id || d.capa_id || d.audit_id || d.doc_id || d.event_id) return `/student/quality`;
+    if (d.contract_id) return `/student/documents`;
+    if (d.payment_id) return `/student/payments`;
+    return null;
+  };
+
   return (
     <div className={config.wrapperClass}>
       <PageHeader
@@ -390,6 +577,9 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
         maxWidth={config.headerMaxWidth}
         actions={
           <div className="flex items-center gap-2">
+            <button onClick={() => setPrefsOpen(true)} title={t("notification.preferences", "Notification Preferences")} className="px-3 py-1.5 bg-navy-800 border border-navy-700 text-gray-300 rounded-lg text-xs hover:bg-navy-700 transition-colors">
+              ⚙
+            </button>
             {unreadCount > 0 && (
               <span className="bg-gold-500 text-navy-900 text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} {t('common.unread', 'unread')}</span>
             )}
@@ -417,27 +607,45 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
               onSearchChange={setSearch}
             />
 
-            <div className="space-y-2">
-              {filtered.map(n => (
-                <div key={n.id} onClick={() => handleClick(n)}
-                  className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
-                    n.is_read
-                      ? "bg-navy-800/50 border-navy-700/50 hover:bg-navy-800"
-                      : "bg-navy-800 border-gold-500/30 hover:bg-navy-700"
-                  }`}>
-                  <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${TYPE_BG[n.type] || "bg-navy-700 border border-navy-600"}`}>
-                    <span className={TYPE_ICON_COLORS[n.type] || "text-gray-400"}>{TYPE_ICONS[n.type] || "•"}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm ${n.is_read ? "text-gray-300" : "text-white font-semibold"}`}>{n.title}</p>
-                      <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">{formatDate(n.created_at)}</span>
+            <div className="space-y-6">
+              {grouped.map(([dayKey, items]) => {
+                const dayDate = new Date(items[0].created_at);
+                const today = new Date();
+                const isToday = dayDate.toDateString() === today.toDateString();
+                const isYesterday = dayDate.toDateString() === new Date(today.getTime() - 86400000).toDateString();
+                const dayLabel = isToday
+                  ? t('notification.today', 'Today')
+                  : isYesterday
+                    ? t('notification.yesterday', 'Yesterday')
+                    : dayDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+                return (
+                  <div key={dayKey}>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{dayLabel}</h3>
+                    <div className="space-y-2">
+                      {items.map(n => (
+                        <div key={n.id} onClick={() => handleClick(n)}
+                          className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                            n.is_read
+                              ? "bg-navy-800/50 border-navy-700/50 hover:bg-navy-800"
+                              : "bg-navy-800 border-gold-500/30 hover:bg-navy-700"
+                          }`}>
+                          <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-lg ${TYPE_BG[n.type] || "bg-navy-700 border border-navy-600"}`}>
+                            <span className={TYPE_ICON_COLORS[n.type] || "text-gray-400"}>{TYPE_ICONS[n.type] || "•"}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm ${n.is_read ? "text-gray-300" : "text-white font-semibold"}`}>{n.title}</p>
+                              <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">{formatDate(n.created_at)}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{n.message}</p>
+                          </div>
+                          {!n.is_read && <span className="shrink-0 w-2 h-2 bg-gold-500 rounded-full mt-2" />}
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{n.message}</p>
                   </div>
-                  {!n.is_read && <span className="shrink-0 w-2 h-2 bg-gold-500 rounded-full mt-2" />}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {filtered.length === 0 && (
@@ -474,10 +682,19 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
               <div className="px-6 py-4">
                 <p className="text-gray-300 text-sm whitespace-pre-wrap">{selected.message}</p>
                 <p className="text-xs text-gray-500 mt-4">{new Date(selected.created_at).toLocaleString()}</p>
+                {deepLink(selected) && (
+                  <button
+                    onClick={() => { const href = deepLink(selected)!; setSelected(null); router.push(href); }}
+                    className="mt-4 w-full px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold hover:bg-gold-400 transition-colors"
+                  >
+                    {t('notification.viewDetails', 'View details')}
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
+        <NotificationPreferencesModal open={prefsOpen} onClose={() => setPrefsOpen(false)} />
       </main>
     </div>
   );

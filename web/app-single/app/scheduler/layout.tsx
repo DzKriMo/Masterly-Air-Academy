@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useUnreadCounts } from "@/lib/use-unread-counts";
 import {
-  LayoutDashboard, CalendarDays, PlaneTakeoff, Users, Menu,
+  LayoutDashboard, CalendarDays, PlaneTakeoff, Users, Menu, Bell, Mail,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -15,7 +15,7 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
-  const unread = useUnreadCounts({ includeMessages: false, enabled: isAuthenticated });
+  const unread = useUnreadCounts({ includeMessages: true, enabled: isAuthenticated });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const NAV = [
@@ -23,6 +23,8 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
     { href: "/scheduler/availability", label: t("scheduler.availability"), Icon: Users },
     { href: "/scheduler/bookings", label: t("scheduler.bookings"), Icon: CalendarDays },
     { href: "/scheduler/aircraft", label: t("scheduler.aircraft"), Icon: PlaneTakeoff },
+    { href: "/scheduler/notifications", label: t("scheduler.notifications", "Notifications"), Icon: Bell, badge: unread.notifications },
+    { href: "/scheduler/messages", label: t("scheduler.messages", "Messages"), Icon: Mail, badge: unread.messages },
   ];
 
   useEffect(() => {
@@ -59,7 +61,12 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
             <a key={item.href} href={item.href} onClick={closeSidebar}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm mb-0.5 transition-colors ${pathname === item.href ? "bg-gold-500/20 text-gold-500 font-semibold" : "text-gray-400 hover:text-white hover:bg-navy-700"}`}>
               <item.Icon className="w-5 h-5 shrink-0" />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {"badge" in item && (item as any).badge > 0 && (
+                <span className="bg-gold-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                  {(item as any).badge > 99 ? "99+" : (item as any).badge}
+                </span>
+              )}
             </a>
           ))}
         </nav>

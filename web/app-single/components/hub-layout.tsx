@@ -25,12 +25,16 @@ export function HubLayout({
   tabs,
   defaultTab,
   actions,
+  backHref = "/admin/dashboard",
+  backLabel = "Back to Dashboard",
   children,
 }: {
   title: string;
   tabs: HubTab[];
   defaultTab: string;
   actions?: React.ReactNode;
+  backHref?: string;
+  backLabel?: string;
   children: (active: string) => React.ReactNode;
 }) {
   const router = useRouter();
@@ -58,8 +62,8 @@ export function HubLayout({
     <div className="min-h-screen bg-navy-900">
       <PageHeader
         title={title}
-        backHref="/admin/dashboard"
-        backLabel="Back to Dashboard"
+        backHref={backHref}
+        backLabel={backLabel}
         actions={actions}
       />
 

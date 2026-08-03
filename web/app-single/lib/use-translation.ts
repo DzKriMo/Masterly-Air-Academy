@@ -136,7 +136,26 @@ const translations: Record<string, Record<string, string>> = {
     "common.close": "Close",
     "common.submit": "Submit",
     "common.selectAll": "Select All",
-
+    "common.send": "Send",
+    "common.sending": "Sending...",
+    "common.to": "To",
+    "common.subject": "Subject",
+    "common.message": "Message",
+    "common.you": "You",
+    "common.read": "Read",
+    "common.sent": "Sent",
+    "common.deleting": "Deleting...",
+    "common.thread": "Conversation",
+    "common.attachments": "Attachments",
+    "common.uploading": "Uploading...",
+    "common.uploaded": "Uploaded",
+    "common.uploadFailed": "Upload failed",
+    "common.downloadFailed": "Download failed",
+    "common.loadMore": "Load more",
+    "common.newMessage": "New message",
+    "common.noThread": "No messages in this conversation.",
+    "common.allMessages": "All Messages",
+    "common.unreadOnly": "Unread Only",
     "common.empty": "No data available",
 
     "errors.title": "Something went wrong",
@@ -149,6 +168,12 @@ const translations: Record<string, Record<string, string>> = {
     // ── student ──
     "student.dashboard": "Dashboard",
     "student.exams": "Exams",
+    "student.exams_quizzes": "Exams & Quizzes",
+    "student.quizzes": "Quizzes",
+    "student.quizzesHint": "Quick knowledge checks for your modules.",
+    "student.noQuizzes": "No quizzes available at this time.",
+    "student.startQuiz": "Start Quiz",
+    "student.quiz": "Quiz",
     "student.flightLog": "Flight Log",
     "student.myCourses": "My Courses",
     "student.schedule": "Schedule",
@@ -205,6 +230,10 @@ const translations: Record<string, Record<string, string>> = {
     "student.history": "History",
     "student.notifications": "Notifications",
 
+    "notification.today": "Today",
+    "notification.yesterday": "Yesterday",
+    "notification.viewDetails": "View details",
+
     // ── instructor ──
     "instructor.dashboard": "Dashboard",
     "instructor.calendar": "Calendar",
@@ -213,6 +242,7 @@ const translations: Record<string, Record<string, string>> = {
     "instructor.moduleContent": "Module Content",
     "instructor.myStudents": "My Students",
     "instructor.messages": "Messages",
+    "instructor.notifications": "Notifications",
     "instructor.progressChecks": "Progress Checks",
     "instructor.skillTests": "Skill Tests",
     "instructor.attendance": "Attendance",
@@ -377,6 +407,7 @@ const translations: Record<string, Record<string, string>> = {
     "director.revenue": "Revenue",
     "director.passRates": "Pass Rates",
     "director.instructorUtilization": "Instructor Utilization",
+    "director.messages": "Messages",
 
     // ── scheduler ──
     "scheduler.dashboard": "Scheduler Dashboard",
@@ -395,6 +426,8 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "Available Instructors",
     "scheduler.todaysEvents": "Today's Events",
     "scheduler.maintenanceDue": "Maintenance Due",
+    "scheduler.notifications": "Notifications",
+    "scheduler.messages": "Messages",
 
     // ── TV Display ──
     "tv.daily": "Daily Schedule",
@@ -735,6 +768,26 @@ const translations: Record<string, Record<string, string>> = {
     "common.close": "Fermer",
     "common.submit": "Soumettre",
     "common.selectAll": "Tout selectionner",
+    "common.send": "Envoyer",
+    "common.sending": "Envoi...",
+    "common.to": "A",
+    "common.subject": "Objet",
+    "common.message": "Message",
+    "common.you": "Vous",
+    "common.read": "Lu",
+    "common.sent": "Envoye",
+    "common.deleting": "Suppression...",
+    "common.thread": "Conversation",
+    "common.attachments": "Pieces jointes",
+    "common.uploading": "Telechargement...",
+    "common.uploaded": "Telecharge",
+    "common.uploadFailed": "Echec du telechargement",
+    "common.downloadFailed": "Echec du telechargement",
+    "common.loadMore": "Charger plus",
+    "common.newMessage": "Nouveau message",
+    "common.noThread": "Aucun message dans cette conversation.",
+    "common.allMessages": "Tous les messages",
+    "common.unreadOnly": "Non lus uniquement",
 
     "common.empty": "Aucune donnee",
 
@@ -748,6 +801,12 @@ const translations: Record<string, Record<string, string>> = {
     // ── student ──
     "student.dashboard": "Tableau de bord",
     "student.exams": "Examens",
+    "student.exams_quizzes": "Examens et quiz",
+    "student.quizzes": "Quiz",
+    "student.quizzesHint": "Contrôles rapides de connaissances pour vos modules.",
+    "student.noQuizzes": "Aucun quiz disponible pour le moment.",
+    "student.startQuiz": "Commencer le quiz",
+    "student.quiz": "Quiz",
     "student.flightLog": "Carnet de vol",
     "student.myCourses": "Mes cours",
     "student.schedule": "Emploi du temps",
@@ -804,6 +863,10 @@ const translations: Record<string, Record<string, string>> = {
     "student.history": "Historique",
     "student.notifications": "Notifications",
 
+    "notification.today": "Aujourd'hui",
+    "notification.yesterday": "Hier",
+    "notification.viewDetails": "Voir les details",
+
     // ── instructor ──
     "instructor.dashboard": "Tableau de bord",
     "instructor.calendar": "Calendrier",
@@ -812,6 +875,7 @@ const translations: Record<string, Record<string, string>> = {
     "instructor.moduleContent": "Contenu des modules",
     "instructor.myStudents": "Mes eleves",
     "instructor.messages": "Messages",
+    "instructor.notifications": "Notifications",
     "instructor.progressChecks": "Controles de progres",
     "instructor.skillTests": "Tests de competence",
     "instructor.attendance": "Presence",
@@ -976,12 +1040,14 @@ const translations: Record<string, Record<string, string>> = {
     "director.revenue": "Revenus",
     "director.passRates": "Taux de reussite",
     "director.instructorUtilization": "Utilisation des instructeurs",
+    "director.messages": "Messages",
 
     // ── scheduler ──
     "scheduler.dashboard": "Tableau de bord planificateur",
     "scheduler.calendar": "Calendrier",
     "scheduler.bookings": "Reservations",
     "scheduler.availability": "Disponibilite des instructeurs",
+    "scheduler.notifications": "Notifications",
     "scheduler.aircraft": "Etat de la flotte",
     "scheduler.newBooking": "Nouvelle reservation",
     "scheduler.resourceType": "Type de ressource",
@@ -994,6 +1060,7 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "Instructeurs disponibles",
     "scheduler.todaysEvents": "Evenements du jour",
     "scheduler.maintenanceDue": "Maintenance a prevoir",
+    "scheduler.messages": "Messages",
 
     // ── TV Display ──
     "tv.daily": "Programme du jour",
@@ -1334,6 +1401,26 @@ const translations: Record<string, Record<string, string>> = {
     "common.close": "إغلاق",
     "common.submit": "إرسال",
     "common.selectAll": "تحديد الكل",
+    "common.send": "إرسال",
+    "common.sending": "جار الإرسال...",
+    "common.to": "إلى",
+    "common.subject": "الموضوع",
+    "common.message": "الرسالة",
+    "common.you": "أنت",
+    "common.read": "مقروء",
+    "common.sent": "مرسل",
+    "common.deleting": "جار الحذف...",
+    "common.thread": "المحادثة",
+    "common.attachments": "المرفقات",
+    "common.uploading": "جار الرفع...",
+    "common.uploaded": "تم الرفع",
+    "common.uploadFailed": "فشل الرفع",
+    "common.downloadFailed": "فشل التنزيل",
+    "common.loadMore": "تحميل المزيد",
+    "common.newMessage": "رسالة جديدة",
+    "common.noThread": "لا توجد رسائل في هذه المحادثة.",
+    "common.allMessages": "كل الرسائل",
+    "common.unreadOnly": "غير المقروءة فقط",
 
     "common.empty": "لا توجد بيانات",
 
@@ -1347,6 +1434,12 @@ const translations: Record<string, Record<string, string>> = {
     // ── student ──
     "student.dashboard": "لوحة القيادة",
     "student.exams": "الامتحانات",
+    "student.exams_quizzes": "الامتحانات والاختبارات القصيرة",
+    "student.quizzes": "الاختبارات القصيرة",
+    "student.quizzesHint": "فحوصات سريعة للمعرفة لوحداتك.",
+    "student.noQuizzes": "لا توجد اختبارات قصيرة متاحة حالياً.",
+    "student.startQuiz": "ابدأ الاختبار القصير",
+    "student.quiz": "اختبار قصير",
     "student.flightLog": "سجل الطيران",
     "student.myCourses": "دوراتي",
     "student.schedule": "الجدول",
@@ -1403,6 +1496,10 @@ const translations: Record<string, Record<string, string>> = {
     "student.history": "السجل",
     "student.notifications": "الإشعارات",
 
+    "notification.today": "اليوم",
+    "notification.yesterday": "أمس",
+    "notification.viewDetails": "عرض التفاصيل",
+
     // ── instructor ──
     "instructor.dashboard": "لوحة القيادة",
     "instructor.calendar": "التقويم",
@@ -1411,6 +1508,7 @@ const translations: Record<string, Record<string, string>> = {
     "instructor.moduleContent": "محتوى الوحدات",
     "instructor.myStudents": "طلابي",
     "instructor.messages": "الرسائل",
+    "instructor.notifications": "الإشعارات",
     "instructor.progressChecks": "فحوصات التقدم",
     "instructor.skillTests": "اختبارات المهارات",
     "instructor.attendance": "الحضور",
@@ -1575,12 +1673,14 @@ const translations: Record<string, Record<string, string>> = {
     "director.revenue": "الإيرادات",
     "director.passRates": "معدلات النجاح",
     "director.instructorUtilization": "استخدام المدربين",
+    "director.messages": "الرسائل",
 
     // ── scheduler ──
     "scheduler.dashboard": "لوحة قيادة المخطط",
     "scheduler.calendar": "التقويم",
     "scheduler.bookings": "الحجوزات",
     "scheduler.availability": "توفر المدربين",
+    "scheduler.notifications": "الإشعارات",
     "scheduler.aircraft": "حالة الأسطول",
     "scheduler.newBooking": "حجز جديد",
     "scheduler.resourceType": "نوع المورد",
@@ -1593,6 +1693,7 @@ const translations: Record<string, Record<string, string>> = {
     "scheduler.availableInstructors": "المدربون المتاحون",
     "scheduler.todaysEvents": "أحداث اليوم",
     "scheduler.maintenanceDue": "الصيانة المستحقة",
+    "scheduler.messages": "الرسائل",
 
     // ── TV Display ──
     "tv.daily": "برنامج اليوم",

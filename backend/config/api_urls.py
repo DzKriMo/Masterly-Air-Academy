@@ -38,7 +38,7 @@ from apps.students.views import (
     StudentViewSet, MedicalCertificateViewSet, AdminProfileViewSet,
     FlightInstructorViewSet, GroundInstructorViewSet, PromotionViewSet,
 )
-from apps.notifications.views import NotificationViewSet, MessageViewSet, notification_broadcast
+from apps.notifications.views import NotificationViewSet, MessageViewSet, NotificationBroadcastViewSet
 from apps.core.views import SystemSettingViewSet, AuditLogViewSet, search_view, trigger_backup
 from apps.core.report_views import (
     DashboardKPIView, StudentDashboardView, verify_certificate, finance_reports,
@@ -137,7 +137,7 @@ urlpatterns = [
     path('contact/submit/', submit_contact, name='submit-contact'),
     path('search/', search_view, name='search'),
     path('system/backup/', trigger_backup, name='trigger-backup'),
-    path('notifications/broadcast/', notification_broadcast, name='notification-broadcast'),
+    path('notifications/broadcast/', NotificationBroadcastViewSet.as_view({'post': 'create'}), name='notification-broadcast'),
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
     path('export/courses/', ExportCoursesView.as_view(), name='export-courses'),
     path('export/certificates/', ExportCertificatesView.as_view(), name='export-certificates'),

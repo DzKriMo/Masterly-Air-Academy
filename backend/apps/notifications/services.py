@@ -1,5 +1,7 @@
 """Notification service — creates notifications triggered by key events."""
 
+import json
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -9,20 +11,106 @@ from .models import Notification
 
 User = get_user_model()
 
+try:
+    import redis
+except ImportError:  # pragma: no cover
+    redis = None
+
+
+def get_redis_client():
+    """Return a Redis client for pub/sub, or None if unavailable."""
+    if redis is None:
+        return None
+    try:
+        return redis.Redis.from_url(
+            settings.REDIS_URL,
+            socket_timeout=2,
+            socket_connect_timeout=2,
+            decode_responses=True,
+        )
+    except Exception:  # pragma: no cover
+        return None
+
+
+def publish_user_event(user_id, payload):
+    """Publish a real-time event to a user's Redis channel (best-effort)."""
+    try:
+        client = get_redis_client()
+        if client is not None:
+            client.publish(f'notifications:user:{user_id}', json.dumps(payload))
+    except Exception:
+        pass
+
+
+def publish_message_event(user_id, payload):
+    """Publish a real-time message event to a user's Redis channel (best-effort)."""
+    try:
+        client = get_redis_client()
+        if client is not None:
+            client.publish(f'messages:user:{user_id}', json.dumps(payload))
+    except Exception:
+        pass
+
+
+def serialize_message(msg):
+    """Return a JSON-safe dict for a Message (UUIDs/datetimes serialized to strings)."""
+    from rest_framework.renderers import JSONRenderer
+    from .serializers import MessageSerializer
+    return json.loads(JSONRenderer().render(MessageSerializer(msg).data))
+
 
 class NotificationService:
     """Centralized notification creation. Called from views, signals, or tasks."""
 
     @staticmethod
+    def _preference(user):
+        """Return (email_enabled, in_app_enabled, muted_types) for a user."""
+        try:
+            pref = getattr(user, 'notification_preference', None)
+        except Exception:
+            pref = None
+        if pref is None:
+            try:
+                from .models import NotificationPreference
+                pref = NotificationPreference.objects.filter(user=user).first()
+            except Exception:
+                pref = None
+        if pref is None:
+            return True, True, []
+        return pref.email_enabled, pref.in_app_enabled, (pref.muted_types or [])
+
+    @staticmethod
     def notify(user, type: str, title: str, message: str, data: dict = None):
-        """Send a notification to a single user."""
-        return Notification.objects.create(
+        """Send a notification to a single user.
+
+        This is the single creation funnel: it respects the user's in-app
+        preference, publishes a real-time SSE event, and returns the created
+        Notification (or None when muted).
+        """
+        if not user:
+            return None
+        _, in_app_enabled, muted_types = NotificationService._preference(user)
+        if not in_app_enabled or type in muted_types:
+            return None
+        notif = Notification.objects.create(
             user=user,
             type=type,
             title=title,
             message=message,
             data=data or {},
         )
+        publish_user_event(
+            str(user.id),
+            {
+                'id': str(notif.id),
+                'type': notif.type,
+                'title': notif.title,
+                'message': notif.message,
+                'data': notif.data,
+                'created_at': notif.created_at.isoformat(),
+            },
+        )
+        return notif
 
     @staticmethod
     def notify_role(role: str, type: str, title: str, message: str, data: dict = None):
@@ -30,7 +118,9 @@ class NotificationService:
         users = User.objects.filter(role=role, status='active', is_active=True)
         notifications = []
         for user in users:
-            notifications.append(NotificationService.notify(user, type, title, message, data))
+            n = NotificationService.notify(user, type, title, message, data)
+            if n is not None:
+                notifications.append(n)
         return notifications
 
     @staticmethod
@@ -39,33 +129,43 @@ class NotificationService:
         users = User.objects.filter(role__in=roles, status='active', is_active=True)
         notifications = []
         for user in users:
-            notifications.append(NotificationService.notify(user, type, title, message, data))
+            n = NotificationService.notify(user, type, title, message, data)
+            if n is not None:
+                notifications.append(n)
         return notifications
 
     @staticmethod
     def send_email_notification(user, subject, message):
-        """Send an email notification to a user."""
-        if not user.email:
+        """Queue an email notification to a user (respects email preference)."""
+        if not user or not user.email:
+            return
+        email_enabled, _, muted_types = NotificationService._preference(user)
+        if not email_enabled:
             return
         try:
-            html_message = render_to_string('emails/notification.html', {
-                'subject': subject,
-                'message': message,
-            })
-            text_message = render_to_string('emails/notification.txt', {
-                'subject': subject,
-                'message': message,
-            })
-            send_mail(
-                subject=subject,
-                message=text_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                html_message=html_message,
-                fail_silently=True,
-            )
+            from .tasks import send_email_notification_task
+            send_email_notification_task.delay(str(user.id), subject, message)
         except Exception:
-            pass  # Email failures should not break the app
+            # Fallback to synchronous send if Celery broker is unavailable
+            try:
+                html_message = render_to_string('emails/notification.html', {
+                    'subject': subject,
+                    'message': message,
+                })
+                text_message = render_to_string('emails/notification.txt', {
+                    'subject': subject,
+                    'message': message,
+                })
+                send_mail(
+                    subject=subject,
+                    message=text_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    html_message=html_message,
+                    fail_silently=True,
+                )
+            except Exception:
+                pass  # Email failures should not break the app
 
     # ── Pre-built event triggers ──────────────────────────
 
