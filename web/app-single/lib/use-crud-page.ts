@@ -117,6 +117,9 @@ export interface CrudPageConfig<T> {
   allowEdit?: boolean;
   allowDelete?: boolean;
   pageSize?: number;
+
+  /** Optional extra controls rendered in the header next to the create button. */
+  toolbarActions?: React.ReactNode;
 }
 
 export interface CrudPending<V> {

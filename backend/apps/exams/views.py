@@ -25,6 +25,7 @@ from .serializers import (
     CertificateSerializer, StudentCompetencySerializer,
 )
 from .services import AutoGradingService, CertificateService
+from .bulk_import import import_questions, generate_template
 
 
 class QuestionBankViewSet(viewsets.ModelViewSet):
@@ -38,6 +39,29 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ('system_admin', 'chief_ground_instructor', 'chief_flight_instructor'):
             return QuestionWithAnswerSerializer
         return QuestionSerializer
+
+    @action(detail=False, methods=['get'], url_path='template')
+    def template(self, request):
+        from django.http import HttpResponse
+        fmt = request.query_params.get('fmt', 'csv')
+        if fmt == 'xlsx':
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            filename = 'question_bank_template.xlsx'
+        else:
+            content_type = 'text/csv'
+            filename = 'question_bank_template.csv'
+        response = HttpResponse(generate_template(fmt), content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_bank(self, request):
+        upload = request.FILES.get('file')
+        if upload is None:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+        result = import_questions(upload)
+        code = status.HTTP_201_CREATED if result['created'] else status.HTTP_400_BAD_REQUEST
+        return Response(result, status=code)
 
 
 class ExamViewSet(viewsets.ModelViewSet):

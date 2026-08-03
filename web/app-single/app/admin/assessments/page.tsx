@@ -6,6 +6,7 @@ import { HubCrud } from "@/components/hub-crud";
 import { api } from "@/lib/api";
 import { fmtLabel, formatDate, PROGRAMS, EXAM_TYPES, EXAM_STATUSES, TYPE_COLORS, STATUS_COLORS } from "@/lib/format-utils";
 import { QUESTION_TYPES, DIFFICULTIES } from "@/components/question-form-fields";
+import { QuestionBankImport } from "@/components/question-bank-import";
 
 const TABS: HubTab[] = [
   { id: "bank", label: "Question Bank", icon: HelpCircle },
@@ -57,6 +58,7 @@ function QuestionBankTab() {
       createTitle="New Question"
       editTitle="Edit Question"
       createLabel="+ New Question"
+      toolbarActions={<QuestionBankImport queryKey={["admin-question-bank"]} />}
       searchPlaceholder="Search question or answer..."
       searchFields={["question_text", "correct_answer"]}
       filterFields={[

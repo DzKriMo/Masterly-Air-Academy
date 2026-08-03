@@ -278,14 +278,17 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
             </p>
           )}
         </div>
-        {allowCreate && (
-          <button
-            onClick={crud.openCreate}
-            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400"
-          >
-            {config.createLabel ?? "+ New"}
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {config.toolbarActions}
+          {allowCreate && (
+            <button
+              onClick={crud.openCreate}
+              className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400"
+            >
+              {config.createLabel ?? "+ New"}
+            </button>
+          )}
+        </div>
       </div>
 
       {crud.error && (
