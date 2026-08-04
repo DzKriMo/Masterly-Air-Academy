@@ -5,6 +5,7 @@ from .models import (
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
     Simulator, SimulatorSession, FlightExercise, FlightLogEntry,
 )
+from apps.students.models import Student
 
 
 class FlightProgramSerializer(serializers.ModelSerializer):
@@ -248,6 +249,7 @@ class FlightLogEntrySerializer(serializers.ModelSerializer):
     student_number = serializers.CharField(source='student.student_number', read_only=True)
     aircraft_reg = serializers.CharField(source='aircraft.registration', read_only=True, default=None)
     validated_by_name = serializers.SerializerMethodField()
+    student = serializers.PrimaryKeyRelatedField(queryset=Student.objects.all(), required=False)
 
     class Meta:
         model = FlightLogEntry
@@ -260,7 +262,7 @@ class FlightLogEntrySerializer(serializers.ModelSerializer):
             'validated_at', 'rejection_reason',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['student', 'validated_by', 'validated_at', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['validated_by', 'validated_at', 'status', 'created_at', 'updated_at']
 
     def get_validated_by_name(self, obj):
         if obj.validated_by:

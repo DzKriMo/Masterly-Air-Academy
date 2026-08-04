@@ -449,9 +449,16 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        from apps.students.models import Student
-        student = Student.objects.get(user=user)
-        serializer.save(student=student)
+        if user.role == 'student':
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=user)
+            except Student.DoesNotExist:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({'detail': 'Student profile not found.'})
+            serializer.save(student=student)
+        else:
+            serializer.save()
 
     def perform_destroy(self, instance):
         user = self.request.user
