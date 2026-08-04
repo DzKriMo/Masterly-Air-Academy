@@ -206,6 +206,38 @@ class InstructorAvailability(models.Model):
         return f'{self.instructor.last_name} - {days[self.day_of_week]}'
 
 
+class ExerciseCategory(models.TextChoices):
+    MANEUVER = 'maneuver', 'Maneuver'
+    PROCEDURE = 'procedure', 'Procedure'
+    EMERGENCY = 'emergency', 'Emergency'
+    NAVIGATION = 'navigation', 'Navigation'
+    OTHER = 'other', 'Other'
+
+
+class FlightExercise(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=20, unique=True)
+    title = models.CharField(max_length=255)
+    title_ar = models.CharField(max_length=255, blank=True, null=True)
+    title_fr = models.CharField(max_length=255, blank=True, null=True)
+    category = models.CharField(max_length=30, choices=ExerciseCategory.choices, default=ExerciseCategory.OTHER)
+    description = models.TextField(blank=True, null=True)
+    program = models.CharField(max_length=10, choices=TrainingProgram.choices, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'flight_exercises'
+        verbose_name = 'Flight Exercise'
+        verbose_name_plural = 'Flight Exercises'
+        ordering = ['category', 'order', 'code']
+
+    def __str__(self):
+        return f'{self.code} - {self.title}'
+
+
 class Simulator(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)

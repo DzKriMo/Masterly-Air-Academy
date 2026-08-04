@@ -8,7 +8,7 @@ from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
     FlightProgram, FlightLessonTemplate,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
-    Simulator, SimulatorSession,
+    Simulator, SimulatorSession, FlightExercise,
 )
 from .serializers import (
     AircraftSerializer, AircraftListSerializer,
@@ -18,6 +18,7 @@ from .serializers import (
     ResourceBookingSerializer, InstructorAvailabilitySerializer,
     MaintenanceRecordSerializer,
     SimulatorSerializer, SimulatorSessionSerializer,
+    FlightExerciseSerializer,
 )
 from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
@@ -81,7 +82,17 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
             except FlightInstructor.DoesNotExist:
                 return qs.none()
         if self.request.user.role == 'chief_flight_instructor':
-            return qs
+        return qs
+
+
+class FlightExerciseViewSet(viewsets.ModelViewSet):
+    queryset = FlightExercise.objects.all()
+    serializer_class = FlightExerciseSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['category', 'program', 'is_active']
+    search_fields = ['code', 'title']
+    ordering_fields = ['category', 'order', 'code']
         return qs
 
     def get_serializer_class(self):

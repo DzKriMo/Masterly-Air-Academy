@@ -15,6 +15,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
+import { ExerciseChipSelector } from "@/components/exercise-chip-selector";
 
 interface ProgressCheck {
   id: string; student: string; student_name: string;
@@ -60,7 +61,7 @@ export default function ProgressChecksPage() {
   const [showValidateForm, setShowValidateForm] = useState(false);
   const [validateCheck, setValidateCheck] = useState<ProgressCheck | null>(null);
   const [validateForm, setValidateForm] = useState({
-    result: "", observations: "", lessons_to_repeat: "",
+    result: "", observations: "", lessons_to_repeat: [] as string[],
   });
   const [validating, setValidating] = useState(false);
 
@@ -117,7 +118,7 @@ export default function ProgressChecksPage() {
 
   const openValidate = (check: ProgressCheck) => {
     setValidateCheck(check);
-    setValidateForm({ result: "", observations: "", lessons_to_repeat: "" });
+    setValidateForm({ result: "", observations: "", lessons_to_repeat: [] });
     setShowValidateForm(true);
   };
 
@@ -128,8 +129,8 @@ export default function ProgressChecksPage() {
       const body: any = {};
       if (validateForm.result) body.result = validateForm.result;
       if (validateForm.observations) body.observations = validateForm.observations;
-      if (validateForm.lessons_to_repeat) {
-        body.lessons_to_repeat = validateForm.lessons_to_repeat.split(",").map(s => s.trim()).filter(Boolean);
+      if (validateForm.lessons_to_repeat.length > 0) {
+        body.lessons_to_repeat = validateForm.lessons_to_repeat;
       }
       await api.post(`/progress-checks/${validateCheck.id}/validate/`, body);
       setShowValidateForm(false);
@@ -292,11 +293,8 @@ export default function ProgressChecksPage() {
                   className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t("instructor.lessonsToRepeat", "Lessons to Repeat (comma separated)")}</label>
-                <input value={validateForm.lessons_to_repeat}
-                  onChange={e => setValidateForm({...validateForm, lessons_to_repeat: e.target.value})}
-                  placeholder={t("instructor.lessonsPlaceholder", "e.g. Steep turns, Emergency procedures")}
-                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                <label className="block text-sm text-gray-400 mb-1">{t("instructor.lessonsToRepeat", "Lessons to Repeat")}</label>
+                <ExerciseChipSelector selected={validateForm.lessons_to_repeat} onChange={(vals) => setValidateForm({...validateForm, lessons_to_repeat: vals})} placeholder={t("instructor.lessonsPlaceholder", "Select or type lessons...")} />
               </div>
             </div>
           </form>

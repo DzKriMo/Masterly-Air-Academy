@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { ErrorCard } from "@/components/error-card";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ExerciseChipSelector } from "@/components/exercise-chip-selector";
 
 export default function EvaluateFlightPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -20,10 +21,11 @@ export default function EvaluateFlightPage() {
   const { t } = useTranslation();
 
   const [form, setForm] = useState({
-    flight_duration: "", exercises_completed: "", competencies_acquired: "",
+    flight_duration: "", competencies_acquired: [] as string[],
     difficulties: "", observations: "", recommendations: "", grade: "", result: "", pedagogical_note: "",
     departure_time: "", arrival_time: "", signed_by_instructor: false,
   });
+  const [exercises, setExercises] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [grade, setGrade] = useState(0);
@@ -41,8 +43,7 @@ export default function EvaluateFlightPage() {
         ...form,
         flight_duration: parseFloat(form.flight_duration),
         grade: parseFloat(form.grade),
-        exercises_completed: form.exercises_completed.split(",").map(s => s.trim()).filter(Boolean),
-        competencies_acquired: form.competencies_acquired.split(",").map(s => s.trim()).filter(Boolean),
+        exercises_completed: exercises,
       };
       // Only include departure/arrival if provided
       if (!body.departure_time) delete body.departure_time;
@@ -97,9 +98,9 @@ export default function EvaluateFlightPage() {
             <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.arrivalTime", "Arrival Time")}</label><input type="datetime-local" value={form.arrival_time} onChange={e => setForm({...form, arrival_time: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.exercisesCompleted", "Exercises Completed (comma separated)")}</label><input value={form.exercises_completed} onChange={e => setForm({...form, exercises_completed: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" placeholder={t("instructor.exercisesPlaceholder", "e.g. Takeoff, Landing, Steep turns")} /></div>
-            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.competenciesAcquired", "Competencies Acquired")}</label><input value={form.competencies_acquired} onChange={e => setForm({...form, competencies_acquired: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" placeholder={t("instructor.competenciesPlaceholder", "e.g. Radio communication, Crosswind landing")} /></div>
+          <div className="grid grid-cols-1 gap-4">
+            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.exercisesCompleted", "Exercises Completed")}</label><ExerciseChipSelector selected={exercises} onChange={setExercises} placeholder={t("instructor.exercisesPlaceholder", "Select or type exercises...")} /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.competenciesAcquired", "Competencies Acquired")}</label><ExerciseChipSelector selected={form.competencies_acquired} onChange={(vals) => setForm({...form, competencies_acquired: vals})} placeholder={t("instructor.competenciesPlaceholder", "Select or type competencies...")} /></div>
           </div>
           <div><label className="block text-sm text-gray-400 mb-1">{t("instructor.difficultiesEncountered", "Difficulties Encountered")}</label><textarea value={form.difficulties} onChange={e => setForm({...form, difficulties: e.target.value})} rows={2} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white" /></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

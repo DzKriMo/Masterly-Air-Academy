@@ -472,6 +472,7 @@ class SkillTestViewSet(viewsets.ModelViewSet):
         skill_test.report_url = request.data.get('report_url', skill_test.report_url)
         skill_test.observations = request.data.get('observations', skill_test.observations)
         skill_test.recommendations = request.data.get('recommendations', skill_test.recommendations)
+        skill_test.exercises = request.data.get('exercises', skill_test.exercises)
         skill_test.save()
 
         # If passed, auto-issue certificate

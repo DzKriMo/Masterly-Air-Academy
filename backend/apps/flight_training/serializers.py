@@ -3,7 +3,7 @@ from .models import (
     FlightProgram, FlightLessonTemplate, Aircraft,
     FlightLesson, FlightPreparation, FlightStatus,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
-    Simulator, SimulatorSession,
+    Simulator, SimulatorSession, FlightExercise,
 )
 
 
@@ -231,3 +231,13 @@ class SimulatorSessionSerializer(serializers.ModelSerializer):
 
     def get_instructor_name(self, obj):
         return f'{obj.instructor.first_name} {obj.instructor.last_name}'
+
+
+class FlightExerciseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlightExercise
+        fields = [
+            'id', 'code', 'title', 'title_ar', 'title_fr',
+            'category', 'description', 'program',
+            'is_active', 'order', 'created_at', 'updated_at',
+        ]

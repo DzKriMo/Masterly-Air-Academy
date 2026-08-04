@@ -15,6 +15,7 @@ import { FilterBar, FilterOption } from "@/components/filter-bar";
 import { ModalForm } from "@/components/modal-form";
 import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
+import { ExerciseChipSelector } from "@/components/exercise-chip-selector";
 
 interface SkillTest {
   id: string; student: string; student_name: string;
@@ -23,6 +24,7 @@ interface SkillTest {
   scheduled_date: string; completed_date: string | null;
   result: string | null; report_url: string | null;
   observations: string | null; recommendations: string | null;
+  exercises: string[];
   status: string;
 }
 
@@ -59,7 +61,7 @@ export default function SkillTestsPage() {
   const [showCompleteForm, setShowCompleteForm] = useState(false);
   const [completeTest, setCompleteTest] = useState<SkillTest | null>(null);
   const [completeForm, setCompleteForm] = useState({
-    result: "", observations: "", recommendations: "", report_url: "",
+    result: "", observations: "", recommendations: "", report_url: "", exercises: [] as string[],
   });
   const [completing, setCompleting] = useState(false);
 
@@ -115,7 +117,7 @@ export default function SkillTestsPage() {
 
   const openComplete = (test: SkillTest) => {
     setCompleteTest(test);
-    setCompleteForm({ result: "", observations: "", recommendations: "", report_url: "" });
+    setCompleteForm({ result: "", observations: "", recommendations: "", report_url: "", exercises: [] });
     setShowCompleteForm(true);
   };
 
@@ -128,6 +130,7 @@ export default function SkillTestsPage() {
       if (completeForm.observations) body.observations = completeForm.observations;
       if (completeForm.recommendations) body.recommendations = completeForm.recommendations;
       if (completeForm.report_url) body.report_url = completeForm.report_url;
+      if (completeForm.exercises.length > 0) body.exercises = completeForm.exercises;
       await api.post(`/skill-tests/${completeTest.id}/complete/`, body);
       setShowCompleteForm(false);
       setCompleteTest(null);
@@ -273,6 +276,10 @@ export default function SkillTestsPage() {
                   <option value="passed">{t("common.passed", "Passed")}</option>
                   <option value="failed">{t("common.failed", "Failed")}</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t("instructor.exercises", "Exercises")}</label>
+                <ExerciseChipSelector selected={completeForm.exercises} onChange={(vals) => setCompleteForm({...completeForm, exercises: vals})} placeholder={t("instructor.exercisesPlaceholder", "Select or type exercises...")} />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t("common.observations", "Observations")}</label>

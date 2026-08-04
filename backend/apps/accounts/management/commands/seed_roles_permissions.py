@@ -287,6 +287,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self._create_all_permissions()
         self._create_groups_and_assign()
+        self._seed_exercises()
 
     def _create_all_permissions(self):
         """Create all 98 custom permissions as Django Permission objects."""
@@ -360,4 +361,53 @@ class Command(BaseCommand):
                     f'\n{assigned} users assigned to their role groups'
                 )
             )
+
+    def _seed_exercises(self):
+        """Seed standard flight exercises if none exist."""
+        from apps.flight_training.models import FlightExercise
+
+        if FlightExercise.objects.exists():
+            return
+
+        exercises = [
+            ('EX-TKF', 'Takeoff', 'إقلاع', 'Décollage', 'maneuver', None, 1),
+            ('EX-LDG', 'Landing', 'هبوط', 'Atterrissage', 'maneuver', None, 2),
+            ('EX-STP', 'Steep Turns', 'منعطفات حادة', 'Virages serrés', 'maneuver', None, 3),
+            ('EX-STL', 'Slow Flight', 'طيران بطيء', 'Vol lent', 'maneuver', None, 4),
+            ('EX-STL2', 'Stall Recovery', 'استعادة من الانهيار', 'Récupération décrochage', 'emergency', None, 5),
+            ('EX-SPN', 'Spin Awareness', 'الوعي بالدوران', 'Sensibilisation vrille', 'emergency', None, 6),
+            ('EX-ENG', 'Engine Failure', 'عطل المحرك', 'Panne moteur', 'emergency', None, 7),
+            ('EX-FOR', 'Forced Landing', 'هبوط اضطراري', 'Atterrissage forcé', 'emergency', None, 8),
+            ('EX-FIR', 'Fire Drill', 'تمرين حريق', 'Exercice incendie', 'emergency', None, 9),
+            ('EX-PRE', 'Pre-flight Inspection', 'فحص ما قبل الطيران', 'Inspection pré-vol', 'procedure', None, 10),
+            ('EX-CKL', 'Checklist Usage', 'استخدام قائمة الفحص', 'Utilisation checklist', 'procedure', None, 11),
+            ('EX-RDO', 'Radio Communication', 'اتصالات لاسلكية', 'Communications radio', 'procedure', None, 12),
+            ('EX-ATC', 'ATC Procedures', 'إجراءات المراقبة', 'Procédures ATC', 'procedure', None, 13),
+            ('EX-CIR', 'Circuit Patterns', 'أنماط الدوران', 'Circuits piste', 'maneuver', None, 14),
+            ('EX-XWD', 'Crosswind Landing', 'هبوط مع رياح جانبية', 'Atterrissage vent travers', 'maneuver', None, 15),
+            ('EX-GLD', 'Glide Approach', 'اقتراب انزلاقي', 'Approche planée', 'maneuver', None, 16),
+            ('EX-NAV', 'Visual Navigation', 'ملاحة بصرية', 'Navigation visuelle', 'navigation', None, 17),
+            ('EX-IFR', 'IFR Procedures', 'إجراءات الطيران الآلي', 'Procédures IFR', 'navigation', 'IR', 18),
+            ('EX-MEP', 'Asymmetric Flight', 'طيران غير متماثل', 'Vol asymétrique', 'emergency', 'MEP', 19),
+            ('EX-MCC', 'Crew Coordination', 'تنسيق الطاقم', 'Coordination équipage', 'procedure', 'MCC', 20),
+            ('EX-SLO', 'Solo Navigation', 'ملاحة فردية', 'Navigation solo', 'navigation', None, 21),
+            ('EX-NGT', 'Night Flying', 'طيران ليلي', 'Vol de nuit', 'maneuver', None, 22),
+            ('EX-ABR', 'Aborted Takeoff', 'إلغاء الإقلاع', 'Décollage interrompu', 'emergency', None, 23),
+            ('EX-ILS', 'ILS Approach', 'اقتراب ILS', 'Approche ILS', 'navigation', 'IR', 24),
+        ]
+
+        created = 0
+        for code, title, title_ar, title_fr, category, program, order in exercises:
+            FlightExercise.objects.get_or_create(
+                code=code,
+                defaults={
+                    'title': title, 'title_ar': title_ar, 'title_fr': title_fr,
+                    'category': category, 'program': program, 'order': order,
+                },
+            )
+            created += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(f'{created} flight exercises seeded')
+        )
 

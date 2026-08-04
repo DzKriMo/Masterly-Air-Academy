@@ -230,6 +230,7 @@ class SkillTest(models.Model):
     report_url = models.TextField(blank=True, null=True)
     observations = models.TextField(blank=True, null=True)
     recommendations = models.TextField(blank=True, null=True)
+    exercises = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, default='authorized')
     created_at = models.DateTimeField(auto_now_add=True)
 

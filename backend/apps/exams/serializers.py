@@ -37,7 +37,7 @@ class SkillTestSerializer(serializers.ModelSerializer):
             'id', 'student', 'student_name', 'examiner', 'examiner_name',
             'authorized_by', 'authorized_by_name', 'scheduled_date',
             'completed_date', 'result', 'report_url', 'observations',
-            'recommendations', 'status',
+            'recommendations', 'exercises', 'status',
         ]
 
     def get_student_name(self, obj):

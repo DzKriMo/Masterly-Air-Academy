@@ -1,5 +1,5 @@
 "use client";
-import { Map, BookOpen, Plane, ClipboardCheck } from "lucide-react";
+import { Map, BookOpen, Plane, ClipboardCheck, ListChecks } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
 import { fmtLabel, formatDate, formatTime, todayLocal, STATUS_COLORS } from "@/lib/format-utils";
@@ -9,6 +9,7 @@ const TABS: HubTab[] = [
   { id: "templates", label: "Lesson Templates", icon: BookOpen },
   { id: "lessons", label: "Flight Lessons", icon: Plane },
   { id: "preps", label: "Preparations", icon: ClipboardCheck },
+  { id: "exercises", label: "Exercise Bank", icon: ListChecks },
 ];
 
 export default function FlightOpsHubPage() {
@@ -20,6 +21,7 @@ export default function FlightOpsHubPage() {
           {active === "templates" && <TemplatesTab />}
           {active === "lessons" && <LessonsTab />}
           {active === "preps" && <PrepsTab />}
+          {active === "exercises" && <ExercisesTab />}
         </>
       )}
     </HubLayout>
@@ -344,4 +346,86 @@ interface Prep {
   lesson_objectives: string | null;
   briefing_notes: string | null;
   prepared_at: string;
+}
+
+const EXERCISE_CATEGORIES = ["maneuver", "procedure", "emergency", "navigation", "other"];
+const CAT_COLORS: Record<string, string> = {
+  maneuver: "bg-blue-500/10 text-blue-400",
+  procedure: "bg-green-500/10 text-green-400",
+  emergency: "bg-red-500/10 text-red-400",
+  navigation: "bg-purple-500/10 text-purple-400",
+  other: "bg-gray-500/10 text-gray-400",
+};
+
+function ExercisesTab() {
+  return (
+    <HubCrud<FlightExercise>
+      queryKey={["admin-flight-exercises"]}
+      endpoint="/flight-exercises/"
+      titleFallback="Flight Exercise Bank"
+      emptyTitle="No exercises yet"
+      emptyMessage="Define standard flight exercises for evaluations."
+      emptyActionLabel="+ New Exercise"
+      createTitle="New Exercise"
+      editTitle="Edit Exercise"
+      createLabel="+ New Exercise"
+      searchPlaceholder="Search code or title..."
+      searchFields={["code", "title"]}
+      filterFields={[
+        { key: "category", label: "All Categories", options: EXERCISE_CATEGORIES.map(c => ({ value: c, label: fmtLabel(c) })) },
+        { key: "program", label: "All Programs", options: ["", "PPL", "CPL", "IR", "MEP", "MCC"].map(p => ({ value: p, label: p || "All" })) },
+        { key: "is_active", label: "All Status", options: [{ value: "true", label: "Active" }, { value: "false", label: "Inactive" }] },
+      ]}
+      initialCreate={{ code: "", title: "", title_ar: "", title_fr: "", category: "maneuver", description: "", program: "", is_active: true, order: "0" }}
+      buildForm={(e) => ({ code: e.code, title: e.title, title_ar: e.title_ar || "", title_fr: e.title_fr || "", category: e.category, description: e.description || "", program: e.program || "", is_active: e.is_active, order: String(e.order ?? 0) })}
+      buildPayload={(f) => ({
+        code: f.code, title: f.title,
+        title_ar: f.title_ar || null, title_fr: f.title_fr || null,
+        category: f.category, description: f.description || null,
+        program: f.program || null, is_active: f.is_active, order: parseInt(f.order, 10) || 0,
+      })}
+      fields={(mode) => [
+        { name: "code", label: "Code", type: "text", required: true, mono: true, placeholder: "e.g. EX-TKF", span: "half" },
+        { name: "category", label: "Category", type: "select", required: true, options: EXERCISE_CATEGORIES.map(c => ({ value: c, label: fmtLabel(c) })), span: "half" },
+        { name: "title", label: "Title (EN)", type: "text", required: true },
+        { name: "title_fr", label: "Title (FR)", type: "text", span: "half" },
+        { name: "title_ar", label: "Title (AR)", type: "text", span: "half" },
+        { name: "program", label: "Program (leave empty for all)", type: "select", options: ["", "PPL", "CPL", "IR", "MEP", "MCC"].map(p => ({ value: p, label: p || "All Programs" })), span: "half" },
+        { name: "order", label: "Display Order", type: "text", span: "half" },
+        { name: "description", label: "Description", type: "textarea", rows: 2 },
+        { name: "is_active", label: "Active", type: "checkbox" },
+      ]}
+      columns={[
+        { key: "code", header: "Code", render: (e) => <span className="text-sm font-mono font-semibold text-gold-500">{e.code}</span> },
+        { key: "title", header: "Title", render: (e) => <span className="text-sm text-white">{e.title}</span> },
+        { key: "category", header: "Category", render: (e) => <span className={`text-xs px-2 py-0.5 rounded ${CAT_COLORS[e.category] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(e.category)}</span> },
+        { key: "program", header: "Program", render: (e) => <span className="text-sm text-gray-400">{e.program || "All"}</span> },
+        { key: "is_active", header: "Active", render: (e) => <CheckBadge ok={e.is_active} /> },
+      ]}
+      detailTitle="Exercise Details"
+      detailFields={(e) => [
+        { label: "Code", value: e.code },
+        { label: "Title", value: e.title },
+        ...(e.title_fr ? [{ label: "Title (FR)", value: e.title_fr }] : []),
+        ...(e.title_ar ? [{ label: "Title (AR)", value: e.title_ar }] : []),
+        { label: "Category", value: fmtLabel(e.category) },
+        { label: "Program", value: e.program || "All Programs" },
+        { label: "Order", value: String(e.order) },
+        { label: "Active", value: e.is_active ? "Yes" : "No" },
+        ...(e.description ? [{ label: "Description", value: e.description }] : []),
+      ]}
+    />
+  );
+}
+interface FlightExercise {
+  id: string;
+  code: string;
+  title: string;
+  title_ar: string | null;
+  title_fr: string | null;
+  category: string;
+  description: string | null;
+  program: string | null;
+  is_active: boolean;
+  order: number;
 }
