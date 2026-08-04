@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useUnreadCounts } from "@/lib/use-unread-counts";
-import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, File, CreditCard, BarChart, Bell, Clock, Menu, X, Heart, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, CreditCard, BarChart, Bell, Clock, Menu, X, Heart, AlertTriangle, FolderOpen } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/flights", label: t("student.flightLog"), Icon: Plane },
     { href: "/student/courses", label: t("student.myCourses"), Icon: BookOpen },
     { href: "/student/schedule", label: t("student.schedule"), Icon: Calendar },
-    { href: "/student/documents", label: t("student.documents", "Documents"), Icon: File },
+    { href: "/student/library", label: t("student.library", "Library"), Icon: FolderOpen },
     { href: "/student/payments", label: t("student.payments", "Payments"), Icon: CreditCard },
     { href: "/student/results", label: t("student.results", "Results"), Icon: BarChart },
     { href: "/student/safety-report", label: t("student.safetyReport", "Safety Report"), Icon: AlertTriangle },

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { LayoutDashboard, FileText, BarChart3, ScrollText, Bell, MessageSquare, Menu, X } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, ScrollText, Bell, MessageSquare, Menu, X, FolderOpen } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +39,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     { href: "/finance/invoices", label: t("finance.invoices"), Icon: FileText },
     { href: "/finance/contracts", label: t("finance.contracts"), Icon: ScrollText },
     { href: "/finance/reports", label: t("finance.reports"), Icon: BarChart3 },
+    { href: "/finance/library", label: t("finance.library", "Library"), Icon: FolderOpen },
     { href: "/finance/messages", label: t("finance.messages", "Messages"), Icon: MessageSquare, badge: unreadMsgCount },
     { href: "/finance/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];

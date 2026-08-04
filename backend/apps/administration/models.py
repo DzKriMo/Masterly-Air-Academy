@@ -96,6 +96,25 @@ class Contract(models.Model):
         return f'Contract #{self.contract_number}'
 
 
+class LibraryCategory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    icon = models.CharField(max_length=50, blank=True, null=True)
+    color = models.CharField(max_length=20, blank=True, null=True)
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'library_categories'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class Document(models.Model):
     class DocumentStatus(models.TextChoices):
         DRAFT = 'draft', 'Draft'
@@ -108,13 +127,24 @@ class Document(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     student = models.ForeignKey('students.Student', on_delete=models.SET_NULL, null=True, blank=True, related_name='documents')
     name = models.CharField(max_length=255)
+    title_ar = models.CharField(max_length=255, blank=True, null=True)
+    title_fr = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     type = models.CharField(max_length=50, blank=True, null=True)
     category = models.CharField(max_length=50, blank=True, null=True)
+    library_category = models.ForeignKey(LibraryCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='documents')
     file_url = models.CharField(max_length=500)
     mime_type = models.CharField(max_length=100, blank=True, null=True)
     file_size = models.IntegerField(null=True, blank=True)
     version = models.IntegerField(default=1)
+    version_history = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, choices=DocumentStatus.choices, default=DocumentStatus.APPROVED)
+    expiry_date = models.DateTimeField(null=True, blank=True)
+    download_count = models.IntegerField(default=0)
+    is_public = models.BooleanField(default=True)
+    visible_to_roles = models.JSONField(default=list, blank=True)
+    promotions = models.ManyToManyField('students.Promotion', blank=True, related_name='documents')
+    individual_students = models.ManyToManyField('students.Student', blank=True, related_name='library_documents')
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_documents')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -122,6 +152,14 @@ class Document(models.Model):
     class Meta:
         db_table = 'documents'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_public']),
+            models.Index(fields=['expiry_date']),
+        ]
 
     def __str__(self):
         return self.name
+
+    def is_expired(self):
+        from django.utils import timezone
+        return bool(self.expiry_date and self.expiry_date < timezone.now())

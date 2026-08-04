@@ -1,6 +1,6 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
-from .models import Application, Invoice, Payment, Contract, Document
+from .models import Application, Invoice, Payment, Contract, Document, LibraryCategory
 
 
 class PaymentInline(TabularInline):
@@ -88,22 +88,33 @@ class ContractAdmin(ModelAdmin):
 
 @admin.register(Document)
 class DocumentAdmin(ModelAdmin):
-    list_display = ['name', 'type', 'category', 'version', 'status', 'created_at']
-    list_filter = ['type', 'category', 'status']
-    search_fields = ['name']
-    autocomplete_fields = ['user', 'student', 'uploaded_by']
+    list_display = ['name', 'type', 'library_category', 'version', 'status', 'is_public', 'created_at']
+    list_filter = ['type', 'library_category', 'status', 'is_public']
+    search_fields = ['name', 'description']
+    autocomplete_fields = ['user', 'student', 'uploaded_by', 'promotions', 'individual_students']
     date_hierarchy = 'created_at'
     fieldsets = (
         (None, {
-            'fields': ('name', 'type', 'category', 'status'),
+            'fields': ('name', 'title_ar', 'title_fr', 'description', 'type', 'library_category', 'status'),
         }),
         ('File', {
             'fields': ('file_url', 'mime_type', 'file_size'),
         }),
+        ('Visibility', {
+            'fields': ('is_public', 'visible_to_roles', 'promotions', 'individual_students', 'expiry_date'),
+        }),
         ('Versioning', {
-            'fields': ('version',),
+            'fields': ('version', 'version_history'),
         }),
         ('Ownership', {
             'fields': ('user', 'student', 'uploaded_by'),
         }),
     )
+
+
+@admin.register(LibraryCategory)
+class LibraryCategoryAdmin(ModelAdmin):
+    list_display = ['name', 'icon', 'color', 'sort_order', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name', 'description']
+    list_editable = ['sort_order', 'is_active']

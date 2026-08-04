@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
-import { LayoutDashboard, Search, AlertTriangle, ClipboardList, ShieldAlert, Shield, FileText, Bell, MessageSquare, Menu, X } from "lucide-react";
+import { LayoutDashboard, Search, AlertTriangle, ClipboardList, ShieldAlert, Shield, Bell, MessageSquare, Menu, X, FolderOpen } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function QualityLayout({ children }: { children: React.ReactNode }) {
@@ -49,7 +49,7 @@ export default function QualityLayout({ children }: { children: React.ReactNode 
     { href: "/quality/capas", label: t("quality.capas"), Icon: ClipboardList },
     { href: "/quality/risks", label: t("quality.riskAssessments"), Icon: ShieldAlert },
     { href: "/quality/safety", label: t("quality.safetyEvents"), Icon: Shield },
-    { href: "/quality/documents", label: t("quality.documents"), Icon: FileText },
+    { href: "/quality/library", label: t("quality.library", "Library"), Icon: FolderOpen },
     { href: "/quality/messages", label: t("quality.messages", "Messages"), Icon: MessageSquare, badge: unreadMsgCount },
     { href: "/quality/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];

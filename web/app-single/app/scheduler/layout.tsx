@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useUnreadCounts } from "@/lib/use-unread-counts";
 import {
-  LayoutDashboard, CalendarDays, PlaneTakeoff, Users, Menu, Bell, Mail,
+  LayoutDashboard, CalendarDays, PlaneTakeoff, Users, Menu, Bell, Mail, FolderOpen,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -23,6 +23,7 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
     { href: "/scheduler/availability", label: t("scheduler.availability"), Icon: Users },
     { href: "/scheduler/bookings", label: t("scheduler.bookings"), Icon: CalendarDays },
     { href: "/scheduler/aircraft", label: t("scheduler.aircraft"), Icon: PlaneTakeoff },
+    { href: "/scheduler/library", label: t("scheduler.library", "Library"), Icon: FolderOpen },
     { href: "/scheduler/notifications", label: t("scheduler.notifications", "Notifications"), Icon: Bell, badge: unread.notifications },
     { href: "/scheduler/messages", label: t("scheduler.messages", "Messages"), Icon: Mail, badge: unread.messages },
   ];

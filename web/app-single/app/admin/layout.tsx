@@ -174,7 +174,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       Icon: Settings,
       items: [
         { href: "/admin/reports", label: t("admin.reports", "Reports"), Icon: BarChart3 },
-        { href: "/admin/documents", label: t("admin.documents", "Documents"), Icon: File },
+        { href: "/admin/library", label: t("admin.library", "Library"), Icon: FolderOpen },
         { href: "/admin/audit-logs", label: t("admin.auditLogs", "Audit Logs"), Icon: ScrollText },
         { href: "/admin/settings", label: t("admin.settings", "Settings"), Icon: Settings },
       ],
@@ -202,7 +202,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         "/admin/students", "/admin/promotions", "/admin/instructors", "/admin/applications",
         "/admin/certificates", "/admin/medical-certificates",
       ]);
-      const SYSTEM_KEEP = new Set(["/admin/reports", "/admin/documents"]);
+      const SYSTEM_KEEP = new Set(["/admin/reports", "/admin/library"]);
       const HIDE_SECTIONS = new Set(["quality-safety", "finance"]);
       sections = sections
         .filter(s => !HIDE_SECTIONS.has(s.id))

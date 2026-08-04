@@ -242,6 +242,7 @@ ROLE_DEFINITIONS = {
             'students': ['view'],
             'ground_training': ['view'], 'flight_training': ['view'],
             'academic_years': ['view'], 'promotions': ['view'],
+            'documents': ['view'],
             'notifications': ['view', 'broadcast'],
         },
     },

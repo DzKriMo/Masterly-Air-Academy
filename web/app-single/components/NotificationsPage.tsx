@@ -564,7 +564,7 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
     if (d.invoice_id) return `/student/invoices`;
     if (d.certificate_id) return `/student/certificates`;
     if (d.ncr_id || d.capa_id || d.audit_id || d.doc_id || d.event_id) return `/student/quality`;
-    if (d.contract_id) return `/student/documents`;
+    if (d.contract_id) return `/student/library`;
     if (d.payment_id) return `/student/payments`;
     return null;
   };

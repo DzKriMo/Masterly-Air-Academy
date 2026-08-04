@@ -8,7 +8,7 @@ import { useUnreadCounts } from "@/lib/use-unread-counts";
 import {
   LayoutDashboard, CalendarDays, PlaneTakeoff, BookOpen, FileText,
   Users, MessageSquare, ClipboardCheck, Target, ClipboardList,
-  Menu, BarChart3, GitBranch, DoorOpen, Clock, Bell,
+  Menu, BarChart3, GitBranch, DoorOpen, Clock, Bell, FolderOpen,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -22,10 +22,10 @@ const ROLE_LABELS: Record<Role, { label: string; color: string; portal: string }
 };
 
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
-  flight_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications"],
-  ground_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications"],
-  chief_flight_instructor: ["/instructor/cfi-dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/instructor-management", "/instructor/flight-programs", "/instructor/student-progress"],
-  chief_ground_instructor: ["/instructor/cgi-dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/progression-overview", "/instructor/reports", "/instructor/subject-management"],
+  flight_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/library"],
+  ground_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/library"],
+  chief_flight_instructor: ["/instructor/cfi-dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/instructor-management", "/instructor/flight-programs", "/instructor/student-progress", "/instructor/library"],
+  chief_ground_instructor: ["/instructor/cgi-dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/progression-overview", "/instructor/reports", "/instructor/subject-management", "/instructor/library"],
 };
 
 export default function InstructorLayout({ children }: { children: React.ReactNode }) {
@@ -48,6 +48,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
   const NAV = useMemo(() => {
     const items: { href: string; label: string; Icon: any; badge?: number }[] = [
       { href: dashboardHref, label: t("instructor.dashboard"), Icon: LayoutDashboard },
+      { href: "/instructor/library", label: t("instructor.library", "Library"), Icon: FolderOpen },
     ];
 
     if (isFI || isCFI) {

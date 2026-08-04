@@ -1,16 +1,23 @@
 import uuid
 from rest_framework import viewsets, status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Count, Q
+from apps.accounts.authentication import QueryTokenAuthentication
 from apps.accounts.permissions import HasRolePermission
-from apps.students.models import Student
+from apps.students.models import Student, Promotion
 from apps.exams.pdf import generate_invoice_pdf as _inv_pdf
-from .models import Application, Invoice, Payment, Contract, Document
-from .serializers import ApplicationSerializer, InvoiceSerializer, PaymentSerializer, DocumentSerializer, ContractSerializer
+from .models import Application, Invoice, Payment, Contract, Document, LibraryCategory
+from .serializers import (
+    ApplicationSerializer, InvoiceSerializer, PaymentSerializer,
+    DocumentSerializer, ContractSerializer, LibraryCategorySerializer,
+)
 
 
 def refresh_invoice_status(invoice):
@@ -284,19 +291,98 @@ class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'documents.view'
-    filterset_fields = ['type', 'category', 'status']
-    search_fields = ['name']
+    authentication_classes = [
+        QueryTokenAuthentication,
+        SessionAuthentication,
+        JWTAuthentication,
+    ]
+    filterset_fields = ['type', 'category', 'status', 'library_category']
+    search_fields = ['name', 'description']
+
+    @staticmethod
+    def _can_manage(user):
+        """Library managers: system_admin, training_admin, admin_responsible,
+        admissions_responsible (via documents.manage) and anyone holding manage."""
+        if user.role == 'system_admin' or user.is_superuser:
+            return True
+        if user.role in ('training_admin', 'admin_responsible', 'admissions_responsible'):
+            return True
+        perms = user.get_all_permissions()
+        return any(
+            p.endswith('.documents.manage') or p.endswith('.documents.create')
+            for p in perms
+        )
+
+    def _visible_queryset(self, qs):
+        """Restrict documents to those visible to the requesting user.
+
+        Library items are visible when public, or when the user's role is in
+        visible_to_roles, or (for students) their promotion / individual
+        targeting matches. Expired documents are hidden from non-managers.
+        Managers see everything.
+        """
+        user = self.request.user
+        if self._can_manage(user):
+            return qs
+
+        student = getattr(user, 'student_profile', None)
+
+        def _matches(doc):
+            if doc.is_public:
+                return True
+            if user.role in (doc.visible_to_roles or []):
+                return True
+            if student is not None:
+                promo_ids = [p.id for p in doc.promotions.all()]
+                if student.promotion_id and student.promotion_id in promo_ids:
+                    return True
+                stu_ids = [s.id for s in doc.individual_students.all()]
+                if student.id in stu_ids:
+                    return True
+                if doc.student_id == student.id:
+                    return True
+            return False
+
+        now = timezone.now()
+        visible = [
+            d.id for d in qs
+            if _matches(d) and (d.expiry_date is None or d.expiry_date >= now)
+        ]
+        return qs.filter(id__in=visible)
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.user.role == 'student':
-            from apps.students.models import Student
-            try:
-                student = Student.objects.get(user=self.request.user)
-                return qs.filter(student=student)
-            except Student.DoesNotExist:
-                return qs.none()
-        return qs
+        qs = Document.objects.annotate(
+            _view_count=Count('individual_students', distinct=True)
+        ).select_related('library_category', 'uploaded_by').prefetch_related('promotions', 'individual_students')
+        return self._visible_queryset(qs)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    @action(detail=False, methods=['get'])
+    def categories(self, request):
+        qs = LibraryCategory.objects.annotate(
+            document_count=Count('documents', distinct=True)
+        ).filter(is_active=True)
+        serializer = LibraryCategorySerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def create_category(self, request):
+        if not self._can_manage(request.user):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = LibraryCategorySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.save()
+        return Response(LibraryCategorySerializer(category).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -306,10 +392,59 @@ class DocumentViewSet(viewsets.ModelViewSet):
         try:
             f = default_storage.open(doc.file_url, 'rb')
             response = StreamingHttpResponse(f, content_type=doc.mime_type or 'application/octet-stream')
-            response['Content-Disposition'] = f'inline; filename="{doc.name}"'
+            safe_name = doc.name.replace('"', '')
+            response['Content-Disposition'] = f'inline; filename="{safe_name}"'
+            Document.objects.filter(id=doc.id).update(download_count=doc.download_count + 1)
             return response
         except Exception:
             return Response({'error': 'File not found'}, status=404)
+
+    @action(detail=True, methods=['get'], url_path='stream')
+    def stream(self, request, pk=None):
+        """Stream a media file (video/image/pdf) so it plays/previews in-browser."""
+        doc = self.get_object()
+        from apps.ground_training.views import _stream_from_storage
+        inline = (doc.mime_type or '').startswith(('video/', 'image/', 'application/pdf'))
+        response = _stream_from_storage(
+            doc.file_url,
+            content_type=doc.mime_type or 'application/octet-stream',
+            filename=doc.name.replace('"', ''),
+            inline=inline,
+        )
+        if response is None:
+            return Response({'error': 'File not found'}, status=404)
+        return response
+
+    @action(detail=True, methods=['post'])
+    def reupload(self, request, pk=None):
+        """Replace the file for an existing document, bumping the version."""
+        if not self._can_manage(request.user):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        doc = self.get_object()
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+
+        from apps.ground_training.views import _store_upload
+        path = _store_upload('library', file)
+
+        history = list(doc.version_history or [])
+        history.append({
+            'version': doc.version,
+            'file_url': doc.file_url,
+            'file_size': doc.file_size,
+            'mime_type': doc.mime_type,
+            'uploaded_by': str(doc.uploaded_by_id) if doc.uploaded_by_id else None,
+            'created_at': doc.updated_at.isoformat() if doc.updated_at else None,
+        })
+        doc.file_url = path
+        doc.file_size = file.size
+        doc.mime_type = file.content_type
+        doc.version = (doc.version or 1) + 1
+        doc.version_history = history
+        doc.uploaded_by = request.user
+        doc.save()
+        return Response(DocumentSerializer(doc, context=self.get_serializer_context()).data)
 
     @action(detail=False, methods=['post'])
     def upload(self, request):
@@ -317,6 +452,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({'error': 'No file provided'}, status=400)
 
+        # Students may only upload personal documents for themselves; all
+        # library (shared) uploads require manager permission.
         student_id = request.data.get('student_id')
         if request.user.role == 'student':
             from apps.students.models import Student
@@ -328,19 +465,64 @@ class DocumentViewSet(viewsets.ModelViewSet):
             except Student.DoesNotExist:
                 return Response({'error': 'Student profile not found'}, status=400)
 
-        from django.core.files.storage import default_storage
-        path = default_storage.save(f'documents/{file.name}', file)
+        if not student_id and not self._can_manage(request.user):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.ground_training.views import _store_upload
+        path = _store_upload('library', file)
+
+        category = None
+        category_id = request.data.get('library_category') or request.data.get('category_id')
+        if category_id:
+            category = LibraryCategory.objects.filter(id=category_id).first()
+        elif request.data.get('new_category'):
+            category, _ = LibraryCategory.objects.get_or_create(
+                name=request.data['new_category'],
+                defaults={'description': request.data.get('category_description', '')},
+            )
+
+        # Parse multi-value fields
+        def parse_list(key):
+            raw = request.data.get(key)
+            if raw is None:
+                return []
+            if isinstance(raw, (list, tuple)):
+                return [v for v in raw if v]
+            return [v.strip() for v in str(raw).split(',') if v.strip()]
+
+        role_values = parse_list('visible_to_roles')
+        promotion_ids = parse_list('promotions')
+        student_ids = parse_list('individual_students')
+
+        expiry_raw = request.data.get('expiry_date')
+        expiry = None
+        if expiry_raw:
+            try:
+                expiry = timezone.datetime.fromisoformat(str(expiry_raw).replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                expiry = None
+
         doc = Document.objects.create(
             name=request.data.get('name', file.name),
+            title_ar=request.data.get('title_ar') or None,
+            title_fr=request.data.get('title_fr') or None,
+            description=request.data.get('description') or None,
             file_url=path,
             type=request.data.get('type', 'other'),
-            category=request.data.get('category', 'general'),
+            library_category=category,
             mime_type=file.content_type,
             file_size=file.size,
             uploaded_by=request.user,
             student_id=student_id or None,
+            is_public=request.data.get('is_public', 'true') not in ('false', 'False', '0'),
+            visible_to_roles=role_values,
+            expiry_date=expiry,
         )
-        return Response(DocumentSerializer(doc).data, status=201)
+        if promotion_ids:
+            doc.promotions.set(Promotion.objects.filter(id__in=promotion_ids))
+        if student_ids:
+            doc.individual_students.set(Student.objects.filter(id__in=student_ids))
+        return Response(DocumentSerializer(doc, context=self.get_serializer_context()).data, status=201)
 
 
 class ContractViewSet(viewsets.ModelViewSet):
