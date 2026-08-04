@@ -81,28 +81,8 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
                 return qs.filter(instructor=fi)
             except FlightInstructor.DoesNotExist:
                 return qs.none()
-        return qs
-
-
-class FlightExerciseViewSet(viewsets.ModelViewSet):
-    queryset = FlightExercise.objects.all()
-    serializer_class = FlightExerciseSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'flight_training.view'
-    filterset_fields = ['category', 'program', 'is_active']
-    search_fields = ['code', 'title']
-    ordering_fields = ['category', 'order', 'code']
-
-
-class FlightExerciseViewSet(viewsets.ModelViewSet):
-    queryset = FlightExercise.objects.all()
-    serializer_class = FlightExerciseSerializer
-    permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'flight_training.view'
-    filterset_fields = ['category', 'program', 'is_active']
-    search_fields = ['code', 'title']
-    ordering_fields = ['category', 'order', 'code']
-        return qs
+        if self.request.user.role == 'chief_flight_instructor':
+            return qs
         return qs
 
     def get_serializer_class(self):
@@ -273,10 +253,20 @@ class FlightPreparationViewSet(viewsets.ModelViewSet):
             from apps.students.models import FlightInstructor
             try:
                 fi = FlightInstructor.objects.get(user=self.request.user)
-                return qs.filter(flight_lesson__instructor=fi)
+                return qs.filter(instructor=fi)
             except FlightInstructor.DoesNotExist:
                 return qs.none()
         return qs
+
+
+class FlightExerciseViewSet(viewsets.ModelViewSet):
+    queryset = FlightExercise.objects.all()
+    serializer_class = FlightExerciseSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['category', 'program', 'is_active']
+    search_fields = ['code', 'title']
+    ordering_fields = ['category', 'order', 'code']
 
 
 class ResourceBookingViewSet(viewsets.ModelViewSet):
@@ -413,3 +403,4 @@ class FlightExerciseViewSet(viewsets.ModelViewSet):
     filterset_fields = ['category', 'program', 'is_active']
     search_fields = ['code', 'title']
     ordering_fields = ['category', 'order', 'code']
+
