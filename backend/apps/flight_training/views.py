@@ -418,6 +418,16 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status', 'student']
     search_fields = ['student__first_name', 'student__last_name']
 
+    def check_permissions(self, request):
+        if request.user.role == 'student':
+            return
+        return super().check_permissions(request)
+
+    def check_object_permissions(self, request, obj):
+        if request.user.role == 'student':
+            return
+        return super().check_object_permissions(request, obj)
+
     def get_queryset(self):
         user = self.request.user
         qs = super().get_queryset()
@@ -442,6 +452,13 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
         from apps.students.models import Student
         student = Student.objects.get(user=user)
         serializer.save(student=student)
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if user.role == 'student' and instance.status != 'pending':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Cannot delete non-pending entries.')
+        instance.delete()
 
     @action(detail=True, methods=['post'])
     def validate_entry(self, request, pk=None):
