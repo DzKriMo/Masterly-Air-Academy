@@ -76,6 +76,18 @@ export const offlineQueue = {
     });
   },
 
+  /** Remove entries by IDs in a single transaction. */
+  async removeIds(ids: number[]): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      ids.forEach(id => store.delete(id));
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  },
+
   /** Remove all entries. */
   async clear(): Promise<void> {
     const db = await openDB();
@@ -88,20 +100,32 @@ export const offlineQueue = {
   },
 };
 
+let syncLock = false;
+
 /** Try to sync all pending entries to the API. Returns count of synced. */
 export async function syncPendingEntries(apiPost: (data: any) => Promise<any>): Promise<number> {
-  const entries = await offlineQueue.getAll();
-  if (entries.length === 0) return 0;
+  if (syncLock) return 0;
+  syncLock = true;
+  try {
+    const entries = await offlineQueue.getAll();
+    if (entries.length === 0) return 0;
 
-  let synced = 0;
-  for (const entry of entries) {
-    try {
-      await apiPost(entry.data);
-      await offlineQueue.remove(entry.id!);
-      synced++;
-    } catch {
-      break; // stop on first failure — will retry later
+    let synced = 0;
+    const toRemove: number[] = [];
+    for (const entry of entries) {
+      try {
+        await apiPost(entry.data);
+        toRemove.push(entry.id!);
+        synced++;
+      } catch {
+        continue; // skip bad entries, continue with rest
+      }
     }
+    if (toRemove.length > 0) {
+      await offlineQueue.removeIds(toRemove);
+    }
+    return synced;
+  } finally {
+    syncLock = false;
   }
-  return synced;
 }

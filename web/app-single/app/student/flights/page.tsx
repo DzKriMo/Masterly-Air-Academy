@@ -134,7 +134,9 @@ export default function StudentFlightsPage() {
     setPrinting(true);
     try {
       const res = await api.download(`/flight-lessons/${id}/report/`);
-      window.open(URL.createObjectURL(await res.blob()), '_blank');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch {}
     finally { setPrinting(false); }
   };
@@ -143,7 +145,9 @@ export default function StudentFlightsPage() {
     setPrinting(true);
     try {
       const res = await api.download(`/flight-log-entries/${id}/report/`);
-      window.open(URL.createObjectURL(await res.blob()), '_blank');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch {}
     finally { setPrinting(false); }
   };
@@ -181,10 +185,7 @@ export default function StudentFlightsPage() {
     if (form.arrival_time) body.arrival_time = form.arrival_time;
 
     if (!navigator.onLine) {
-      await offlineQueue.push(body);
-      setShowForm(false); resetForm();
-      showToast("success", t("student.entryQueuedOffline", "Entry saved offline — will sync when online"));
-      setSaving(false);
+      await queueEntry(body);
       return;
     }
 
@@ -197,8 +198,20 @@ export default function StudentFlightsPage() {
       setShowForm(false); resetForm(); loadEntries();
       showToast("success", editEntry ? t("student.entryUpdated", "Entry updated") : t("student.entryCreated", "Entry submitted"));
     } catch (err: any) {
-      showToast("error", err.message || t("student.saveFailed", "Failed to save"));
+      // Fallback to offline queue on any network/server error
+      await queueEntry(body);
     } finally { setSaving(false); }
+  };
+
+  const queueEntry = async (body: any) => {
+    try {
+      await offlineQueue.push(body);
+      setShowForm(false); resetForm();
+      showToast("success", t("student.entryQueuedOffline", "Entry saved offline — will sync when online"));
+    } catch {
+      showToast("error", t("student.saveFailed", "Failed to save"));
+    }
+    setSaving(false);
   };
 
   const handleDeleteEntry = async (id: string) => {

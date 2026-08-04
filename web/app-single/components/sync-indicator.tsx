@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { offlineQueue, syncPendingEntries } from "@/lib/offline-queue";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pendingCount, setPendingCount] = useState(0);
+  const isOnlineRef = useRef(isOnline);
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
   const refreshCount = useCallback(async () => {
     try { setPendingCount(await offlineQueue.count()); } catch {}
   }, []);
 
   const sync = useCallback(async () => {
-    if (!isOnline) return;
+    if (!isOnlineRef.current || !isAuthenticated) return 0;
     try {
       const synced = await syncPendingEntries((data) => api.post('/flight-log-entries/', data));
       await refreshCount();
       return synced;
-    } catch {}
-    return 0;
-  }, [isOnline, refreshCount]);
+    } catch {
+      return 0;
+    }
+  }, [isAuthenticated, refreshCount]);
 
   useEffect(() => {
     const goOnline = () => { setIsOnline(true); sync(); };
@@ -28,13 +34,12 @@ export function useOfflineSync() {
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
     refreshCount();
-    // Sync on mount if online
-    if (navigator.onLine) sync();
+    if (navigator.onLine && isAuthenticated) sync();
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
     };
-  }, [sync, refreshCount]);
+  }, [sync, isAuthenticated, refreshCount]);
 
   return { isOnline, pendingCount, sync, refreshCount };
 }
