@@ -100,6 +100,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       Icon: ClipboardList,
       items: [
         { href: "/admin/assessments", label: t("admin.assessments", "Assessments"), Icon: ClipboardList },
+        { href: "/admin/final-exam-questions", label: t("admin.finalExamQuestions", "Final Exam Q-Bank"), Icon: ClipboardList },
+        { href: "/admin/final-exams", label: t("admin.finalExams", "Final Exams"), Icon: Award },
       ],
     },
     {

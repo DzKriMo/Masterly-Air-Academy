@@ -26,6 +26,10 @@ from apps.exams.views import (
     ProgressCheckViewSet, SkillTestViewSet, PracticalEvaluationViewSet,
     ExamAttemptViewSet, QuizAttemptViewSet, CertificatePdfView,
 )
+from apps.exams.final_views import (
+    FinalExamQuestionViewSet, FinalExamViewSet,
+    exam_access, exam_submit, exam_status,
+)
 from apps.administration.views import (
     ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
     ContractViewSet, InvoicePdfView,
@@ -96,6 +100,8 @@ router.register(r'flight-programs', FlightProgramViewSet)
 router.register(r'flight-lesson-templates', FlightLessonTemplateViewSet)
 router.register(r'flight-exercises', FlightExerciseViewSet)
 router.register(r'flight-log-entries', FlightLogEntryViewSet)
+router.register(r'final-exam-questions', FinalExamQuestionViewSet)
+router.register(r'final-exams', FinalExamViewSet)
 router.register(r'medical-certificates', MedicalCertificateViewSet)
 router.register(r'progress-checks', ProgressCheckViewSet)
 router.register(r'skill-tests', SkillTestViewSet)
@@ -156,6 +162,11 @@ urlpatterns = [
     path('export/risk-assessments/', ExportRiskAssessmentsView.as_view(), name='export-risk-assessments'),
     path('reports/students/', student_report, name='report-students'),
     path('reports/financial/', financial_report, name='report-financial'),
+
+    # Public final exam endpoints (no auth)
+    path('exam/access/', exam_access, name='exam-access'),
+    path('exam/submit/', exam_submit, name='exam-submit'),
+    path('exam/status/<str:access_code>/', exam_status, name='exam-status'),
 
     path('reports/exams/', exam_reports, name='report-exams'),
     path('reports/fleet/', fleet_report, name='report-fleet'),
