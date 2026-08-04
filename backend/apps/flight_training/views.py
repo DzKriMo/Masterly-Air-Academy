@@ -470,7 +470,7 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def validate_entry(self, request, pk=None):
         user = request.user
-        if user.role not in ('flight_instructor', 'chief_flight_instructor', 'system_admin'):
+        if user.role not in ('flight_instructor', 'chief_flight_instructor', 'system_admin', 'admin_responsible', 'training_admin'):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         entry = self.get_object()
@@ -481,7 +481,12 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
         from apps.students.models import FlightInstructor
 
-        fi = FlightInstructor.objects.get(user=user)
+        fi = None
+        try:
+            fi = FlightInstructor.objects.get(user=user)
+        except FlightInstructor.DoesNotExist:
+            pass
+
         entry.status = data['status']
         entry.validated_by = fi
         entry.validated_at = timezone.now()
