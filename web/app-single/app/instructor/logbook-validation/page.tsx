@@ -20,7 +20,7 @@ interface LogEntry {
   aircraft_reg?: string; aircraft_text?: string; date: string;
   flight_duration: number; exercises: string[]; notes?: string;
   status: string; validated_by_name?: string; validated_at?: string;
-  rejection_reason?: string; created_at: string;
+  rejection_reason?: string; grade?: number; instructor_notes?: string; created_at: string;
 }
 
 export default function LogbookValidationPage() {
@@ -34,7 +34,7 @@ export default function LogbookValidationPage() {
   const [searchValue, setSearchValue] = useState("");
   const [selected, setSelected] = useState<LogEntry | null>(null);
   const [showValidate, setShowValidate] = useState(false);
-  const [validateForm, setValidateForm] = useState({ status: "approved", rejection_reason: "" });
+  const [validateForm, setValidateForm] = useState({ status: "approved", rejection_reason: "", grade: "", instructor_notes: "" });
   const [validating, setValidating] = useState(false);
 
   useAuthGuard(isAuthenticated, authLoading);
@@ -64,9 +64,13 @@ export default function LogbookValidationPage() {
     e.preventDefault(); setValidating(true);
     if (!selected) return;
     try {
-      await api.post(`/flight-log-entries/${selected.id}/validate_entry/`, validateForm);
+      const body: any = { ...validateForm };
+      if (validateForm.status === 'approved') {
+        body.grade = validateForm.grade ? parseFloat(validateForm.grade) : null;
+      }
+      await api.post(`/flight-log-entries/${selected.id}/validate_entry/`, body);
       setShowValidate(false); setSelected(null);
-      setValidateForm({ status: "approved", rejection_reason: "" });
+    setValidateForm({ status: "approved", rejection_reason: "", grade: "", instructor_notes: "" });
       showToast("success", validateForm.status === "approved" ? t("instructor.entryApproved", "Entry approved") : t("instructor.entryRejected", "Entry rejected"));
       fetchEntries();
     } catch (err: any) {
@@ -76,7 +80,7 @@ export default function LogbookValidationPage() {
 
   const openValidate = (entry: LogEntry) => {
     setSelected(entry);
-    setValidateForm({ status: "approved", rejection_reason: "" });
+      setValidateForm({ status: "approved", rejection_reason: "", grade: "", instructor_notes: "" });
     setShowValidate(true);
   };
 
@@ -158,6 +162,20 @@ export default function LogbookValidationPage() {
                       <option value="rejected">{t("common.reject", "Reject")}</option>
                     </select>
                   </div>
+                  {validateForm.status === "approved" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">{t("common.grade", "Grade (0-10)")}</label>
+                          <input type="number" step="0.1" min="0" max="10" value={validateForm.grade} onChange={e => setValidateForm({...validateForm, grade: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">{t("instructor.notes", "Evaluation Notes")}</label>
+                        <textarea value={validateForm.instructor_notes} onChange={e => setValidateForm({...validateForm, instructor_notes: e.target.value})} rows={2} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                      </div>
+                    </>
+                  )}
                   {validateForm.status === "rejected" && (
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">{t("instructor.rejectionReason")} *</label>

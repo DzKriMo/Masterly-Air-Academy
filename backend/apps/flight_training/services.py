@@ -206,12 +206,12 @@ class FlightLogService:
                     'date': e.date,
                     'aircraft': e.aircraft.registration if e.aircraft else (e.aircraft_text or '—'),
                     'duration': float(e.flight_duration) if e.flight_duration else 0,
-                    'grade': None,
+                    'grade': float(e.grade) if e.grade else None,
                     'result': f'approved ({e.validated_by.first_name} {e.validated_by.last_name})' if e.validated_by else 'approved',
                     'instructor_name': f'{e.validated_by.first_name} {e.validated_by.last_name}' if e.validated_by else None,
                     'exercises_completed': e.exercises,
                     'competencies_acquired': None,
-                    'observations': e.notes,
+                    'observations': e.instructor_notes or e.notes,
                 }
                 for e in log_entries
             ],

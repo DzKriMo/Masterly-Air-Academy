@@ -296,6 +296,8 @@ class FlightLogEntry(models.Model):
     validated_by = models.ForeignKey('students.FlightInstructor', on_delete=models.SET_NULL, null=True, blank=True, related_name='validated_log_entries')
     validated_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True, null=True)
+    grade = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    instructor_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

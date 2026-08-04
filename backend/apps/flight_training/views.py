@@ -487,8 +487,11 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
         entry.validated_at = timezone.now()
         if data['status'] == 'rejected':
             entry.rejection_reason = data.get('rejection_reason', '')
+            entry.grade = None
         else:
             entry.rejection_reason = None
+            entry.grade = data.get('grade')
+            entry.instructor_notes = data.get('instructor_notes', '')
         entry.save()
 
         return Response(FlightLogEntrySerializer(entry).data)

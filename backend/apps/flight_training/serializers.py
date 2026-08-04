@@ -260,6 +260,7 @@ class FlightLogEntrySerializer(serializers.ModelSerializer):
             'flight_duration', 'exercises', 'notes',
             'status', 'validated_by', 'validated_by_name',
             'validated_at', 'rejection_reason',
+            'grade', 'instructor_notes',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['validated_by', 'validated_at', 'status', 'created_at', 'updated_at']
@@ -273,3 +274,5 @@ class FlightLogEntrySerializer(serializers.ModelSerializer):
 class FlightLogEntryValidateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=['approved', 'rejected'])
     rejection_reason = serializers.CharField(required=False, allow_blank=True)
+    grade = serializers.DecimalField(max_digits=4, decimal_places=1, required=False, allow_null=True)
+    instructor_notes = serializers.CharField(required=False, allow_blank=True)
