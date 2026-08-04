@@ -26,7 +26,7 @@ export function PdfReader({ src, title }: Props) {
     setError("");
 
     import("pdfjs-dist").then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs`;
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
       const loadingTask = pdfjs.getDocument({ url: src, withCredentials: true });
       loadingTask.promise.then((doc) => {
