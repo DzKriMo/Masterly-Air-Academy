@@ -120,7 +120,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'invoicing.view'
+    required_permission = 'invoices.view'
     filterset_fields = ['status', 'student', 'currency']
     search_fields = ['invoice_number', 'student__first_name', 'student__last_name']
 
