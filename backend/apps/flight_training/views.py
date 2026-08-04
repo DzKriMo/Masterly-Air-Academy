@@ -501,6 +501,96 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
 
         return Response(FlightLogEntrySerializer(entry).data)
 
+    @action(detail=True, methods=['get'])
+    def report(self, request, pk=None):
+        entry = self.get_object()
+        user = request.user
+
+        all_perms = user.get_all_permissions()
+        has_view = 'flight_training.view' in all_perms or 'flight_training.manage' in all_perms
+        has_view = has_view or any(p.endswith('.flight_training.view') or p.endswith('.flight_training.manage') for p in all_perms)
+        is_owner = hasattr(entry.student, 'user') and entry.student.user == user
+        is_instructor = hasattr(entry.validated_by, 'user') and entry.validated_by.user == user if entry.validated_by else False
+
+        if not (has_view or is_owner or is_instructor):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        from weasyprint import HTML
+        from django.utils.timezone import localtime
+
+        student = entry.student
+        aircraft_label = entry.aircraft.registration if entry.aircraft else (entry.aircraft_text or '—')
+        now_str = localtime(__import__('django.utils.timezone').utils.timezone.now()).strftime('%d/%m/%Y %H:%M')
+        grade_val = float(entry.grade) if entry.grade else None
+        result_label = {'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected'}.get(entry.status, entry.status)
+        result_color = {'pending': '#f59e0b', 'approved': '#16a34a', 'rejected': '#dc2626'}.get(entry.status, '#374151')
+
+        def badges(items, color='#c4943c'):
+            if not items:
+                return '<span style="color:#9ca3af">—</span>'
+            return ' '.join(
+                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{item}</span>'
+                for item in items
+            )
+
+        html = f'''<html><head><meta charset="utf-8"><style>
+        @page {{ size: A4; margin: 1.8cm; }}
+        body {{ font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2937; }}
+        .header {{ border-bottom: 3px solid #c4943c; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
+        .logo {{ font-size: 22px; color: #c4943c; font-weight: 800; }}
+        .subtitle {{ font-size: 12px; color: #6b7280; }}
+        .title {{ font-size: 18px; font-weight: 700; color: #0a1628; margin: 6px 0 14px 0; }}
+        .grid {{ display: flex; flex-wrap: wrap; gap: 12px 32px; margin-bottom: 18px; }}
+        .field {{ min-width: 140px; }}
+        .field-label {{ font-size: 9px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; margin-bottom: 2px; }}
+        .field-value {{ font-size: 13px; color: #1f2937; font-weight: 500; }}
+        .section-title {{ font-size: 13px; font-weight: 700; color: #c4943c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin: 16px 0 8px 0; }}
+        .chips {{ margin-bottom: 6px; }}
+        .result-badge {{ display: inline-block; padding: 4px 16px; border-radius: 6px; font-weight: 800; font-size: 14px; }}
+        .text-block {{ font-size: 12px; line-height: 1.5; color: #4b5563; margin-bottom: 6px; }}
+        .footer {{ margin-top: 30px; font-size: 9px; color: #d1d5db; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }}
+        </style></head><body>
+        <div class="header">
+          <div>
+            <div class="logo">MASTERLY AIR ACADEMY</div>
+            <div class="subtitle">Self-Logged Flight Report</div>
+          </div>
+          <div style="text-align:right">
+            <div class="field-label">Report Date</div>
+            <div class="field-value" style="font-size:11px">{now_str}</div>
+          </div>
+        </div>
+        <h2 class="title">Flight Log Entry</h2>
+        <div class="section-title">Flight Details</div>
+        <div class="grid">
+          <div class="field"><div class="field-label">Student</div><div class="field-value">{student.full_name}</div></div>
+          <div class="field"><div class="field-label">Student #</div><div class="field-value">{student.student_number or '—'}</div></div>
+          <div class="field"><div class="field-label">Program</div><div class="field-value">{student.program or '—'}</div></div>
+          <div class="field"><div class="field-label">Date</div><div class="field-value">{entry.date.strftime('%d/%m/%Y')}</div></div>
+          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{aircraft_label}</div></div>
+          <div class="field"><div class="field-label">Duration</div><div class="field-value">{float(entry.flight_duration)} h</div></div>
+        </div>
+        <div class="section-title">Exercises</div>
+        <div class="chips">{badges(entry.exercises)}</div>
+        <div class="section-title">Evaluation</div>
+        <div class="grid">
+          <div class="field"><div class="field-label">Status</div><span class="result-badge" style="background:{result_color}15;color:{result_color}">{result_label}</span></div>
+          <div class="field"><div class="field-label">Grade</div><div class="field-value">{f'{grade_val}/10' if grade_val is not None else '—'}</div></div>
+          <div class="field"><div class="field-label">Validated by</div><div class="field-value">{f'{entry.validated_by.first_name} {entry.validated_by.last_name}' if entry.validated_by else '—'}</div></div>
+        </div>
+        {f'<div class="section-title">Instructor Notes</div><div class="text-block">{entry.instructor_notes}</div>' if entry.instructor_notes else ''}
+        {f'<div class="section-title">Student Notes</div><div class="text-block">{entry.notes}</div>' if entry.notes else ''}
+        <div class="footer">Masterly Air Academy — Self-Logged Flight Report — Generated on {now_str}</div>
+        </body></html>'''
+
+        try:
+            pdf = HTML(string=html).write_pdf()
+            resp = HttpResponse(pdf, content_type='application/pdf')
+            resp['Content-Disposition'] = f'attachment; filename="log-entry-{entry.date}.pdf"'
+            return resp
+        except ImportError:
+            return HttpResponse('PDF generation not available', status=501)
+
 
 class ResourceBookingViewSet(viewsets.ModelViewSet):
     queryset = ResourceBooking.objects.all()

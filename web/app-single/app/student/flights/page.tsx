@@ -130,8 +130,16 @@ export default function StudentFlightsPage() {
     setPrinting(true);
     try {
       const res = await api.download(`/flight-lessons/${id}/report/`);
-      const blob = await res.blob();
-      window.open(URL.createObjectURL(blob), '_blank');
+      window.open(URL.createObjectURL(await res.blob()), '_blank');
+    } catch {}
+    finally { setPrinting(false); }
+  };
+
+  const handlePrintLogEntry = async (id: string) => {
+    setPrinting(true);
+    try {
+      const res = await api.download(`/flight-log-entries/${id}/report/`);
+      window.open(URL.createObjectURL(await res.blob()), '_blank');
     } catch {}
     finally { setPrinting(false); }
   };
@@ -263,6 +271,9 @@ export default function StudentFlightsPage() {
                 <div className="flex gap-3 justify-end">
                   {selectedFlight?.id && selectedFlight.source !== 'log_entry' && (
                     <button onClick={() => handlePrintReport(selectedFlight!.id)} disabled={printing} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 rounded-lg text-sm font-semibold">{printing ? "..." : t("instructor.printReport", "Print Report")}</button>
+                  )}
+                  {selectedFlight?.id && selectedFlight.source === 'log_entry' && (
+                    <button onClick={() => handlePrintLogEntry(selectedFlight!.id)} disabled={printing} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 rounded-lg text-sm font-semibold">{printing ? "..." : t("instructor.printReport", "Print Report")}</button>
                   )}
                   <button onClick={() => setSelectedFlight(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm">{t("close", "Close")}</button>
                 </div>

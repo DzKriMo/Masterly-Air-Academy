@@ -128,9 +128,21 @@ export default function LogbookValidationPage() {
           onClose={() => setShowValidate(false)}
           title={`${t("instructor.validateEntry", "Validate Entry")} — ${selected?.student_name || ""}`}
           footer={
-            <button type="submit" form="validate-form" disabled={validating} className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">
-              {validating ? t("common.validating", "Validating...") : t("instructor.confirmValidation", "Confirm")}
-            </button>
+            <div className="flex gap-3 justify-end">
+              {selected?.status === 'approved' && (
+                <button onClick={async () => {
+                  try { const r = await api.download(`/flight-log-entries/${selected.id}/report/`); window.open(URL.createObjectURL(await r.blob()), '_blank'); } catch {}
+                }} className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
+                  {t("instructor.printReport", "Print Report")}
+                </button>
+              )}
+              {selected?.status === 'pending' && (
+                <button type="submit" form="validate-form" disabled={validating} className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">
+                  {validating ? t("common.validating", "Validating...") : t("instructor.confirmValidation", "Confirm")}
+                </button>
+              )}
+              <button onClick={() => setShowValidate(false)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm">{t("close", "Close")}</button>
+            </div>
           }
         >
           <form id="validate-form" onSubmit={handleValidate}>
