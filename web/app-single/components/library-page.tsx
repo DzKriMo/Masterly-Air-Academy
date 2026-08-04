@@ -561,11 +561,11 @@ function PreviewModal({
         </div>
 
         <div className="p-5">
-          {mime.startsWith("video/") && token ? (
-            <VideoPlayer src={url} className="aspect-video" />
+          {mime.startsWith("video/") ? (
+            <VideoPlayer src={url} />
           ) : mime.startsWith("image/") ? (
             <img src={url} alt={item.name} className="w-full rounded-xl object-contain max-h-[60vh] bg-navy-900" />
-          ) : mime.includes("pdf") && token ? (
+          ) : mime.includes("pdf") ? (
             <iframe src={url} className="w-full h-[60vh] rounded-xl bg-navy-900" title={item.name} />
           ) : (
             <div className="p-10 text-center text-gray-400">
