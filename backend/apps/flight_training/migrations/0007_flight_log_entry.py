@@ -6,7 +6,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('flight_training', '0006_alter_flightexercise_program'),
+        ('flight_training', '0005_flight_exercise'),
         ('students', '0004_remove_student_academic_year_promotion_and_more'),
     ]
 
