@@ -24,7 +24,7 @@ import { offlineQueue } from "@/lib/offline-queue";
 import { useOfflineSync, SyncIndicator } from "@/components/sync-indicator";
 
 interface FlightEntry { id: string; date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: any; competencies_acquired?: any; observations?: string; source?: string; }
-interface LogEntry { id: string; date: string; aircraft_reg?: string; aircraft_text?: string; flight_duration: number; exercises: string[]; notes?: string; status: string; validated_by_name?: string; validated_at?: string; rejection_reason?: string; }
+interface LogEntry { id: string; date: string; aircraft_reg?: string; aircraft_text?: string; flight_duration: number; exercises: string[]; notes?: string; status: string; validated_by_name?: string; validated_at?: string; rejection_reason?: string; departure_time?: string; arrival_time?: string; }
 
 export default function StudentFlightsPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -158,7 +158,7 @@ export default function StudentFlightsPage() {
     setEditEntry(entry);
     setForm({
       aircraft: entry.aircraft_reg || "", aircraft_text: entry.aircraft_text || "",
-      date: entry.date || "", departure_time: "", arrival_time: "",
+      date: entry.date || "", departure_time: entry.departure_time ? entry.departure_time.slice(0, 16) : "", arrival_time: entry.arrival_time ? entry.arrival_time.slice(0, 16) : "",
       flight_duration: String(entry.flight_duration || ""),
       exercises: entry.exercises || [], notes: entry.notes || "",
     });
@@ -352,6 +352,16 @@ export default function StudentFlightsPage() {
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">{t("duration")} (h) *</label>
                     <input type="number" step="0.1" min="0" value={form.flight_duration} onChange={e => setForm({...form, flight_duration: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">{t("instructor.departureTime", "Start Time")}</label>
+                    <input type="datetime-local" value={form.departure_time} onChange={e => setForm({...form, departure_time: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">{t("instructor.arrivalTime", "End Time")}</label>
+                    <input type="datetime-local" value={form.arrival_time} onChange={e => setForm({...form, arrival_time: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
                   </div>
                 </div>
                 <div>

@@ -20,7 +20,8 @@ interface LogEntry {
   aircraft_reg?: string; aircraft_text?: string; date: string;
   flight_duration: number; exercises: string[]; notes?: string;
   status: string; validated_by_name?: string; validated_at?: string;
-  rejection_reason?: string; grade?: number; instructor_notes?: string; created_at: string;
+  rejection_reason?: string; grade?: number; instructor_notes?: string;
+  departure_time?: string; arrival_time?: string; created_at: string;
 }
 
 export default function LogbookValidationPage() {
@@ -152,6 +153,8 @@ export default function LogbookValidationPage() {
                 <DetailField label={t("common.date")} value={selected?.date || "—"} />
                 <DetailField label={t("aircraft")} value={selected?.aircraft_reg || selected?.aircraft_text || "—"} />
                 <DetailField label={t("duration")} value={selected ? `${selected.flight_duration}h` : "—"} />
+                {selected?.departure_time && <DetailField label={t("instructor.departureTime", "Departure")} value={new Date(selected.departure_time).toLocaleString()} />}
+                {selected?.arrival_time && <DetailField label={t("instructor.arrivalTime", "Arrival")} value={new Date(selected.arrival_time).toLocaleString()} />}
               </div>
               {selected?.exercises && selected.exercises.length > 0 && (
                 <div>
