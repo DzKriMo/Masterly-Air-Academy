@@ -2,7 +2,8 @@
 
 // ============================================================
 // MASTERLY AIR ACADEMY | Auth Context (JWT + Django)
-// Token stored in sessionStorage (cleared on browser close)
+// Token stored in localStorage — shared across tabs.
+// Proactive token refresh before expiry + activity-based keepalive.
 // ============================================================
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
@@ -40,14 +41,36 @@ interface AuthState {
   hasRole: (role: string) => boolean;
 }
 
-// ── Session persistence ─────────────────────────────────────
+// ── JWT helpers ──────────────────────────────────────────────
+
+function parseJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function getTokenExpiry(token: string): Date | null {
+  const payload = parseJwtPayload(token);
+  if (payload?.exp) return new Date(payload.exp * 1000);
+  return null;
+}
+
+const REFRESH_MARGIN_MS = 5 * 60 * 1000; // refresh 5 min before expiry
+
+// ── Session persistence (localStorage, shared across tabs) ───
 
 const SESSION_KEY = 'maa_session';
 
 function loadSession(): { token: string | null; refresh: string | null; user: AuthUser | null } {
   if (typeof window === 'undefined') return { token: null, refresh: null, user: null };
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
@@ -57,19 +80,19 @@ function loadSession(): { token: string | null; refresh: string | null; user: Au
       };
     }
   } catch {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
   }
   return { token: null, refresh: null, user: null };
 }
 
 function saveSession(token: string, refresh: string | null, user: AuthUser): void {
   if (typeof window === 'undefined') return;
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token, refresh, user }));
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, refresh, user }));
 }
 
 function clearSession(): void {
   if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
 }
 
 // ── Context ─────────────────────────────────────────────────
@@ -81,23 +104,128 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const userRef = useRef<AuthUser | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     userRef.current = user;
-  }, [user]);
+    tokenRef.current = token;
+  }, [user, token]);
 
-  // Restore session on mount
+  // ── Refresh token ──────────────────────────────────────────
+
+  const refreshToken = useCallback(async () => {
+    const session = loadSession();
+    if (!session.refresh) return false;
+    try {
+      const res = await fetch(`${api.getBaseUrl()}/api/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: session.refresh }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        api.setTokens(data.access, session.refresh);
+        saveSession(data.access, session.refresh, session.user!);
+        setToken(data.access);
+        tokenRef.current = data.access;
+        useAuthStore.getState().setAuth(session.user!, data.access);
+        scheduleRefresh(data.access);
+        return true;
+      }
+    } catch {}
+    return false;
+  }, []);
+
+  // ── Schedule proactive refresh ─────────────────────────────
+
+  const scheduleRefresh = useCallback((tok?: string | null) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    const t = tok || tokenRef.current;
+    if (!t) return;
+    const expiry = getTokenExpiry(t);
+    if (!expiry) return;
+    const delay = Math.max(0, expiry.getTime() - Date.now() - REFRESH_MARGIN_MS);
+    refreshTimerRef.current = setTimeout(() => {
+      refreshToken();
+    }, delay);
+  }, [refreshToken]);
+
+  // ── Activity tracking ──────────────────────────────────────
+
+  const resetActivityTimer = useCallback(() => {
+    if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
+    // Refresh token proactively if user is active and token is approaching expiry
+    const t = tokenRef.current;
+    if (!t) return;
+    const expiry = getTokenExpiry(t);
+    if (!expiry) return;
+    const remaining = expiry.getTime() - Date.now();
+    if (remaining < REFRESH_MARGIN_MS) {
+      refreshToken();
+    }
+  }, [refreshToken]);
+
+  useEffect(() => {
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    const handler = () => resetActivityTimer();
+    events.forEach(e => document.addEventListener(e, handler, { passive: true }));
+    return () => events.forEach(e => document.removeEventListener(e, handler));
+  }, [resetActivityTimer]);
+
+  // ── Restore session on mount ───────────────────────────────
+
   useEffect(() => {
     const session = loadSession();
     if (session.token && session.user) {
-      setToken(session.token);
-      setUser(session.user);
-      api.setTokens(session.token, session.refresh);
-      useAuthStore.getState().setAuth(session.user, session.token);
+      const expiry = getTokenExpiry(session.token);
+      if (expiry && expiry.getTime() > Date.now()) {
+        setToken(session.token);
+        setUser(session.user);
+        api.setTokens(session.token, session.refresh);
+        useAuthStore.getState().setAuth(session.user, session.token);
+        scheduleRefresh(session.token);
+      } else if (session.refresh) {
+        // Token expired but refresh is available — try refresh immediately
+        refreshToken().catch(() => {});
+      } else {
+        clearSession();
+      }
     }
     setIsLoading(false);
   }, []);
 
-  // Register forced-logout redirect handler on mount
+  // ── Cross-tab sync (localStorage "storage" event) ──────────
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== SESSION_KEY) return;
+      if (!e.newValue) {
+        // Session was cleared in another tab — log out here too
+        setToken(null);
+        setUser(null);
+        api.clearAuth();
+        useAuthStore.getState().clearAuth();
+        return;
+      }
+      try {
+        const parsed = JSON.parse(e.newValue);
+        if (parsed.token && parsed.user) {
+          setToken(parsed.token);
+          setUser(parsed.user);
+          api.setTokens(parsed.token, parsed.refresh);
+          useAuthStore.getState().setAuth(parsed.user, parsed.token);
+          scheduleRefresh(parsed.token);
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [scheduleRefresh]);
+
+  // ── Forced-logout redirect handler ─────────────────────────
+
   useEffect(() => {
     api.onLogout(() => {
       const storedRole = userRef.current?.role || loadSession().user?.role;
@@ -111,15 +239,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // ── Auth methods ───────────────────────────────────────────
+
   const login = useCallback(async (email: string, password: string) => {
-    // POST /api/login/ | Custom JWT serializer returns { access, refresh, user }
     const response = await api.post<{
       access: string;
       refresh: string;
       user: AuthUser;
     }>('/login/', { email, password });
 
-    // DRF returns the data directly | no .data wrapper on success
     const { access, refresh, user: userData } = response as unknown as {
       access: string;
       refresh: string;
@@ -135,16 +263,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     api.setTokens(access, refresh);
     saveSession(access, refresh, userData);
     useAuthStore.getState().setAuth(userData, access);
+    scheduleRefresh(access);
 
     return { user: userData, token: access };
-  }, []);
+  }, [scheduleRefresh]);
 
   const logout = useCallback(async () => {
     try {
       await api.post('/logout/');
-    } catch {
-      // Token may already be invalid | cleanup anyway
-    }
+    } catch {}
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
     setToken(null);
     setUser(null);
     api.clearAuth();
@@ -165,6 +294,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [user]
   );
+
+  // ── Cleanup timers on unmount ──────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
+    };
+  }, []);
 
   return (
     <AuthContext.Provider

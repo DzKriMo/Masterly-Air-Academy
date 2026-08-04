@@ -16,6 +16,10 @@ class ApiClient {
   private refreshToken: string | null = null;
   private onLogoutHandler: (() => void) | null = null;
 
+  getBaseUrl(): string {
+    return API_BASE;
+  }
+
   setTokens(access: string, refresh: string | null): void {
     this.accessToken = access;
     this.refreshToken = refresh;
