@@ -38,3 +38,9 @@ export function withExt(name: string | null | undefined, type?: string | null): 
 export function moduleDocDownloadUrl(id: string): string {
   return `/module-documents/${id}/download/`;
 }
+
+/** Build the module-document stream URL for inline reading with auth token. */
+export function moduleDocStreamUrl(id: string, token?: string | null): string {
+  const tok = token || api.getAccessToken();
+  return `/api/module-documents/${id}/download/?token=${encodeURIComponent(tok || "")}`;
+}

@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import { fmtLabel } from "@/lib/format-utils";
 import { VideoPlayer } from "@/components/video-player";
+import { PdfReader } from "@/components/pdf-reader";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -567,7 +568,7 @@ function PreviewModal({
           ) : mime.startsWith("image/") ? (
             <img src={url} alt={item.name} className="w-full rounded-xl object-contain max-h-[60vh] bg-navy-900" />
           ) : mime.includes("pdf") ? (
-            <iframe src={url} className="w-full h-[60vh] rounded-xl bg-navy-900" title={item.name} />
+            <PdfReader src={url} title={item.name} />
           ) : (
             <div className="p-10 text-center text-gray-400">
               {t("library.noPreview", "No inline preview available for this file type.")}
