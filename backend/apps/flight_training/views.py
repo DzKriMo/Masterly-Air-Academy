@@ -81,7 +81,6 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
                 return qs.filter(instructor=fi)
             except FlightInstructor.DoesNotExist:
                 return qs.none()
-        if self.request.user.role == 'chief_flight_instructor':
         return qs
 
 
@@ -93,6 +92,17 @@ class FlightExerciseViewSet(viewsets.ModelViewSet):
     filterset_fields = ['category', 'program', 'is_active']
     search_fields = ['code', 'title']
     ordering_fields = ['category', 'order', 'code']
+
+
+class FlightExerciseViewSet(viewsets.ModelViewSet):
+    queryset = FlightExercise.objects.all()
+    serializer_class = FlightExerciseSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['category', 'program', 'is_active']
+    search_fields = ['code', 'title']
+    ordering_fields = ['category', 'order', 'code']
+        return qs
         return qs
 
     def get_serializer_class(self):
@@ -392,3 +402,14 @@ class SimulatorSessionViewSet(viewsets.ModelViewSet):
             except FlightInstructor.DoesNotExist:
                 return qs.none()
         return qs
+
+
+
+class FlightExerciseViewSet(viewsets.ModelViewSet):
+    queryset = FlightExercise.objects.all()
+    serializer_class = FlightExerciseSerializer
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'flight_training.view'
+    filterset_fields = ['category', 'program', 'is_active']
+    search_fields = ['code', 'title']
+    ordering_fields = ['category', 'order', 'code']
