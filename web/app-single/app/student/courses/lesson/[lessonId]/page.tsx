@@ -11,6 +11,7 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
+import { VideoPlayer } from "@/components/video-player";
 
 interface Lesson {
   id: string;
@@ -74,31 +75,19 @@ export default function LessonViewPage() {
     if (embedUrl) {
       return (
         <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
-          <iframe
-            src={embedUrl}
-            title="Video"
-            className="absolute inset-0 w-full h-full"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
+          <iframe src={embedUrl} title="Video" className="absolute inset-0 w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
         </div>
       );
     }
     return (
-      <video
-        ref={videoRef}
-        controls
-        playsInline
-        preload="metadata"
-        className="w-full h-full object-contain bg-black"
+      <VideoPlayer
+        src={url}
+        videoRef={videoRef}
         onTimeUpdate={onVideoTimeUpdate}
         onPause={onVideoPause}
-        onEnded={onVideoEnded}
         onPlay={onVideoPlay}
-      >
-        <source src={url} />
-        {t("student.videoNotSupported", "Your browser does not support the video tag.")}
-      </video>
+        onEnded={onVideoEnded}
+      />
     );
   };
 

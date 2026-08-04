@@ -30,22 +30,24 @@ from .serializers import (
 
 
 def _stream_from_storage(key, content_type='application/octet-stream', filename='file', inline=True):
-    """Stream a stored (MinIO) file as a StreamingHttpResponse, or None if unresolvable."""
+    """Stream a stored (MinIO) file with proper byte-range support for video seeking."""
     from django.core.files.storage import default_storage
-    from django.http import StreamingHttpResponse
+    from django.http import FileResponse, HttpResponse
 
     if not key:
         return None
     if key.startswith(('http://', 'https://')):
         return None
-    # A "/media/..." prefix refers to the same MinIO object with the prefix stripped.
     if key.startswith('/media/'):
         key = key[len('/media/'):]
     if not default_storage.exists(key):
         return None
     try:
         f = default_storage.open(key, 'rb')
-        response = StreamingHttpResponse(f, content_type=content_type)
+        file_size = default_storage.size(key)
+        response = FileResponse(f, content_type=content_type, as_attachment=False, filename=filename)
+        response['Accept-Ranges'] = 'bytes'
+        response['Content-Length'] = file_size
         disposition = 'inline' if inline else 'attachment'
         response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
         return response

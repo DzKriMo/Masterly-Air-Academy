@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
+import { VideoPlayer } from "@/components/video-player";
 import { useTranslation } from "@/lib/use-translation";
 import { api } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
@@ -84,12 +85,7 @@ export default function InstructorLessonViewPage() {
       );
     }
 
-    return (
-      <video controls className="w-full rounded-xl" preload="metadata">
-        <source src={url} />
-        {t("student.videoNotSupported", "Your browser does not support the video tag.")}
-      </video>
-    );
+    return <VideoPlayer src={url} />;
   };
 
   useEffect(() => {
