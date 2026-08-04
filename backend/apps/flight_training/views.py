@@ -236,9 +236,17 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def report(self, request, pk=None):
-        if not _user_has_permission(request.user, 'flight_training.view'):
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         lesson = self.get_object()
+        user = request.user
+
+        all_perms = user.get_all_permissions()
+        has_view = 'flight_training.view' in all_perms or 'flight_training.manage' in all_perms
+        has_view = has_view or any(p.endswith('.flight_training.view') or p.endswith('.flight_training.manage') for p in all_perms)
+        is_owner = hasattr(lesson.student, 'user') and lesson.student.user == user
+        is_instructor = hasattr(lesson.instructor, 'user') and lesson.instructor.user == user
+
+        if not (has_view or is_owner or is_instructor):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         from weasyprint import HTML
         from django.utils.timezone import localtime

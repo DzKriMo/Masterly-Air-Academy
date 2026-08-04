@@ -3,6 +3,7 @@ import { Map, BookOpen, Plane, ClipboardCheck, ListChecks } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
 import { fmtLabel, formatDate, formatTime, todayLocal, STATUS_COLORS } from "@/lib/format-utils";
+import { api } from "@/lib/api";
 
 const TABS: HubTab[] = [
   { id: "programs", label: "Programs", icon: Map },
@@ -234,6 +235,22 @@ function LessonsTab() {
         { key: "status", header: "Status", render: (l) => <span className={`text-xs px-2 py-0.5 rounded ${LESSON_COLORS[l.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(l.status)}</span> },
       ]}
       detailTitle="Flight Lesson Details"
+      detailExtra={(l) => (
+        <div className="mt-4 pt-4 border-t border-navy-700">
+          <button
+            onClick={async () => {
+              try {
+                const res = await api.download(`/flight-lessons/${l.id}/report/`);
+                const blob = await res.blob();
+                window.open(URL.createObjectURL(blob), '_blank');
+              } catch {}
+            }}
+            className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm"
+          >
+            Print Flight Report
+          </button>
+        </div>
+      )}
       detailFields={(l) => [
         { label: "Student", value: l.student_name },
         { label: "Instructor", value: l.instructor_name || "—" },
