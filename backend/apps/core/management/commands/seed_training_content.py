@@ -509,6 +509,7 @@ class Command(BaseCommand):
                 if subj_created:
                     created_subjects += 1
 
+                module_order = 1
                 for mod_data in subj_data['modules']:
                     module, mod_created = Module.objects.get_or_create(
                         subject=subject,
@@ -518,9 +519,10 @@ class Command(BaseCommand):
                             'title_ar': mod_data.get('title_ar', mod_data['title']),
                             'description': mod_data.get('title', ''),
                             'duration': mod_data.get('duration', 10),
-                            'order': mod_data.get('order', 1),
+                            'order': module_order,
                         }
                     )
+                    module_order += 1
                     if mod_created:
                         created_modules += 1
 
