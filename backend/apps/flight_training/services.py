@@ -138,16 +138,24 @@ class FlightLogService:
 
     @staticmethod
     def get_student_log(student_id):
-        from .models import FlightLesson, FlightLessonTemplate
+        from .models import FlightLesson, FlightLessonTemplate, FlightLogEntry
         from apps.students.models import Student
         lessons = FlightLesson.objects.filter(
             student_id=student_id, status='completed'
         ).order_by('scheduled_date').select_related('instructor', 'aircraft')
 
-        total_hours = sum(
+        log_entries = FlightLogEntry.objects.filter(
+            student_id=student_id, status='approved'
+        ).order_by('date').select_related('aircraft', 'validated_by')
+
+        lesson_hours = sum(
             float(l.flight_duration) for l in lessons if l.flight_duration
         )
-        total_lessons = lessons.count()
+        entry_hours = sum(
+            float(e.flight_duration) for e in log_entries if e.flight_duration
+        )
+        total_hours = lesson_hours + entry_hours
+        total_lessons = lessons.count() + log_entries.count()
 
         # Get student program info for progress calculation
         try:
@@ -191,5 +199,20 @@ class FlightLogService:
                     'observations': l.observations,
                 }
                 for l in lessons
+            ],
+            'log_entries': [
+                {
+                    'id': str(e.id),
+                    'date': e.date,
+                    'aircraft': e.aircraft.registration if e.aircraft else (e.aircraft_text or '—'),
+                    'duration': float(e.flight_duration) if e.flight_duration else 0,
+                    'grade': None,
+                    'result': f'approved ({e.validated_by.first_name} {e.validated_by.last_name})' if e.validated_by else 'approved',
+                    'instructor_name': f'{e.validated_by.first_name} {e.validated_by.last_name}' if e.validated_by else None,
+                    'exercises_completed': e.exercises,
+                    'competencies_acquired': None,
+                    'observations': e.notes,
+                }
+                for e in log_entries
             ],
         }

@@ -9,7 +9,7 @@ from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
     FlightProgram, FlightLessonTemplate,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
-    Simulator, SimulatorSession, FlightExercise,
+    Simulator, SimulatorSession, FlightExercise, FlightLogEntry,
 )
 from .serializers import (
     AircraftSerializer, AircraftListSerializer,
@@ -19,7 +19,7 @@ from .serializers import (
     ResourceBookingSerializer, InstructorAvailabilitySerializer,
     MaintenanceRecordSerializer,
     SimulatorSerializer, SimulatorSessionSerializer,
-    FlightExerciseSerializer,
+    FlightExerciseSerializer, FlightLogEntrySerializer, FlightLogEntryValidateSerializer,
 )
 from .models import MaintenanceRecord
 from .services import ConflictDetectionService, FlightLogService
@@ -410,14 +410,63 @@ class FlightPreparationViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class FlightExerciseViewSet(viewsets.ModelViewSet):
-    queryset = FlightExercise.objects.all()
-    serializer_class = FlightExerciseSerializer
+class FlightLogEntryViewSet(viewsets.ModelViewSet):
+    serializer_class = FlightLogEntrySerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
-    filterset_fields = ['category', 'program', 'is_active']
-    search_fields = ['code', 'title']
-    ordering_fields = ['category', 'order', 'code']
+    filterset_fields = ['status', 'student']
+    search_fields = ['student__first_name', 'student__last_name']
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = FlightLogEntry.objects.select_related('student', 'aircraft', 'validated_by').all()
+        if user.role in ('student',):
+            try:
+                from apps.students.models import Student
+                student = Student.objects.get(user=user)
+                return qs.filter(student=student)
+            except Student.DoesNotExist:
+                return qs.none()
+        if user.role in ('flight_instructor', 'chief_flight_instructor'):
+            try:
+                from apps.students.models import FlightInstructor
+                fi = FlightInstructor.objects.get(user=user)
+                return qs.filter(student__main_instructor=fi)
+            except FlightInstructor.DoesNotExist:
+                return qs.none()
+        return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        from apps.students.models import Student
+        student = Student.objects.get(user=user)
+        serializer.save(student=student)
+
+    @action(detail=True, methods=['post'])
+    def validate_entry(self, request, pk=None):
+        user = request.user
+        if user.role not in ('flight_instructor', 'chief_flight_instructor', 'system_admin'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        entry = self.get_object()
+        val_serializer = FlightLogEntryValidateSerializer(data=request.data)
+        val_serializer.is_valid(raise_exception=True)
+        data = val_serializer.validated_data
+
+        from django.utils import timezone
+        from apps.students.models import FlightInstructor
+
+        fi = FlightInstructor.objects.get(user=user)
+        entry.status = data['status']
+        entry.validated_by = fi
+        entry.validated_at = timezone.now()
+        if data['status'] == 'rejected':
+            entry.rejection_reason = data.get('rejection_reason', '')
+        else:
+            entry.rejection_reason = None
+        entry.save()
+
+        return Response(FlightLogEntrySerializer(entry).data)
 
 
 class ResourceBookingViewSet(viewsets.ModelViewSet):

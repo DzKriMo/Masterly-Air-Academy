@@ -273,3 +273,41 @@ class SimulatorSession(models.Model):
 
     def __str__(self):
         return f'{self.simulator.name} - {self.scheduled_date}'
+
+
+class LogEntryStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    APPROVED = 'approved', 'Approved'
+    REJECTED = 'rejected', 'Rejected'
+
+
+class FlightLogEntry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='log_entries')
+    aircraft = models.ForeignKey(Aircraft, on_delete=models.SET_NULL, null=True, blank=True, related_name='log_entries')
+    aircraft_text = models.CharField(max_length=100, blank=True, null=True)
+    date = models.DateField()
+    departure_time = models.DateTimeField(null=True, blank=True)
+    arrival_time = models.DateTimeField(null=True, blank=True)
+    flight_duration = models.DecimalField(max_digits=4, decimal_places=1)
+    exercises = models.JSONField(default=list, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=LogEntryStatus.choices, default=LogEntryStatus.PENDING)
+    validated_by = models.ForeignKey('students.FlightInstructor', on_delete=models.SET_NULL, null=True, blank=True, related_name='validated_log_entries')
+    validated_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'flight_log_entries'
+        ordering = ['-date', '-created_at']
+        verbose_name = 'Flight Log Entry'
+        verbose_name_plural = 'Flight Log Entries'
+        indexes = [
+            models.Index(fields=['student', 'status']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'{self.student.full_name} - {self.date} ({self.status})'

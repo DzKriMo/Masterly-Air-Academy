@@ -3,7 +3,7 @@ from .models import (
     FlightProgram, FlightLessonTemplate, Aircraft,
     FlightLesson, FlightPreparation, FlightStatus,
     InstructorAvailability, ResourceBooking, MaintenanceRecord,
-    Simulator, SimulatorSession, FlightExercise,
+    Simulator, SimulatorSession, FlightExercise, FlightLogEntry,
 )
 
 
@@ -241,3 +241,33 @@ class FlightExerciseSerializer(serializers.ModelSerializer):
             'category', 'description', 'program',
             'is_active', 'order', 'created_at', 'updated_at',
         ]
+
+
+class FlightLogEntrySerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    student_number = serializers.CharField(source='student.student_number', read_only=True)
+    aircraft_reg = serializers.CharField(source='aircraft.registration', read_only=True, default=None)
+    validated_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FlightLogEntry
+        fields = [
+            'id', 'student', 'student_name', 'student_number',
+            'aircraft', 'aircraft_reg', 'aircraft_text',
+            'date', 'departure_time', 'arrival_time',
+            'flight_duration', 'exercises', 'notes',
+            'status', 'validated_by', 'validated_by_name',
+            'validated_at', 'rejection_reason',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['validated_by', 'validated_at', 'status']
+
+    def get_validated_by_name(self, obj):
+        if obj.validated_by:
+            return f'{obj.validated_by.first_name} {obj.validated_by.last_name}'
+        return None
+
+
+class FlightLogEntryValidateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=['approved', 'rejected'])
+    rejection_reason = serializers.CharField(required=False, allow_blank=True)

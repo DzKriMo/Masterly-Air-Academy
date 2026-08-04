@@ -18,6 +18,7 @@ from apps.flight_training.views import (
     ResourceBookingViewSet, InstructorAvailabilityViewSet, FlightLogViewSet,
     MaintenanceRecordViewSet, FlightProgramViewSet, FlightLessonTemplateViewSet,
     SimulatorViewSet, SimulatorSessionViewSet, FlightExerciseViewSet,
+    FlightLogEntryViewSet,
 )
 from apps.exams.views import (
     QuestionBankViewSet, ExamViewSet, QuizViewSet,
@@ -94,6 +95,7 @@ router.register(r'maintenance-records', MaintenanceRecordViewSet, basename='main
 router.register(r'flight-programs', FlightProgramViewSet)
 router.register(r'flight-lesson-templates', FlightLessonTemplateViewSet)
 router.register(r'flight-exercises', FlightExerciseViewSet)
+router.register(r'flight-log-entries', FlightLogEntryViewSet)
 router.register(r'medical-certificates', MedicalCertificateViewSet)
 router.register(r'progress-checks', ProgressCheckViewSet)
 router.register(r'skill-tests', SkillTestViewSet)
