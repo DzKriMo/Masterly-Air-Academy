@@ -19,7 +19,7 @@ import autoTable from 'jspdf-autotable';
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
-interface FlightEntry { date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: number; competencies_acquired?: number; observations?: string; }
+interface FlightEntry { id: string; date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: number; competencies_acquired?: number; observations?: string; }
 
 export default function StudentFlightsPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -31,6 +31,7 @@ export default function StudentFlightsPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selectedFlight, setSelectedFlight] = useState<FlightEntry | null>(null);
+  const [printing, setPrinting] = useState(false);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -116,6 +117,20 @@ export default function StudentFlightsPage() {
     doc.save('flight-logbook.pdf');
   };
 
+  const handlePrintReport = async (id: string) => {
+    setPrinting(true);
+    try {
+      const res = await api.download(`/flight-lessons/${id}/report/`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      console.error("Failed to generate report:", err);
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const columns: Column<FlightEntry>[] = [
     { key: "date", header: t('common.date') },
     { key: "aircraft", header: t("aircraft"), render: (item) => <span className="text-white font-medium">{item.aircraft}</span> },
@@ -177,9 +192,16 @@ export default function StudentFlightsPage() {
               onClose={() => setSelectedFlight(null)}
               title={t("student.flightDetail", "Flight Details")}
               footer={
-                <button onClick={() => setSelectedFlight(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
-                  {t("close", "Close")}
-                </button>
+                <div className="flex gap-3 justify-end">
+                  {selectedFlight && (
+                    <button onClick={() => handlePrintReport(selectedFlight.id)} disabled={printing} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 rounded-lg text-sm font-semibold transition-colors">
+                      {printing ? "..." : t("instructor.printReport", "Print Report")}
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedFlight(null)} className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm transition-colors">
+                    {t("close", "Close")}
+                  </button>
+                </div>
               }
             >
               {selectedFlight && (

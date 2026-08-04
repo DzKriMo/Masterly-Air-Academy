@@ -179,6 +179,7 @@ class FlightLogService:
             'program_progress': program_progress,
             'lessons': [
                 {
+                    'id': str(l.id),
                     'date': l.scheduled_date,
                     'aircraft': l.aircraft.registration,
                     'duration': float(l.flight_duration) if l.flight_duration else 0,
