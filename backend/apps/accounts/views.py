@@ -142,7 +142,7 @@ class LogoutView(views.APIView):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'users.manage'
+    required_permission = 'users.view'
     filterset_fields = ['role', 'status', 'is_active']
     search_fields = ['email', 'username', 'first_name', 'last_name']
 
@@ -190,11 +190,11 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all().prefetch_related('permissions')
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'users.manage'
+    required_permission = 'users.view'
 
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'users.manage'
+    required_permission = 'users.view'
