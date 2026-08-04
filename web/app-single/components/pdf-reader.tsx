@@ -18,6 +18,7 @@ export function PdfReader({ src, title }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
+  const [dataUrl, setDataUrl] = useState("");
   const renderTask = useRef<any>(null);
 
   useEffect(() => {
@@ -25,22 +26,31 @@ export function PdfReader({ src, title }: Props) {
     setLoading(true);
     setError("");
 
-    import("pdfjs-dist").then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    async function loadPdf() {
+      try {
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setDataUrl(url);
 
-      const loadingTask = pdfjs.getDocument({ url: src, withCredentials: true });
-      loadingTask.promise.then((doc) => {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+        const doc = await pdfjs.getDocument({ url, withCredentials: false }).promise;
         if (cancelled) return;
         setPdf(doc);
         setNumPages(doc.numPages);
         setPageNum(1);
         setLoading(false);
-      }).catch((err: any) => {
+      } catch (err: any) {
         if (cancelled) return;
         setError("Failed to load PDF");
         setLoading(false);
-      });
-    });
+      }
+    }
+    loadPdf();
 
     return () => { cancelled = true; };
   }, [src]);
@@ -63,8 +73,6 @@ export function PdfReader({ src, title }: Props) {
   }, [pdf, scale]);
 
   useEffect(() => { renderPage(pageNum); }, [pageNum, renderPage]);
-
-  useEffect(() => { renderPage(pageNum); }, [scale]);
 
   const goTo = (n: number) => {
     const p = Math.max(1, Math.min(numPages, n));
@@ -102,7 +110,6 @@ export function PdfReader({ src, title }: Props) {
 
   return (
     <div ref={containerRef} className={`bg-navy-900 rounded-xl overflow-hidden border border-navy-700 ${fullscreen ? "fixed inset-0 z-50" : ""}`}>
-      {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-navy-800 border-b border-navy-700 sticky top-0 z-10">
         {title && <span className="text-sm text-white font-medium truncate flex-1">{title}</span>}
 
@@ -110,37 +117,24 @@ export function PdfReader({ src, title }: Props) {
           <button onClick={() => goTo(pageNum - 1)} disabled={pageNum <= 1} className="p-1.5 rounded hover:bg-navy-700 disabled:opacity-30 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
-
-          <span className="text-xs text-gray-400 min-w-[60px] text-center font-mono">
-            {pageNum} / {numPages || "?"}
-          </span>
-
+          <span className="text-xs text-gray-400 min-w-[60px] text-center font-mono">{pageNum} / {numPages || "?"}</span>
           <button onClick={() => goTo(pageNum + 1)} disabled={pageNum >= numPages} className="p-1.5 rounded hover:bg-navy-700 disabled:opacity-30 text-gray-400 hover:text-white transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         <div className="w-px h-5 bg-navy-600 mx-1" />
-
-        <button onClick={zoomOut} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-white transition-colors">
-          <ZoomOut className="w-4 h-4" />
-        </button>
+        <button onClick={zoomOut} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-white transition-colors"><ZoomOut className="w-4 h-4" /></button>
         <span className="text-xs text-gray-400 w-10 text-center font-mono">{Math.round(scale * 100)}%</span>
-        <button onClick={zoomIn} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-white transition-colors">
-          <ZoomIn className="w-4 h-4" />
-        </button>
+        <button onClick={zoomIn} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-white transition-colors"><ZoomIn className="w-4 h-4" /></button>
 
         <div className="w-px h-5 bg-navy-600 mx-1" />
-
-        <a href={src} download={title || "document.pdf"} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-gold-500 transition-colors">
-          <Download className="w-4 h-4" />
-        </a>
+        <a href={dataUrl || src} download={title || "document.pdf"} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-gold-500 transition-colors"><Download className="w-4 h-4" /></a>
         <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-navy-700 text-gray-400 hover:text-white transition-colors">
           {fullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Canvas */}
       <div className={`overflow-auto bg-navy-950 flex justify-center p-4 ${fullscreen ? "flex-1" : "max-h-[65vh]"}`}>
         {loading && (
           <div className="flex items-center justify-center h-64">
