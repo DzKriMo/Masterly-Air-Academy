@@ -100,13 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Register forced-logout redirect handler on mount
   useEffect(() => {
     api.onLogout(() => {
-      const role = userRef.current?.role;
+      const storedRole = userRef.current?.role || loadSession().user?.role;
       setToken(null);
       setUser(null);
       clearSession();
       if (typeof window !== 'undefined') {
         const studentRoles = ['student', 'candidate', 'graduate'];
-        window.location.href = role && studentRoles.includes(role) ? '/student/login' : '/login';
+        window.location.href = storedRole && studentRoles.includes(storedRole) ? '/student/login' : '/login';
       }
     });
   }, []);
