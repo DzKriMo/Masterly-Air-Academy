@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
+import { useAuth } from "@/lib/auth-context";
+import { getDefaultPortal } from "@/lib/portal-access";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
 const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "prog_cpl_title", IR: "prog_ir_title", MEP: "prog_mep_title", MCC: "prog_mcc_title" };
@@ -61,6 +64,8 @@ const programDetails: ProgramDetail[] = [
 
 export default function LandingPage() {
   const { t, locale } = useTranslation();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -68,6 +73,14 @@ export default function LandingPage() {
   const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
   const [cardsPerView, setCardsPerView] = useState(3);
   const SWIPE_THRESHOLD = 50;
+
+  // Redirect logged-in users to their portal
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated && user) {
+      router.replace(getDefaultPortal(user.role));
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   useEffect(() => {
     const update = () => setCardsPerView(window.innerWidth < 620 ? 1 : 3);

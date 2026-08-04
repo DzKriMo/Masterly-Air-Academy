@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -15,8 +16,19 @@ type FormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, isLoading } = useAuth();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated && user) {
+      if (usesDjangoAdmin(user.role)) {
+        window.location.href = "/admin/dashboard";
+      } else {
+        router.replace(getDefaultPortal(user.role));
+      }
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   const {
     register,
