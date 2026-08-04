@@ -226,7 +226,7 @@ ROLE_DEFINITIONS = {
             'flight_training': ['manage'],
             'exams': ['manage'],
             'attendance': ['manage'],
-            'documents': ['view', 'create', 'update'],
+            'documents': ['view', 'create', 'update', 'delete'],
             'applications': ['manage'],
             'fleet': ['view'],
             'schedule': ['manage'],

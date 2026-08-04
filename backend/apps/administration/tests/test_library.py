@@ -94,6 +94,33 @@ def student_with_docs_view(student_profile):
     return student_profile.user
 
 
+@pytest.fixture
+def training_admin_client(db):
+    """APIClient for a training_admin with the seeder's documents permissions
+    (view/create/update/delete) — i.e. the minimum needed to manage the Library."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from rest_framework.test import APIClient
+    from rest_framework_simplejwt.tokens import RefreshToken
+    User = get_user_model()
+    user = User.objects.create_user(
+        username='training_admin', email='training@masterly.test',
+        password='testpass123', role='training_admin',
+        first_name='Training', last_name='Admin',
+    )
+    ct = ContentType.objects.get_for_model(User)
+    for codename in ('documents.view', 'documents.create', 'documents.update', 'documents.delete'):
+        perm, _ = Permission.objects.get_or_create(
+            codename=codename, name=f'Documents {codename}', content_type=ct,
+        )
+        user.user_permissions.add(perm)
+    client = APIClient()
+    refresh = RefreshToken.for_user(user)
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    return client
+
+
 class TestLibraryVisibility:
     def test_public_doc_visible_to_staff(self, api_client, library_doc, staff_with_docs_view):
         api_client.force_authenticate(user=staff_with_docs_view)
@@ -210,6 +237,19 @@ class TestLibraryUpload:
         assert resp.status_code == 200, resp.content
         assert resp.data['version'] == 2
         assert len(resp.data['version_history']) == 1
+
+    def test_training_admin_can_upload(self, api_client, training_admin_client):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        f = SimpleUploadedFile('ta.pdf', b'%PDF-1.4 fake', content_type='application/pdf')
+        resp = training_admin_client.post('/api/documents/upload/', {'file': f, 'name': 'TA Notes'})
+        assert resp.status_code == 201, resp.content
+        assert resp.data['name'] == 'TA Notes'
+
+    def test_training_admin_can_delete(self, api_client, training_admin_client, library_doc):
+        from apps.administration.models import Document
+        resp = training_admin_client.delete(f'/api/documents/{library_doc.id}/')
+        assert resp.status_code == 204, resp.content
+        assert not Document.objects.filter(id=library_doc.id).exists()
 
 
 class TestLibraryCategories:
