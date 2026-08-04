@@ -9,9 +9,10 @@ interface UnreadCounts {
 
 export function useUnreadCounts(options?: {
   includeMessages?: boolean;
+  includeApplications?: boolean;
   enabled?: boolean;
 }): UnreadCounts {
-  const { includeMessages = false, enabled = true } = options || {};
+  const { includeMessages = false, includeApplications = false, enabled = true } = options || {};
   const [notifications, setNotifications] = useState(0);
   const [messages, setMessages] = useState(0);
   const [applicationsPending, setApplicationsPending] = useState(0);
@@ -28,9 +29,11 @@ export function useUnreadCounts(options?: {
           .then((d: any) => setMessages(d.count ?? 0))
           .catch(() => {});
       }
-      api.get("/applications/?status=pending")
-        .then((d: any) => setApplicationsPending(d.count ?? 0))
-        .catch(() => {});
+      if (includeApplications) {
+        api.get("/applications/?status=pending")
+          .then((d: any) => setApplicationsPending(d.count ?? 0))
+          .catch(() => {});
+      }
     };
 
     fetchUnread();

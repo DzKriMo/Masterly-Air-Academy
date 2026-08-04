@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const unread = useUnreadCounts({ includeMessages: true, enabled: isAuthenticated });
+  const unread = useUnreadCounts({ includeMessages: true, includeApplications: true, enabled: isAuthenticated });
 
   const NOTIFICATION_BADGE = () => unread.notifications;
   const MESSAGES_BADGE = () => unread.messages;
