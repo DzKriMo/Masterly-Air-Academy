@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api } from "@/lib/api";
+import { api, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DataTable, Column } from "@/components/data-table";
 import { ModalForm } from "@/components/modal-form";
@@ -68,7 +68,7 @@ export default function AdminRolesPage() {
   } = useQuery<RoleGroup[]>({
     queryKey: ["admin", "groups"],
     queryFn: async (): Promise<RoleGroup[]> => {
-      const d: any = await api.get("/groups/");
+      const d: any = await api.get(withFullLimit("/groups/"));
       return (d?.results || d || []) as RoleGroup[];
     },
     enabled: isAuthenticated,
@@ -77,7 +77,7 @@ export default function AdminRolesPage() {
   const { data: permissionsList = [] } = useQuery<Permission[]>({
     queryKey: ["admin", "permissions"],
     queryFn: async (): Promise<Permission[]> => {
-      const d: any = await api.get("/permissions/");
+      const d: any = await api.get(withFullLimit("/permissions/"));
       return (d?.results || d || []) as Permission[];
     },
     enabled: isAuthenticated,
@@ -86,7 +86,7 @@ export default function AdminRolesPage() {
   const { data: users = [] } = useQuery<AppUser[]>({
     queryKey: ["admin", "users"],
     queryFn: async (): Promise<AppUser[]> => {
-      const d: any = await api.get("/users/");
+      const d: any = await api.get(withFullLimit("/users/"));
       return (d?.results || d || []) as AppUser[];
     },
     enabled: isAuthenticated,
@@ -162,11 +162,15 @@ export default function AdminRolesPage() {
   const permissionsByType = useMemo(() => {
     const grouped: Record<string, Permission[]> = {};
     for (const perm of permissionsList) {
-      const key = perm.content_type_name || "other";
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(perm);
+      // Group by domain (part before the dot in codename, e.g. "flight_training" from "flight_training.view")
+      const domain = perm.codename.includes('.') ? perm.codename.split('.')[0] : perm.codename;
+      if (!grouped[domain]) grouped[domain] = [];
+      grouped[domain].push(perm);
     }
-    return grouped;
+    // Sort keys alphabetically
+    const sorted: Record<string, Permission[]> = {};
+    Object.keys(grouped).sort().forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
   }, [permissionsList]);
 
   // ── Columns ──
@@ -401,8 +405,8 @@ export default function AdminRolesPage() {
                 {Object.entries(permissionsByType).map(
                   ([contentType, perms]) => (
                     <div key={contentType} className="mb-3">
-                      <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5 capitalize">
-                        {contentType.replace(/_/g, " ")}
+                      <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">
+                        {contentType.charAt(0).toUpperCase() + contentType.slice(1).replace(/_/g, " ")}
                       </h4>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                         {perms.map((perm) => {
