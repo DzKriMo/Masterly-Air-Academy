@@ -22,6 +22,8 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [buffering, setBuffering] = useState(true);
+  const [buffered, setBuffered] = useState(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,13 +95,32 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
     el.preload = "metadata";
     const onTime = () => { setCurrentTime(el.currentTime); onTimeUpdate?.(el.currentTime); };
     const onDur = () => setDuration(el.duration);
+    const onWaiting = () => setBuffering(true);
+    const onCanPlay = () => setBuffering(false);
+    const onSeeked = () => setBuffering(false);
+    const onSeeking = () => setBuffering(true);
+    const onProgress = () => {
+      if (el.buffered.length > 0) {
+        setBuffered(el.buffered.end(el.buffered.length - 1));
+      }
+    };
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onDur);
     el.addEventListener("durationchange", onDur);
+    el.addEventListener("waiting", onWaiting);
+    el.addEventListener("canplay", onCanPlay);
+    el.addEventListener("seeking", onSeeking);
+    el.addEventListener("seeked", onSeeked);
+    el.addEventListener("progress", onProgress);
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onDur);
       el.removeEventListener("durationchange", onDur);
+      el.removeEventListener("waiting", onWaiting);
+      el.removeEventListener("canplay", onCanPlay);
+      el.removeEventListener("seeking", onSeeking);
+      el.removeEventListener("seeked", onSeeked);
+      el.removeEventListener("progress", onProgress);
     };
   }, [ref, onTimeUpdate]);
 
@@ -122,6 +143,16 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
         onVolumeChange={() => { if (ref.current) { setVolume(ref.current.volume); setMuted(ref.current.muted); } }}
       />
 
+      {/* Loading / buffering spinner */}
+      {buffering && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+          <svg className="w-10 h-10 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="#c4943c" strokeWidth="3" />
+            <path className="opacity-75" fill="#c4943c" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+      )}
+
       {/* Big play button overlay */}
       {!playing && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -140,6 +171,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
       >
         {/* Progress bar */}
         <div className="relative h-1 bg-navy-600/50 rounded-full mb-3 cursor-pointer group/progress" onClick={seek}>
+          <div className="absolute inset-y-0 left-0 bg-gold-500/30 rounded-full" style={{ width: `${duration ? (buffered / duration) * 100 : 0}%` }} />
           <div className="absolute inset-y-0 left-0 bg-gold-500 rounded-full" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
           <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-gold-500 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity shadow-lg"
             style={{ left: `calc(${duration ? (currentTime / duration) * 100 : 0}% - 6px)` }}
