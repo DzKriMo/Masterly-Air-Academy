@@ -503,6 +503,7 @@ class Command(BaseCommand):
                         'title_fr': subj_data.get('title_fr', subj_data['title_en']),
                         'title_ar': subj_data.get('title_ar', subj_data['title_en']),
                         'program': program_code,
+                        'total_hours': subj_data.get('total_hours', 30),
                     }
                 )
                 if subj_created:
