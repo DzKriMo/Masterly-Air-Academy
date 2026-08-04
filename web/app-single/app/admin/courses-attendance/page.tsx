@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Calendar, GraduationCap, ClipboardCheck, Users, ChevronDown, Search } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
+import { ModalForm } from "@/components/modal-form";
 import { formatDate, formatTime, fmtLabel, todayLocal } from "@/lib/format-utils";
 import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
+import { useToast } from "@/components/toast";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorCard } from "@/components/error-card";
@@ -145,24 +147,104 @@ const ENROLLMENT_COLORS: Record<string, string> = {
 };
 
 function EnrollmentsTab() {
+  const { t } = { t: (k: string, f?: string) => f || k };
+  const { showToast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [enrollForm, setEnrollForm] = useState({ course: "", mode: "student" as "student" | "promotion", student: "", promotion: "" });
+  const [saving, setSaving] = useState(false);
+
+  const { data: students } = useQuery<any[]>({ queryKey: ["enroll-students"], queryFn: async () => unwrapResults(await api.get(withFullLimit("/students/"))) });
+  const { data: promotions } = useQuery<any[]>({ queryKey: ["enroll-promos"], queryFn: async () => unwrapResults(await api.get(withFullLimit("/promotions/"))) });
+  const { data: courses } = useQuery<any[]>({ queryKey: ["enroll-courses"], queryFn: async () => unwrapResults(await api.get(withFullLimit("/courses/"))) });
+
+  const handleEnroll = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      if (enrollForm.mode === "student") {
+        await api.post("/course-enrollments/", { student: enrollForm.student, course: enrollForm.course });
+        showToast("success", "Student enrolled");
+      } else {
+        const promoStudents = unwrapResults<any>(await api.get(withFullLimit(`/students/?promotion=${enrollForm.promotion}`)));
+        let count = 0;
+        for (const s of promoStudents) {
+          try { await api.post("/course-enrollments/", { student: s.id, course: enrollForm.course }); count++; } catch {}
+        }
+        showToast("success", `${count} students enrolled`);
+      }
+      setShowForm(false);
+      setEnrollForm({ course: "", mode: "student", student: "", promotion: "" });
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to enroll");
+    } finally { setSaving(false); }
+  };
+
   return (
-    <CourseGroupedList
-      queryKey={["admin-enrollments"]}
-      endpoint="/course-enrollments/"
-      titleFallback="Enrollments"
-      emptyTitle="No enrollments yet"
-      emptyMessage="Enroll students into courses."
-      searchPlaceholder="Search student..."
-      coursesQueryKey={["admin-enrollments-courses"]}
-      coursesEndpoint="/courses/"
-      renderRow={(e) => ({
-        key: e.id,
-        course: e.course,
-        badge: { label: fmtLabel(e.status), className: ENROLLMENT_COLORS[e.status] || "bg-gray-500/10 text-gray-400" },
-        title: e.student_name,
-        subtitle: formatDate(e.enrolled_at),
-      })}
-    />
+    <>
+      <div className="flex justify-end mb-4">
+        <button onClick={() => { setEnrollForm({ course: "", mode: "student", student: "", promotion: "" }); setShowForm(true); }} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
+          + Enroll Students
+        </button>
+      </div>
+      <CourseGroupedList
+        queryKey={["admin-enrollments"]}
+        endpoint="/course-enrollments/"
+        titleFallback="Enrollments"
+        emptyTitle="No enrollments yet"
+        emptyMessage="Enroll students into courses."
+        searchPlaceholder="Search student..."
+        coursesQueryKey={["admin-enrollments-courses"]}
+        coursesEndpoint="/courses/"
+        renderRow={(e) => ({
+          key: e.id,
+          course: e.course,
+          badge: { label: fmtLabel(e.status), className: ENROLLMENT_COLORS[e.status] || "bg-gray-500/10 text-gray-400" },
+          title: e.student_name,
+          subtitle: formatDate(e.enrolled_at),
+        })}
+      />
+
+      <ModalForm open={showForm} onClose={() => setShowForm(false)} title="Enroll Students"
+        footer={
+          <button type="submit" form="enroll-form" disabled={saving} className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">
+            {saving ? "Enrolling..." : "Enroll"}
+          </button>
+        }
+      >
+        <form id="enroll-form" onSubmit={handleEnroll} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Course *</label>
+            <select value={enrollForm.course} onChange={e => setEnrollForm({...enrollForm, course: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+              <option value="">Select course...</option>
+              {(courses || []).map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Enrollment Mode</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setEnrollForm({...enrollForm, mode: "student"})} className={`px-4 py-2 rounded-lg text-sm font-semibold ${enrollForm.mode === "student" ? "bg-gold-500 text-navy-900" : "bg-navy-700 text-gray-400"}`}>Single Student</button>
+              <button type="button" onClick={() => setEnrollForm({...enrollForm, mode: "promotion"})} className={`px-4 py-2 rounded-lg text-sm font-semibold ${enrollForm.mode === "promotion" ? "bg-gold-500 text-navy-900" : "bg-navy-700 text-gray-400"}`}>By Promotion</button>
+            </div>
+          </div>
+          {enrollForm.mode === "student" ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Student *</label>
+              <select value={enrollForm.student} onChange={e => setEnrollForm({...enrollForm, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+                <option value="">Select student...</option>
+                {(students || []).map((s: any) => <option key={s.id} value={s.id}>{s.full_name || `${s.first_name} ${s.last_name}`} ({s.student_number})</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Promotion *</label>
+              <select value={enrollForm.promotion} onChange={e => setEnrollForm({...enrollForm, promotion: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm">
+                <option value="">Select promotion...</option>
+                {(promotions || []).map((p: any) => <option key={p.id} value={p.id}>{p.name || p.code}</option>)}
+              </select>
+            </div>
+          )}
+        </form>
+      </ModalForm>
+    </>
   );
 }
 interface Enrollment {
