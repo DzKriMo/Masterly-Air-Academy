@@ -20,6 +20,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
+import { offlineQueue } from "@/lib/offline-queue";
+import { useOfflineSync, SyncIndicator } from "@/components/sync-indicator";
 
 interface FlightEntry { id: string; date: string; aircraft: string; duration: number; grade: number | null; result: string | null; instructor_name?: string; exercises_completed?: any; competencies_acquired?: any; observations?: string; source?: string; }
 interface LogEntry { id: string; date: string; aircraft_reg?: string; aircraft_text?: string; flight_duration: number; exercises: string[]; notes?: string; status: string; validated_by_name?: string; validated_at?: string; rejection_reason?: string; }
@@ -47,6 +49,8 @@ export default function StudentFlightsPage() {
     aircraft: "", aircraft_text: "", date: "", departure_time: "", arrival_time: "",
     flight_duration: "", exercises: [] as string[], notes: "",
   });
+
+  const { isOnline, pendingCount, sync } = useOfflineSync();
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -175,6 +179,14 @@ export default function StudentFlightsPage() {
     if (form.aircraft_text) body.aircraft_text = form.aircraft_text;
     if (form.departure_time) body.departure_time = form.departure_time;
     if (form.arrival_time) body.arrival_time = form.arrival_time;
+
+    if (!navigator.onLine) {
+      await offlineQueue.push(body);
+      setShowForm(false); resetForm();
+      showToast("success", t("student.entryQueuedOffline", "Entry saved offline — will sync when online"));
+      setSaving(false);
+      return;
+    }
 
     try {
       if (editEntry) {
@@ -355,6 +367,7 @@ export default function StudentFlightsPage() {
           </>
         )}
       </main>
+      <SyncIndicator isOnline={isOnline} pendingCount={pendingCount} onSync={sync} />
     </div>
   );
 }
