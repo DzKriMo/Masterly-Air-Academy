@@ -411,6 +411,7 @@ class FlightPreparationViewSet(viewsets.ModelViewSet):
 
 
 class FlightLogEntryViewSet(viewsets.ModelViewSet):
+    queryset = FlightLogEntry.objects.select_related('student', 'aircraft', 'validated_by').all()
     serializer_class = FlightLogEntrySerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'flight_training.view'
@@ -419,7 +420,7 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = FlightLogEntry.objects.select_related('student', 'aircraft', 'validated_by').all()
+        qs = super().get_queryset()
         if user.role in ('student',):
             try:
                 from apps.students.models import Student
