@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { HubCrud } from "@/components/hub-crud";
-import { ModalForm } from "@/components/modal-form";
 import { fmtLabel } from "@/lib/format-utils";
-import { api } from "@/lib/api";
-import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
+import { QuestionBankImport } from "@/components/question-bank-import";
 
 interface FinalQuestion {
   id: string; subject: string; subject_name: string; module: string; module_name: string;
@@ -27,33 +25,12 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function FinalExamQuestionsPage() {
   const { t } = useTranslation();
-  const { showToast } = useToast();
-  const [showBulk, setShowBulk] = useState(false);
-  const [bulkJson, setBulkJson] = useState("");
-  const [importing, setImporting] = useState(false);
-
-  const handleBulkImport = async () => {
-    setImporting(true);
-    try {
-      let questions;
-      try { questions = JSON.parse(bulkJson); } catch { showToast("error", "Invalid JSON"); setImporting(false); return; }
-      const res = await api.post<any>("/final-exam-questions/bulk_import/", { questions });
-      showToast("success", `${res.created} questions imported. ${(res.errors || []).length} errors.`);
-      if (res.errors?.length) console.error("Import errors:", res.errors);
-      setShowBulk(false);
-      setBulkJson("");
-    } catch (err: any) {
-      showToast("error", err.message || "Import failed");
-    } finally { setImporting(false); }
-  };
 
   return (
     <div className="min-h-screen bg-navy-900 p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">{t("admin.finalExamQuestions", "Final Exam Question Bank")}</h1>
-        <button onClick={() => setShowBulk(true)} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
-          + Bulk Import
-        </button>
+        <QuestionBankImport queryKey={["admin-final-questions"]} endpointPrefix="/final-exam-questions" />
       </div>
 
       <HubCrud<FinalQuestion>
@@ -116,19 +93,6 @@ export default function FinalExamQuestionsPage() {
           ...(q.explanation ? [{ label: "Explanation", value: q.explanation }] : []),
         ]}
       />
-
-      <ModalForm open={showBulk} onClose={() => setShowBulk(false)} title="Bulk Import Questions"
-        footer={
-          <button onClick={handleBulkImport} disabled={importing} className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">
-            {importing ? "Importing..." : "Import"}
-          </button>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-400">Paste JSON array of questions. Each object must have: subject (UUID), module (UUID), question_text, question_type, difficulty. Optional: options (array), correct_answer, explanation.</p>
-          <textarea value={bulkJson} onChange={e => setBulkJson(e.target.value)} rows={15} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm font-mono" placeholder={`[\n  {"subject": "...", "module": "...", "question_text": "...", "question_type": "mcq", "difficulty": "easy", "options": ["A","B","C","D"], "correct_answer": "A"}\n]`} />
-        </div>
-      </ModalForm>
     </div>
   );
 }

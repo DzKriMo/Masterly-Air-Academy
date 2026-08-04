@@ -15,7 +15,7 @@ interface ImportResult {
   errors: { row: number; message: string }[];
 }
 
-export function QuestionBankImport({ queryKey }: { queryKey: string[] }) {
+export function QuestionBankImport({ queryKey, endpointPrefix = "/question-bank" }: { queryKey: string[]; endpointPrefix?: string }) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -24,7 +24,7 @@ export function QuestionBankImport({ queryKey }: { queryKey: string[] }) {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const downloadTemplate = async (fmt: string) => {
-    const ok = await downloadBlob(`/question-bank/template/?fmt=${fmt}`, `question_bank_template.${fmt}`);
+    const ok = await downloadBlob(`${endpointPrefix}/template/?fmt=${fmt}`, `question_bank_template.${fmt}`);
     if (!ok) showToast("error", "Failed to download template.");
   };
 
@@ -41,7 +41,7 @@ export function QuestionBankImport({ queryKey }: { queryKey: string[] }) {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api.upload<ImportResult>("/question-bank/import/", fd);
+      const res = await api.upload<ImportResult>(`${endpointPrefix}/import/`, fd);
       setResult(res);
       if (res.created > 0) {
         showToast("success", `${res.created} question${res.created === 1 ? "" : "s"} imported.`);

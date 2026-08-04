@@ -17,6 +17,7 @@ from .final_serializers import (
     FinalExamModuleConfigSerializer, FinalExamAssignmentSerializer,
     FinalExamAccessSerializer, FinalExamSubmitSerializer,
 )
+from .final_bulk_import import import_questions, generate_template
 
 
 class FinalExamQuestionViewSet(viewsets.ModelViewSet):
@@ -50,6 +51,28 @@ class FinalExamQuestionViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 errors.append({'row': i + 1, 'error': str(e)})
         return Response({'created': created, 'errors': errors})
+
+    @action(detail=False, methods=['get'], url_path='template')
+    def template(self, request):
+        from django.http import HttpResponse
+        fmt = request.query_params.get('fmt', 'csv').lower()
+        if fmt == 'xlsx':
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            filename = 'final_exam_question_template.xlsx'
+        else:
+            content_type = 'text/csv'
+            filename = 'final_exam_question_template.csv'
+        response = HttpResponse(generate_template(fmt), content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_bank(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=400)
+        result = import_questions(file)
+        return Response(result)
 
 
 class FinalExamViewSet(viewsets.ModelViewSet):
