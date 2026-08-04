@@ -33,6 +33,7 @@ export default function EvaluateFlightPage() {
   const [error, setError] = useState<string | null>(null);
   const [showSoloConfirm, setShowSoloConfirm] = useState(false);
   const [soloAuthorizing, setSoloAuthorizing] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   useAuthGuard(isAuthenticated, authLoading);
 
@@ -69,6 +70,20 @@ export default function EvaluateFlightPage() {
       showToast("error", err.message || t("instructor.failedToAuthorizeSolo", "Failed to authorize solo flight"));
     } finally {
       setSoloAuthorizing(false);
+    }
+  };
+
+  const handlePrintReport = async () => {
+    setPrinting(true);
+    try {
+      const res = await api.download(`/flight-lessons/${flightId}/report/`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      showToast("error", err.message || t("instructor.failedToPrint", "Failed to generate report"));
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -122,6 +137,23 @@ export default function EvaluateFlightPage() {
 
           <button type="submit" disabled={saving} className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg">{saving ? t("common.loading", "Submitting...") : t("instructor.submitEvaluation", "Submit Evaluation")}</button>
         </form>
+
+        {/* Evaluation submitted — show report & success */}
+        {submitted && (
+          <div className="mt-6 p-6 bg-navy-800 border border-green-500/30 rounded-xl">
+            <h3 className="text-lg font-bold text-green-400 mb-2">{t("instructor.evaluationSubmitted", "Evaluation Submitted")}</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              {t("instructor.grade", "Grade")}: {grade}/10 &mdash; {t("instructor.flightDuration", "Duration")}: {flightDuration}h
+            </p>
+            <button
+              onClick={handlePrintReport}
+              disabled={printing}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg"
+            >
+              {printing ? t("common.loading", "Generating...") : t("instructor.printReport", "Print Flight Report")}
+            </button>
+          </div>
+        )}
 
         {/* Solo Authorization Section (only after successful evaluation) */}
         {submitted && grade >= 7 && flightDuration > 0 && (

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.http import HttpResponse
 from apps.accounts.permissions import HasRolePermission
 
 from .models import (
@@ -232,6 +233,148 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         )
 
         return Response({'status': 'solo_authorized', 'lesson_id': str(lesson.id)})
+
+    @action(detail=True, methods=['get'])
+    def report(self, request, pk=None):
+        if not _user_has_permission(request.user, 'flight_training.view'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        lesson = self.get_object()
+
+        from weasyprint import HTML
+        from django.utils.timezone import localtime
+
+        student = lesson.student
+        instructor = lesson.instructor
+        aircraft = lesson.aircraft
+
+        dep = localtime(lesson.departure_time).strftime('%d/%m/%Y %H:%M') if lesson.departure_time else '—'
+        arr = localtime(lesson.arrival_time).strftime('%d/%m/%Y %H:%M') if lesson.arrival_time else '—'
+        sched = lesson.scheduled_date.strftime('%d/%m/%Y') if lesson.scheduled_date else '—'
+        now_str = localtime(__import__('django.utils.timezone').utils.timezone.now()).strftime('%d/%m/%Y %H:%M')
+
+        exercises = lesson.exercises_completed or []
+        competencies = lesson.competencies_acquired or []
+
+        def badges(items, color='#c4943c'):
+            if not items:
+                return '<span style="color:#9ca3af">—</span>'
+            return ' '.join(
+                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{item}</span>'
+                for item in items
+            )
+
+        signature_block = ''
+        if lesson.signed_by_instructor:
+            signature_block = f'''
+            <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
+                <p style="font-size:12px;color:#374151"><strong>Digitally signed by:</strong> {instructor.first_name} {instructor.last_name}</p>
+                <p style="font-size:10px;color:#9ca3af">Signed electronically on {now_str}</p>
+            </div>'''
+
+        grade_val = float(lesson.grade) if lesson.grade else None
+        result_label = {'passed': 'PASSED', 'failed': 'FAILED', 'partial': 'PARTIAL'}.get(lesson.result, lesson.result or '—')
+        result_color = {'passed': '#16a34a', 'failed': '#dc2626', 'partial': '#f59e0b'}.get(lesson.result, '#374151')
+
+        html = f'''<html><head><meta charset="utf-8"><style>
+        @page {{ size: A4; margin: 1.8cm; }}
+        body {{ font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2937; }}
+        .header {{ border-bottom: 3px solid #c4943c; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
+        .logo {{ font-size: 22px; color: #c4943c; font-weight: 800; }}
+        .subtitle {{ font-size: 12px; color: #6b7280; }}
+        .title {{ font-size: 18px; font-weight: 700; color: #0a1628; margin: 6px 0 14px 0; }}
+        .grid {{ display: flex; flex-wrap: wrap; gap: 12px 32px; margin-bottom: 18px; }}
+        .field {{ min-width: 140px; }}
+        .field-label {{ font-size: 9px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; margin-bottom: 2px; }}
+        .field-value {{ font-size: 13px; color: #1f2937; font-weight: 500; }}
+        .section-title {{ font-size: 13px; font-weight: 700; color: #c4943c; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin: 16px 0 8px 0; }}
+        .chips {{ margin-bottom: 6px; }}
+        .result-badge {{ display: inline-block; padding: 4px 16px; border-radius: 6px; font-weight: 800; font-size: 14px; }}
+        .text-block {{ font-size: 12px; line-height: 1.5; color: #4b5563; margin-bottom: 6px; }}
+        .footer {{ margin-top: 30px; font-size: 9px; color: #d1d5db; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }}
+        table {{ width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }}
+        th {{ background: #0a1628; color: #c4943c; padding: 6px 10px; text-align: left; font-size: 10px; text-transform: uppercase; }}
+        td {{ padding: 5px 10px; border-bottom: 1px solid #e5e7eb; }}
+        </style></head><body>
+
+        <div class="header">
+          <div>
+            <div class="logo">MASTERLY AIR ACADEMY</div>
+            <div class="subtitle">Flight Training Report</div>
+          </div>
+          <div style="text-align:right">
+            <div class="field-label">Report Date</div>
+            <div class="field-value" style="font-size:11px">{now_str}</div>
+          </div>
+        </div>
+
+        <h2 class="title">Flight Lesson Report</h2>
+
+        <div class="section-title">Flight Details</div>
+        <div class="grid">
+          <div class="field"><div class="field-label">Student</div><div class="field-value">{student.full_name}</div></div>
+          <div class="field"><div class="field-label">Student #</div><div class="field-value">{student.student_number or '—'}</div></div>
+          <div class="field"><div class="field-label">Program</div><div class="field-value">{student.program or '—'}</div></div>
+          <div class="field"><div class="field-label">Instructor</div><div class="field-value">{instructor.first_name} {instructor.last_name}</div></div>
+          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{aircraft.registration} ({aircraft.manufacturer} {aircraft.model or ''})</div></div>
+        </div>
+
+        <div class="section-title">Time & Duration</div>
+        <div class="grid">
+          <div class="field"><div class="field-label">Scheduled Date</div><div class="field-value">{sched}</div></div>
+          <div class="field"><div class="field-label">Departure</div><div class="field-value">{dep}</div></div>
+          <div class="field"><div class="field-label">Arrival</div><div class="field-value">{arr}</div></div>
+          <div class="field"><div class="field-label">Flight Duration</div><div class="field-value">{float(lesson.flight_duration) if lesson.flight_duration else '—'} h</div></div>
+        </div>
+
+        <div class="section-title">Exercises Completed</div>
+        <div class="chips">{badges(exercises)}</div>
+
+        <div class="section-title">Competencies Acquired</div>
+        <div class="chips">{badges(competencies)}</div>
+
+        <div class="section-title">Evaluation</div>
+        <div class="grid">
+          <div class="field"><div class="field-label">Grade</div><div class="field-value">{f'{grade_val}/10' if grade_val is not None else '—'}</div></div>
+          <div class="field"><div class="field-label">Result</div><span class="result-badge" style="background:{result_color}15;color:{result_color}">{result_label}</span></div>
+        </div>
+
+        <div class="section-title">Difficulties Encountered</div>
+        <div class="text-block">{lesson.difficulties or 'None reported'}</div>
+
+        <div class="section-title">Observations</div>
+        <div class="text-block">{lesson.observations or 'None recorded'}</div>
+
+        <div class="section-title">Recommendations</div>
+        <div class="text-block">{lesson.recommendations or 'None'}</div>
+
+        <div class="section-title">Pedagogical Note</div>
+        <div class="text-block">{lesson.pedagogical_note or '—'}</div>
+
+        <div class="section-title">Logbook Summary</div>
+        <table>
+          <tr><th>Date</th><th>Departure</th><th>Arrival</th><th>Duration</th><th>Aircraft</th><th>Instructor</th><th>Grade</th><th>Result</th></tr>
+          <tr>
+            <td>{sched}</td><td>{dep}</td><td>{arr}</td>
+            <td>{float(lesson.flight_duration) if lesson.flight_duration else '—'} h</td>
+            <td>{aircraft.registration}</td>
+            <td>{instructor.first_name} {instructor.last_name}</td>
+            <td>{f'{grade_val}/10' if grade_val is not None else '—'}</td>
+            <td style="color:{result_color};font-weight:700">{result_label}</td>
+          </tr>
+        </table>
+
+        {signature_block}
+
+        <div class="footer">Masterly Air Academy — Flight Training Report — Generated on {now_str}</div>
+        </body></html>'''
+
+        try:
+            pdf = HTML(string=html).write_pdf()
+            resp = HttpResponse(pdf, content_type='application/pdf')
+            resp['Content-Disposition'] = f'attachment; filename="flight-report-{lesson.student.student_number or lesson.id}.pdf"'
+            return resp
+        except ImportError:
+            return HttpResponse('PDF generation not available', status=501)
 
 
 class FlightPreparationViewSet(viewsets.ModelViewSet):
