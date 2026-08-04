@@ -517,6 +517,8 @@ class Command(BaseCommand):
                             'title_fr': mod_data.get('title_fr', mod_data['title']),
                             'title_ar': mod_data.get('title_ar', mod_data['title']),
                             'description': mod_data.get('title', ''),
+                            'duration': mod_data.get('duration', 10),
+                            'order': mod_data.get('order', 1),
                         }
                     )
                     if mod_created:
