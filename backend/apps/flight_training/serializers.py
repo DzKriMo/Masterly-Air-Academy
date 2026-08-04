@@ -260,7 +260,7 @@ class FlightLogEntrySerializer(serializers.ModelSerializer):
             'validated_at', 'rejection_reason',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['validated_by', 'validated_at', 'status']
+        read_only_fields = ['student', 'validated_by', 'validated_at', 'status', 'created_at', 'updated_at']
 
     def get_validated_by_name(self, obj):
         if obj.validated_by:
