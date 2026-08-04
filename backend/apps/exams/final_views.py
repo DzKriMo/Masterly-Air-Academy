@@ -53,6 +53,9 @@ class FinalExamQuestionViewSet(viewsets.ModelViewSet):
 
 
 class FinalExamViewSet(viewsets.ModelViewSet):
+    queryset = FinalExam.objects.select_related('subject', 'created_by').prefetch_related(
+        'module_configs__module', 'promotions'
+    ).all()
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'exams.manage'
     filterset_fields = ['subject', 'status']
