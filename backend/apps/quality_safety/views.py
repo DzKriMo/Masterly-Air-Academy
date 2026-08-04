@@ -275,7 +275,7 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
             '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             '.txt': 'text/plain',
         }.get(name.lower().rsplit('.', 1)[-1], 'application/octet-stream')
-        response = _stream_from_storage(url, content_type=content_type, filename=name)
+        response = _stream_from_storage(url, content_type=content_type, filename=name, request=request)
         if response is None:
             return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
         return response

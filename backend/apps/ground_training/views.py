@@ -29,10 +29,11 @@ from .serializers import (
 )
 
 
-def _stream_from_storage(key, content_type='application/octet-stream', filename='file', inline=True):
-    """Stream a stored (MinIO) file with proper byte-range support for video seeking."""
+def _stream_from_storage(key, content_type='application/octet-stream', filename='file', inline=True, request=None):
+    """Stream a stored file with proper HTTP Range / byte-range support for video seeking."""
     from django.core.files.storage import default_storage
-    from django.http import FileResponse, HttpResponse
+    from django.http import HttpResponse
+    import re
 
     if not key:
         return None
@@ -42,10 +43,36 @@ def _stream_from_storage(key, content_type='application/octet-stream', filename=
         key = key[len('/media/'):]
     if not default_storage.exists(key):
         return None
+
     try:
-        f = default_storage.open(key, 'rb')
         file_size = default_storage.size(key)
-        response = FileResponse(f, content_type=content_type, as_attachment=False, filename=filename)
+        range_header = request.META.get('HTTP_RANGE', '') if request else ''
+        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header) if range_header else None
+
+        if range_match:
+            start = int(range_match.group(1))
+            end_str = range_match.group(2)
+            end = int(end_str) - 1 if end_str else file_size - 1
+            if start >= file_size:
+                return HttpResponse(status=416)
+
+            length = end - start + 1
+            f = default_storage.open(key, 'rb')
+            f.seek(start)
+            data = f.read(length)
+            f.close()
+
+            resp = HttpResponse(data, content_type=content_type, status=206)
+            resp['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+            resp['Content-Length'] = length
+            resp['Accept-Ranges'] = 'bytes'
+            disposition = 'inline' if inline else 'attachment'
+            resp['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+            return resp
+
+        f = default_storage.open(key, 'rb')
+        from django.http import StreamingHttpResponse
+        response = StreamingHttpResponse(f, content_type=content_type)
         response['Accept-Ranges'] = 'bytes'
         response['Content-Length'] = file_size
         disposition = 'inline' if inline else 'attachment'
@@ -108,6 +135,7 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
             lesson.video_url,
             content_type='video/mp4',
             filename=f'lesson_{lesson.lesson_no}.mp4',
+            request=request,
         )
         if response is None:
             if lesson.video_url and (lesson.video_url.startswith('http') or lesson.video_url.startswith('/media/')):
@@ -204,6 +232,7 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
             doc.file_url,
             content_type='application/octet-stream',
             filename=doc.name or 'document',
+            request=request,
         )
         if response is None:
             if doc.file_url and (doc.file_url.startswith('http') or doc.file_url.startswith('/media/')):

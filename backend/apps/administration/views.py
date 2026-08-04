@@ -410,6 +410,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             content_type=doc.mime_type or 'application/octet-stream',
             filename=doc.name.replace('"', ''),
             inline=inline,
+            request=request,
         )
         if response is None:
             return Response({'error': 'File not found'}, status=404)
