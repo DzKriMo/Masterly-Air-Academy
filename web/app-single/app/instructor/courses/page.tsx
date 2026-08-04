@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "@/lib/use-translation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { courseSchema } from "@/lib/validators";
-import { api } from "@/lib/api";
+import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -63,6 +63,10 @@ export default function CoursesPage() {
   const [rescheduleCourse, setRescheduleCourse] = useState<Course | null>(null);
   const [rescheduleForm, setRescheduleForm] = useState({ scheduled_date: "", start_time: "", end_time: "" });
 
+  // Enroll state
+  const [enrollCourse, setEnrollCourse] = useState<Course | null>(null);
+  const [enrollForm, setEnrollForm] = useState({ mode: "student" as "student" | "promotion", student: "", promotion: "" });
+
   const {
     register,
     handleSubmit,
@@ -95,6 +99,42 @@ export default function CoursesPage() {
     enabled: isAuthenticated,
   });
   const rooms: Room[] = roomsData?.results || [];
+
+  const { data: studentsData } = useQuery({
+    queryKey: ["instructor-courses-students"],
+    queryFn: () => api.get<any>(withFullLimit("/students/")).then(unwrapResults),
+    enabled: isAuthenticated,
+  });
+  const students: any[] = studentsData || [];
+
+  const { data: promotionsData } = useQuery({
+    queryKey: ["instructor-courses-promotions"],
+    queryFn: () => api.get<any>(withFullLimit("/promotions/")).then(unwrapResults),
+    enabled: isAuthenticated,
+  });
+  const promotions: any[] = promotionsData || [];
+
+  const enrollMutation = useMutation({
+    mutationFn: async ({ courseId, data }: { courseId: string; data: { mode: "student" | "promotion"; student: string; promotion: string } }) => {
+      if (data.mode === "student") {
+        await api.post<any>("/course-enrollments/", { student: data.student, course: courseId });
+        return 1;
+      }
+      const promoStudents = unwrapResults<any>(await api.get(withFullLimit(`/students/?promotion=${data.promotion}`)));
+      let count = 0;
+      for (const s of promoStudents) {
+        try { await api.post<any>("/course-enrollments/", { student: s.id, course: courseId }); count++; } catch {}
+      }
+      return count;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["instructor-courses"] });
+      setEnrollCourse(null);
+      setEnrollForm({ mode: "student", student: "", promotion: "" });
+      showToast("success", count > 0 ? `${count} student${count > 1 ? "s" : ""} enrolled` : t("instructor.enrolledSuccess", "Enrolled successfully"));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
 
   const createCourse = useMutation({
     mutationFn: async (formData: CourseFormData) => {
@@ -172,6 +212,15 @@ export default function CoursesPage() {
     { key: "enrollment_count", header: t("instructor.students", "Students") },
     { key: "actions", header: "", sortable: false, render: (c) => (
       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => {
+              setEnrollCourse(c);
+              setEnrollForm({ mode: "student", student: "", promotion: "" });
+            }}
+            className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg text-xs hover:bg-green-500/20 transition-colors"
+          >
+            {t("instructor.enroll", "Enroll")}
+          </button>
           <button
             onClick={() => router.push(`/instructor/courses/${c.id}/attendance`)}
             className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors"
@@ -357,6 +406,89 @@ export default function CoursesPage() {
                 </div>
               </div>
             </div>
+          </form>
+        </ModalForm>
+
+        {/* Enroll Modal */}
+        <ModalForm
+          open={!!enrollCourse}
+          onClose={() => { setEnrollCourse(null); setEnrollForm({ mode: "student", student: "", promotion: "" }); }}
+          title={t("instructor.enrollStudents", "Enroll Students")}
+          footer={
+            <button
+              type="submit"
+              form="enroll-form"
+              disabled={enrollMutation.isPending}
+              className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm transition-colors"
+            >
+              {enrollMutation.isPending ? t("common.loading", "Enrolling...") : t("instructor.enroll", "Enroll")}
+            </button>
+          }
+        >
+          {enrollCourse && (
+            <p className="text-sm text-gray-400 mb-4">
+              {enrollCourse.title} • {enrollCourse.subject_code} • {enrollCourse.scheduled_date?.slice(0,10)}
+            </p>
+          )}
+          <form
+            id="enroll-form"
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!enrollCourse) return;
+              enrollMutation.mutate({ courseId: enrollCourse.id, data: enrollForm });
+            }}
+          >
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">{t("instructor.enrollMode", "Enrollment Mode")}</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEnrollForm(p => ({ ...p, mode: "student" }))}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${enrollForm.mode === "student" ? "bg-gold-500 text-navy-900" : "bg-navy-700 text-gray-400"}`}
+                >
+                  {t("instructor.singleStudent", "Single Student")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnrollForm(p => ({ ...p, mode: "promotion" }))}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${enrollForm.mode === "promotion" ? "bg-gold-500 text-navy-900" : "bg-navy-700 text-gray-400"}`}
+                >
+                  {t("instructor.byPromotion", "By Promotion")}
+                </button>
+              </div>
+            </div>
+            {enrollForm.mode === "student" ? (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t("instructor.student", "Student")}</label>
+                <select
+                  value={enrollForm.student}
+                  onChange={e => setEnrollForm(p => ({ ...p, student: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                >
+                  <option value="">{t("instructor.selectStudent", "Select student...")}</option>
+                  {students.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.full_name || `${s.first_name} ${s.last_name}`} ({s.student_number})</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t("instructor.promotion", "Promotion")}</label>
+                <select
+                  value={enrollForm.promotion}
+                  onChange={e => setEnrollForm(p => ({ ...p, promotion: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+                >
+                  <option value="">{t("instructor.selectPromotion", "Select promotion...")}</option>
+                  {promotions.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name || p.code}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </form>
         </ModalForm>
 

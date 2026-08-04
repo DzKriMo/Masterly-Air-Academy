@@ -87,7 +87,7 @@ ROLE_DEFINITIONS = {
         'domains': {
             'dashboard': ['view'],
             'students': ['view'],
-            'ground_training': ['view_own', 'evaluate'],
+            'ground_training': ['view_own', 'evaluate', 'create', 'update'],
             'exams': ['view', 'grade'],
             'attendance': ['view', 'create', 'update'],
             'schedule': ['view_own'],
@@ -114,7 +114,7 @@ ROLE_DEFINITIONS = {
         'domains': {
             'dashboard': ['view'],
             'students': ['view'],
-            'ground_training': ['view'],
+            'ground_training': ['view', 'create', 'update'],
             'flight_training': ['view_own', 'evaluate'],
             'exams': ['view', 'grade'],
             'attendance': ['view', 'create', 'update'],

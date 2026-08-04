@@ -365,7 +365,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         ).all()
         if self.request.user.role == 'student':
             return qs.filter(enrollments__student__user=self.request.user)
-        if self.request.user.role == 'ground_instructor':
+        if self.request.user.role in ('ground_instructor', 'flight_instructor'):
             return qs.filter(instructor__user=self.request.user)
         return qs
 
@@ -448,7 +448,7 @@ class CourseViewSet(viewsets.ModelViewSet):
             courses = Course.objects.filter(
                 enrollments__student__user=user
             ).select_related('subject', 'instructor', 'room').distinct()
-        elif user.role == 'ground_instructor':
+        elif user.role in ('ground_instructor', 'flight_instructor'):
             courses = Course.objects.filter(
                 instructor__user=user
             ).select_related('subject', 'instructor', 'room').distinct()
@@ -573,7 +573,7 @@ class CourseEnrollmentViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         if self.request.user.role == 'student':
             return qs.filter(student__user=self.request.user)
-        if self.request.user.role == 'ground_instructor':
+        if self.request.user.role in ('ground_instructor', 'flight_instructor'):
             return qs.filter(course__instructor__user=self.request.user)
         return qs
 

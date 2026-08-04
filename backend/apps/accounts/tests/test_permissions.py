@@ -97,3 +97,81 @@ def test_view_only_does_not_imply_evaluate(make_perm):
         required_permission = 'ground_training.evaluate'
 
     assert HasRolePermission().has_permission(request, FakeView()) is False
+
+
+@pytest.mark.django_db
+def test_ground_training_create_allows_create_action(make_perm):
+    """A ground instructor holding ground_training.create can create courses
+    (create action on a ground_training.view-required endpoint)."""
+    group = Group.objects.create(name='ground_instructor')
+    group.permissions.set([make_perm('ground_training.view_own'),
+                           make_perm('ground_training.create'),
+                           make_perm('ground_training.update')])
+
+    user = User.objects.create_user(
+        username='gi_user', email='gi@masterly.test',
+        password='testpass123', role='ground_instructor',
+        first_name='GI', last_name='User',
+    )
+    user.groups.add(group)
+
+    factory = APIRequestFactory()
+    request = factory.post('/api/courses/', {})
+    request.user = user
+
+    class FakeView:
+        action = 'create'
+        required_permission = 'ground_training.view'
+
+    assert HasRolePermission().has_permission(request, FakeView()) is True
+
+
+@pytest.mark.django_db
+def test_ground_training_update_allows_partial_update_action(make_perm):
+    """A ground instructor holding ground_training.update can reschedule/cancel
+    (partial_update action) a course."""
+    group = Group.objects.create(name='ground_instructor')
+    group.permissions.set([make_perm('ground_training.view_own'),
+                           make_perm('ground_training.create'),
+                           make_perm('ground_training.update')])
+
+    user = User.objects.create_user(
+        username='gi_user2', email='gi2@masterly.test',
+        password='testpass123', role='ground_instructor',
+        first_name='GI', last_name='Two',
+    )
+    user.groups.add(group)
+
+    factory = APIRequestFactory()
+    request = factory.patch('/api/courses/abc/', {})
+    request.user = user
+
+    class FakeView:
+        action = 'partial_update'
+        required_permission = 'ground_training.view'
+
+    assert HasRolePermission().has_permission(request, FakeView()) is True
+
+
+@pytest.mark.django_db
+def test_view_only_does_not_imply_create_action(make_perm):
+    """A reader with only ground_training.view cannot create courses."""
+    group = Group.objects.create(name='reader')
+    group.permissions.set([make_perm('ground_training.view')])
+
+    user = User.objects.create_user(
+        username='reader2', email='reader2@masterly.test',
+        password='testpass123', role='student',
+        first_name='R', last_name='Two',
+    )
+    user.groups.add(group)
+
+    factory = APIRequestFactory()
+    request = factory.post('/api/courses/', {})
+    request.user = user
+
+    class FakeView:
+        action = 'create'
+        required_permission = 'ground_training.view'
+
+    assert HasRolePermission().has_permission(request, FakeView()) is False
