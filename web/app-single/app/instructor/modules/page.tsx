@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
+import { VideoPlayer } from "@/components/video-player";
 
 interface Module {
   id: string;
@@ -586,11 +587,10 @@ export default function ModulesPage() {
                     className="absolute inset-0 w-full h-full"
                   />
                 ) : (
-                  <video
+                  <VideoPlayer 
                     src={viewLesson.video_url.startsWith("/media/") || viewLesson.video_url.startsWith("http")
                       ? viewLesson.video_url
                       : `/api/module-lessons/${viewLesson.id}/video/`}
-                    controls className="absolute inset-0 w-full h-full"
                   />
                 )}
               </div>

@@ -12,6 +12,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import { fmtLabel } from "@/lib/format-utils";
+import { VideoPlayer } from "@/components/video-player";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -561,9 +562,7 @@ function PreviewModal({
 
         <div className="p-5">
           {mime.startsWith("video/") && token ? (
-            <video key={url} controls autoPlay className="w-full rounded-xl bg-black aspect-video">
-              <source src={url} type={mime} />
-            </video>
+            <VideoPlayer src={url} className="aspect-video" />
           ) : mime.startsWith("image/") ? (
             <img src={url} alt={item.name} className="w-full rounded-xl object-contain max-h-[60vh] bg-navy-900" />
           ) : mime.includes("pdf") && token ? (
