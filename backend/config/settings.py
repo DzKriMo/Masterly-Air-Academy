@@ -186,6 +186,8 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 # Celery
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'{REDIS_URL}/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_BROKER_URL', f'{REDIS_URL}/0')

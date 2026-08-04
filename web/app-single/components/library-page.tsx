@@ -261,7 +261,8 @@ export default function LibraryPage({
 
   const streamUrl = (item: LibraryItem) => {
     const base = process.env.NEXT_PUBLIC_API_URL || "";
-    return `${base}/api/documents/${item.id}/stream/?token=${encodeURIComponent(token || "")}`;
+    const tok = token || api.getAccessToken();
+    return `${base}/api/documents/${item.id}/stream/?token=${encodeURIComponent(tok || "")}`;
   };
 
   const filtered = useMemo(() => {
