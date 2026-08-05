@@ -14,7 +14,7 @@ class FinalExamQuestionSerializer(serializers.ModelSerializer):
         model = FinalExamQuestion
         fields = [
             'id', 'subject', 'subject_name', 'module', 'module_name',
-            'question_text', 'question_type', 'difficulty',
+            'question_text', 'question_type', 'difficulty', 'points',
             'options', 'correct_answer', 'explanation',
             'is_active', 'created_at', 'updated_at',
         ]
@@ -93,14 +93,44 @@ class FinalExamCreateSerializer(serializers.ModelSerializer):
 class FinalExamAssignmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     student_number = serializers.CharField(source='student.student_number', read_only=True)
+    max_points = serializers.SerializerMethodField()
+    earned_points = serializers.SerializerMethodField()
 
     class Meta:
         model = FinalExamAssignment
         fields = [
             'id', 'exam', 'student', 'student_name', 'student_number',
             'access_code', 'questions', 'answers', 'violations', 'is_flagged',
+            'manual_scores', 'essay_graded', 'max_points', 'earned_points',
             'score', 'status', 'started_at', 'submitted_at',
         ]
+
+    def get_max_points(self, obj):
+        from .final_models import FinalExamQuestion
+        ids = obj.questions or []
+        if not ids:
+            return 0
+        qs = FinalExamQuestion.objects.filter(id__in=ids)
+        return float(sum(float(q.points) for q in qs))
+
+    def get_earned_points(self, obj):
+        from .final_models import FinalExamQuestion
+        ids = obj.questions or []
+        if not ids:
+            return 0
+        qs = FinalExamQuestion.objects.filter(id__in=ids)
+        qmap = {str(q.id): q for q in qs}
+        earned = 0.0
+        answers = obj.answers or {}
+        manual = obj.manual_scores or {}
+        for qid, q in qmap.items():
+            if q.question_type in ('mcq', 'scq', 'true_false'):
+                ans = answers.get(qid)
+                if ans is not None and str(ans).strip().lower() == str(q.correct_answer).strip().lower():
+                    earned += float(q.points)
+            else:
+                earned += float(manual.get(qid, 0) or 0)
+        return round(earned, 2)
 
 
 class FinalExamAccessSerializer(serializers.Serializer):

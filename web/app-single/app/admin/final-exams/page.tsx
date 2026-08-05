@@ -7,7 +7,7 @@ import { fmtLabel } from "@/lib/format-utils";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
-import { Trash2, Plus, Download, Users, RotateCcw, Printer, History } from "lucide-react";
+import { Trash2, Plus, Download, Users, RotateCcw, Printer, History, ClipboardCheck } from "lucide-react";
 
 interface FinalExam {
   id: string; hash: string; subject: string; subject_name: string;
@@ -181,12 +181,27 @@ interface Attempt {
   access_code: string; status: string; score: string | number | null;
   started_at: string | null; submitted_at: string | null;
   violations: any[]; is_flagged: boolean;
+  essay_graded?: boolean;
+}
+
+interface GradeQuestion {
+  question_id: string; question_text: string;
+  points: number; answer: string; score: number;
+}
+
+interface GradeData {
+  assignment_id: string; student_name: string; student_number: string; exam_title: string;
+  auto_correct: number; auto_total: number;
+  max_points: number; earned_points: number;
+  score: number | null; essay_graded: boolean; is_flagged: boolean;
+  essay_questions: GradeQuestion[];
 }
 
 function AttemptsPanel({ examId }: { examId: string }) {
   const { showToast } = useToast();
   const [attempts, setAttempts] = useState<Attempt[] | null>(null);
   const [error, setError] = useState("");
+  const [grading, setGrading] = useState<Attempt | null>(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -212,6 +227,10 @@ function AttemptsPanel({ examId }: { examId: string }) {
     } catch (err: any) {
       showToast("error", err.message || "Reset failed");
     }
+  };
+
+  const openGrading = (a: Attempt) => {
+    setGrading(a);
   };
 
   return (
@@ -253,13 +272,28 @@ function AttemptsPanel({ examId }: { examId: string }) {
                     </span>
                     {a.is_flagged && <span className="ml-1 text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400">FLAGGED</span>}
                   </td>
-                  <td className="px-3 py-2 text-white">{a.score != null ? `${a.score}%` : "—"}</td>
+                  <td className="px-3 py-2 text-white">{a.score != null ? `${a.score}%` : "—"}
+                    {a.status === "submitted" && (
+                      <span className={`block text-[10px] ${a.essay_graded ? "text-green-400" : "text-amber-400"}`}>
+                        {a.essay_graded ? "Essays graded" : "Essays pending"}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-gray-400">
                     {Array.isArray(a.violations) && a.violations.length > 0
                       ? <span className="text-red-400">{a.violations.length} — {a.violations.slice(0, 3).map(v => v.type).join(", ")}</span>
                       : "0"}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {a.status === "submitted" && (
+                      <button
+                        onClick={() => openGrading(a)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-gold-500 hover:bg-gold-500/10 transition-colors"
+                        title="Grade essay answers"
+                      >
+                        <ClipboardCheck className="w-3 h-3" /> Grade
+                      </button>
+                    )}
                     <button
                       onClick={() => handleReset(a)}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
@@ -279,6 +313,148 @@ function AttemptsPanel({ examId }: { examId: string }) {
           </table>
         </div>
       )}
+
+      {grading && (
+        <GradingModal
+          examId={examId}
+          attempt={grading}
+          onClose={() => setGrading(null)}
+          onSaved={() => load()}
+        />
+      )}
+    </div>
+  );
+}
+
+function GradingModal({ examId, attempt, onClose, onSaved }: {
+  examId: string; attempt: Attempt; onClose: () => void; onSaved: () => void;
+}) {
+  const { showToast } = useToast();
+  const [data, setData] = useState<GradeData | null>(null);
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    api.get(`/final-exams/${examId}/assignments/${attempt.id}/grade/`)
+      .then((d: any) => {
+        if (cancelled) return;
+        const pd = (d?.data ?? d) as GradeData;
+        setData(pd);
+        const initial: Record<string, number> = {};
+        (pd.essay_questions || []).forEach((q) => { initial[q.question_id] = q.score; });
+        setScores(initial);
+      })
+      .catch((e: any) => { if (!cancelled) setError(e.message || "Failed to load"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [examId, attempt.id]);
+
+  const submitGrades = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api.post(`/final-exams/${examId}/assignments/${attempt.id}/grade/`, { scores });
+      showToast("success", "Grades saved");
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      setError(e.message || "Failed to save grades");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-navy-800 border border-navy-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-navy-700">
+          <div className="min-w-0">
+            <h3 className="text-white font-semibold">Grade Essays — {attempt.student_name}</h3>
+            <p className="text-xs text-gray-500">{attempt.access_code}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {error && <p className="text-xs text-red-400">{error}</p>}
+
+          {loading ? (
+            <p className="text-xs text-gray-500">Loading attempt detail...</p>
+          ) : data ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-navy-900 rounded-lg text-center">
+                  <div className="text-lg font-bold text-white">{data.score != null ? `${data.score}%` : "—"}</div>
+                  <div className="text-[10px] text-gray-500 uppercase">Score</div>
+                </div>
+                <div className="p-3 bg-navy-900 rounded-lg text-center">
+                  <div className="text-lg font-bold text-gold-500">{data.auto_correct}<span className="text-sm text-gray-400">/{data.auto_total}</span></div>
+                  <div className="text-[10px] text-gray-500 uppercase">Auto-graded</div>
+                </div>
+                <div className="p-3 bg-navy-900 rounded-lg text-center">
+                  <div className="text-lg font-bold text-white">{data.earned_points}<span className="text-sm text-gray-400">/{data.max_points}</span></div>
+                  <div className="text-[10px] text-gray-500 uppercase">Points earned</div>
+                </div>
+                <div className="p-3 bg-navy-900 rounded-lg text-center">
+                  <div className={`text-lg font-bold ${data.essay_graded ? "text-green-400" : "text-amber-400"}`}>
+                    {data.essay_graded ? "Done" : "Pending"}
+                  </div>
+                  <div className="text-[10px] text-gray-500 uppercase">Essays</div>
+                </div>
+              </div>
+
+              {data.is_flagged && (
+                <div className="text-[11px] px-3 py-2 rounded bg-red-500/10 border border-red-500/30 text-red-400">
+                  This attempt is FLAGGED (possible cheating). Review carefully.
+                </div>
+              )}
+
+              {data.essay_questions.length === 0 ? (
+                <p className="text-sm text-gray-400">No essay questions in this exam — fully auto-graded.</p>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-300">Manually assign points for each essay question (max = question points). The score updates immediately after saving.</p>
+                  {data.essay_questions.map((q, i) => (
+                    <div key={q.question_id} className="p-4 bg-navy-900 border border-navy-700 rounded-xl">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <p className="text-sm text-white font-medium">{i + 1}. {q.question_text}</p>
+                        <span className="text-[10px] text-gray-400 shrink-0">Max {q.points} pts</span>
+                      </div>
+                      <div className="text-sm text-gray-300 bg-navy-950 rounded-lg p-3 mb-3 border border-navy-700 whitespace-pre-wrap">
+                        {q.answer?.trim() ? q.answer : <span className="text-gray-600">No answer provided.</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400">Points:</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={q.points}
+                          step={0.25}
+                          value={scores[q.question_id] ?? 0}
+                          onChange={(e) => setScores({ ...scores, [q.question_id]: Math.max(0, Math.min(q.points, Number(e.target.value) || 0)) })}
+                          className="w-24 px-2 py-1 bg-navy-800 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
+                        />
+                        <span className="text-xs text-gray-500">/ {q.points}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button onClick={onClose} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Close</button>
+                <button onClick={submitGrades} disabled={saving} className="px-5 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">
+                  {saving ? "Saving..." : "Save Grades"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

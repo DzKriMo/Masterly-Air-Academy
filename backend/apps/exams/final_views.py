@@ -21,6 +21,38 @@ from .final_serializers import (
 from .final_bulk_import import import_questions, generate_template
 
 
+def compute_assignment_points(assignment):
+    """Return (max_points, earned_points, auto_correct, auto_total, essay_question_ids)."""
+    ids = assignment.questions or []
+    qs = FinalExamQuestion.objects.filter(id__in=ids)
+    qmap = {str(q.id): q for q in qs}
+    answers = assignment.answers or {}
+    manual = assignment.manual_scores or {}
+
+    max_points = 0.0
+    earned = 0.0
+    auto_correct = 0
+    auto_total = 0
+    essays = []
+    for qid, q in qmap.items():
+        max_points += float(q.points)
+        ans = answers.get(qid)
+        if q.question_type in ('mcq', 'scq', 'true_false'):
+            auto_total += 1
+            if ans is not None and str(ans).strip().lower() == str(q.correct_answer).strip().lower():
+                earned += float(q.points)
+                auto_correct += 1
+        else:
+            essays.append(qid)
+            earned += float(manual.get(qid, 0) or 0)
+
+    return round(max_points, 2), round(earned, 2), auto_correct, auto_total, essays
+
+
+def final_score_percent(max_points, earned_points):
+    return round((earned_points / max_points * 100) if max_points else 0, 2)
+
+
 class FinalExamQuestionViewSet(viewsets.ModelViewSet):
     queryset = FinalExamQuestion.objects.select_related('subject', 'module').all()
     serializer_class = FinalExamQuestionSerializer
@@ -240,11 +272,99 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         assignment.score = None
         assignment.started_at = None
         assignment.submitted_at = None
+        assignment.manual_scores = {}
+        assignment.essay_graded = False
         assignment.save(update_fields=[
             'status', 'answers', 'violations', 'is_flagged',
-            'score', 'started_at', 'submitted_at',
+            'score', 'started_at', 'submitted_at', 'manual_scores', 'essay_graded',
         ])
         return Response({'status': 'reset', 'assignment_id': str(assignment.id)})
+
+    @action(detail=True, methods=['get'], url_path='assignments/(?P<assignment_id>[^/.]+)/grade')
+    def grade_detail(self, request, pk=None, assignment_id=None):
+        """Return the full breakdown of a submitted assignment for manual grading (essays + auto results)."""
+        exam = self.get_object()
+        assignment = exam.assignments.select_related('student').filter(pk=assignment_id).first()
+        if not assignment:
+            return Response({'error': 'Assignment not found for this exam'}, status=404)
+        if assignment.status != 'submitted':
+            return Response({'error': 'Only submitted exams can be graded'}, status=400)
+
+        max_points, earned_points, auto_correct, auto_total, essays = compute_assignment_points(assignment)
+        answers = assignment.answers or {}
+        manual = assignment.manual_scores or {}
+
+        essay_questions = []
+        qs = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
+        for q in qs:
+            if str(q.id) in essays:
+                essay_questions.append({
+                    'question_id': str(q.id),
+                    'question_text': q.question_text,
+                    'points': float(q.points),
+                    'answer': answers.get(str(q.id), ''),
+                    'score': float(manual.get(str(q.id), 0) or 0),
+                })
+
+        return Response({
+            'assignment_id': str(assignment.id),
+            'student_name': assignment.student.full_name,
+            'student_number': assignment.student.student_number,
+            'exam_title': exam.title,
+            'auto_correct': auto_correct,
+            'auto_total': auto_total,
+            'max_points': max_points,
+            'earned_points': earned_points,
+            'score': float(assignment.score) if assignment.score is not None else None,
+            'essay_graded': assignment.essay_graded,
+            'is_flagged': assignment.is_flagged,
+            'essay_questions': essay_questions,
+        })
+
+    @action(detail=True, methods=['post'], url_path='assignments/(?P<assignment_id>[^/.]+)/grade')
+    def grade(self, request, pk=None, assignment_id=None):
+        """Save manual scores for essay questions and recompute the final score."""
+        exam = self.get_object()
+        assignment = exam.assignments.select_related('student').filter(pk=assignment_id).first()
+        if not assignment:
+            return Response({'error': 'Assignment not found for this exam'}, status=404)
+        if assignment.status != 'submitted':
+            return Response({'error': 'Only submitted exams can be graded'}, status=400)
+
+        scores = request.data.get('scores') or {}
+        if not isinstance(scores, dict):
+            return Response({'error': 'scores must be an object of question_id -> points'}, status=400)
+
+        qs = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
+        qmap = {str(q.id): q for q in qs}
+
+        manual = dict(assignment.manual_scores or {})
+        for qid, val in scores.items():
+            if qid not in qmap:
+                continue
+            q = qmap[qid]
+            if q.question_type in ('mcq', 'scq', 'true_false'):
+                continue  # only essays are manually graded
+            try:
+                pts = float(val)
+            except (TypeError, ValueError):
+                continue
+            pts = max(0.0, min(float(q.points), pts))
+            manual[qid] = pts
+
+        assignment.manual_scores = manual
+        max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
+        assignment.score = final_score_percent(max_points, earned_points)
+        assignment.essay_graded = all(str(qid) in manual for qid in essays)
+        assignment.save()
+
+        return Response({
+            'status': 'graded',
+            'score': assignment.score,
+            'earned_points': earned_points,
+            'max_points': max_points,
+            'essay_graded': assignment.essay_graded,
+        })
 
     @action(detail=True, methods=['get'], url_path='report')
     def report(self, request, pk=None):
@@ -432,23 +552,23 @@ def exam_submit(request):
     answers = submit_serializer.validated_data['answers']
     violations = submit_serializer.validated_data.get('violations') or []
 
-    # Auto-grade MCQ/SCQ/TrueFalse
+    # Auto-grade MCQ/SCQ/TrueFalse by points; essays postponed for manual grading.
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
     qmap = {str(q.id): q for q in questions}
     valid_answers = {k: v for k, v in answers.items() if k in qmap}
-    correct = 0
-    total = 0
-    for qid, answer in valid_answers.items():
-        if qid in qmap:
-            q = qmap[qid]
-            if q.question_type in ('mcq', 'scq', 'true_false'):
-                total += 1
-                if str(answer).strip().lower() == str(q.correct_answer).strip().lower():
-                    correct += 1
-
-    score = round((correct / total * 100) if total > 0 else 0, 2)
 
     assignment.answers = valid_answers
+    total_auto = sum(1 for q in qmap.values() if q.question_type in ('mcq', 'scq', 'true_false'))
+    auto_correct = 0
+    for qid, answer in valid_answers.items():
+        q = qmap[qid]
+        if q.question_type in ('mcq', 'scq', 'true_false'):
+            if str(answer).strip().lower() == str(q.correct_answer).strip().lower():
+                auto_correct += 1
+
+    max_points, earned_points, _, _, _ = compute_assignment_points(assignment)
+    score = final_score_percent(max_points, earned_points)
+
     assignment.score = score
     assignment.status = 'submitted'
     assignment.submitted_at = timezone.now()
@@ -464,8 +584,8 @@ def exam_submit(request):
     return Response({
         'status': 'submitted',
         'score': score,
-        'correct': correct,
-        'total_auto_graded': total,
+        'correct': auto_correct,
+        'total_auto_graded': total_auto,
     })
 
 
