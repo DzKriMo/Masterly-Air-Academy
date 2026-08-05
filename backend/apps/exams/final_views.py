@@ -244,6 +244,11 @@ def exam_access(request):
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
     questions_data = FinalExamQuestionSerializer(questions, many=True).data
 
+    # Never expose correct answers or explanations to the candidate
+    for q in questions_data:
+        q.pop('correct_answer', None)
+        q.pop('explanation', None)
+
     # Shuffle for display but maintain the assigned questions
     return Response({
         'assignment_id': str(assignment.id),

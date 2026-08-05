@@ -40,9 +40,10 @@ export default function ExamPortalPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid code");
-      setExam(data);
-      const elapsed = data.started_at ? Math.floor((Date.now() - new Date(data.started_at).getTime()) / 1000) : 0;
-      setTimeLeft(Math.max(0, (data.duration_minutes * 60) - elapsed));
+      const payload = data.data ?? data;
+      setExam(payload);
+      const elapsed = payload.started_at ? Math.floor((Date.now() - new Date(payload.started_at).getTime()) / 1000) : 0;
+      setTimeLeft(Math.max(0, (payload.duration_minutes * 60) - elapsed));
       setStep("exam");
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
@@ -68,7 +69,7 @@ export default function ExamPortalPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
-      setResult(data);
+      setResult(data.data ?? data);
       setStep("done");
     } catch (err: any) { setError(err.message); }
     finally { setSubmitting(false); }
