@@ -7,7 +7,7 @@ import { fmtLabel } from "@/lib/format-utils";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
-import { Trash2, Plus, Download, Users } from "lucide-react";
+import { Trash2, Plus, Download, Users, RotateCcw, Printer, History } from "lucide-react";
 
 interface FinalExam {
   id: string; hash: string; subject: string; subject_name: string;
@@ -184,6 +184,7 @@ interface Attempt {
 }
 
 function AttemptsPanel({ examId }: { examId: string }) {
+  const { showToast } = useToast();
   const [attempts, setAttempts] = useState<Attempt[] | null>(null);
   const [error, setError] = useState("");
 
@@ -199,6 +200,19 @@ function AttemptsPanel({ examId }: { examId: string }) {
   }, [examId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleReset = async (a: Attempt) => {
+    if (!window.confirm(
+      `Reset ${a.student_name}'s attempt?\n\nThis clears their answers, score, violations and flag, and returns their access code (${a.access_code}) to pending so they can retake the exam. This cannot be undone.`
+    )) return;
+    try {
+      await api.post(`/final-exams/${examId}/assignments/${a.id}/reset/`);
+      showToast("success", `Reset ${a.student_name}'s attempt`);
+      load();
+    } catch (err: any) {
+      showToast("error", err.message || "Reset failed");
+    }
+  };
 
   return (
     <div className="mt-5">
@@ -223,6 +237,7 @@ function AttemptsPanel({ examId }: { examId: string }) {
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Score</th>
                 <th className="px-3 py-2">Violations</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-navy-900">
@@ -243,6 +258,20 @@ function AttemptsPanel({ examId }: { examId: string }) {
                     {Array.isArray(a.violations) && a.violations.length > 0
                       ? <span className="text-red-400">{a.violations.length} — {a.violations.slice(0, 3).map(v => v.type).join(", ")}</span>
                       : "0"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      onClick={() => handleReset(a)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                        a.status === "pending"
+                          ? "text-gray-500 cursor-not-allowed"
+                          : "text-red-400 hover:bg-red-500/10"
+                      }`}
+                      disabled={a.status === "pending"}
+                      title={a.status === "pending" ? "Nothing to reset — attempt not started" : "Reset this attempt"}
+                    >
+                      <RotateCcw className="w-3 h-3" /> Reset
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -349,16 +378,21 @@ export default function FinalExamsPage() {
         detailTitle="Exam Details"
         detailExtra={(e) => (
           <div>
-            <div className="mt-4 pt-4 border-t border-navy-700 flex gap-3">
+            <div className="mt-4 pt-4 border-t border-navy-700 flex gap-3 flex-wrap">
               {e.status === "draft" && (
                 <button onClick={() => { setSelected(e); setShowDetail(true); }} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
                   Generate Assignments
                 </button>
               )}
               {e.assignments_count > 0 && (
-                <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
-                  <Download className="w-4 h-4 inline-block mr-1" />Download Access Codes PDF
-                </button>
+                <>
+                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
+                    <Download className="w-4 h-4 inline-block mr-1" />Access Codes
+                  </button>
+                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/report/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg text-sm">
+                    <Printer className="w-4 h-4 inline-block mr-1" />Printable Report
+                  </button>
+                </>
               )}
             </div>
             <AttemptsPanel examId={e.id} />

@@ -225,6 +225,138 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         qs = exam.assignments.select_related('student').all()
         return Response(FinalExamAssignmentSerializer(qs, many=True).data)
 
+    @action(detail=True, methods=['post'], url_path='assignments/(?P<assignment_id>[^/.]+)/reset')
+    def reset_assignment(self, request, pk=None, assignment_id=None):
+        """Reset a single student's attempt back to pending (wipes answers, score, violations, flags)."""
+        exam = self.get_object()
+        assignment = exam.assignments.filter(pk=assignment_id).first()
+        if not assignment:
+            return Response({'error': 'Assignment not found for this exam'}, status=404)
+
+        assignment.status = 'pending'
+        assignment.answers = {}
+        assignment.violations = []
+        assignment.is_flagged = False
+        assignment.score = None
+        assignment.started_at = None
+        assignment.submitted_at = None
+        assignment.save(update_fields=[
+            'status', 'answers', 'violations', 'is_flagged',
+            'score', 'started_at', 'submitted_at',
+        ])
+        return Response({'status': 'reset', 'assignment_id': str(assignment.id)})
+
+    @action(detail=True, methods=['get'], url_path='report')
+    def report(self, request, pk=None):
+        """Printable HTML exam report: exam details, who took it + results, who was absent, notes."""
+        from django.http import HttpResponse
+        from django.utils.html import escape
+        exam = self.get_object()
+        subject = exam.subject
+        assignments = list(exam.assignments.select_related('student').order_by(
+            'student__last_name', 'student__first_name'
+        ))
+
+        submitted = [a for a in assignments if a.status == 'submitted']
+        in_progress = [a for a in assignments if a.status == 'in_progress']
+        absent = [a for a in assignments if a.status == 'pending']
+
+        scores = [float(a.score) for a in submitted if a.score is not None]
+        avg = round(sum(scores) / len(scores), 2) if scores else None
+
+        def student_cell(a):
+            s = a.student
+            num = f"<div class='num'>{escape(s.student_number or '—')}</div>" if s.student_number else ""
+            return f"{escape(s.full_name)}{num}"
+
+        rows = ''
+        if assignments:
+            rows = '<table class="tbl"><thead><tr><th>#</th><th>Student</th><th>Code</th><th>Status</th><th>Score</th><th>Flagged</th></tr></thead><tbody>'
+            for i, a in enumerate(assignments):
+                flag = 'FLAGGED' if a.is_flagged else ''
+                score = f"{float(a.score):.2f}%" if a.score is not None else '—'
+                status_label = {'submitted': 'Submitted', 'in_progress': 'In Progress', 'pending': 'Absent'}.get(a.status, a.status)
+                rows += (
+                    f'<tr><td>{i + 1}</td><td>{student_cell(a)}</td>'
+                    f'<td class="mono">{escape(a.access_code)}</td>'
+                    f'<td>{status_label}</td>'
+                    f'<td class="mono">{score}</td>'
+                    f'<td class="flag">{flag}</td></tr>'
+                )
+            rows += '</tbody></table>'
+        else:
+            rows = '<p class="empty">No assignments have been generated for this exam yet.</p>'
+
+        absent_names = '; '.join(escape(a.student.full_name) for a in absent) or '—'
+
+        html = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>Exam Report — {escape(exam.title)}</title>
+<style>
+@page {{ size: A4; margin: 1.6cm; }}
+* {{ box-sizing: border-box; }}
+body {{ font-family: "Helvetica Neue", Arial, sans-serif; color: #111827; margin: 0; }}
+.header {{ text-align: center; border-bottom: 3px solid #b0872f; padding-bottom: 12px; margin-bottom: 20px; }}
+.org {{ font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #b0872f; font-weight: 700; }}
+h1 {{ font-size: 20px; margin: 6px 0 2px; }}
+.subtitle {{ font-size: 12px; color: #6b7280; }}
+.meta {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; margin: 16px 0; font-size: 13px; }}
+.meta .k {{ color: #6b7280; }}
+.meta .v {{ font-weight: 600; }}
+h2 {{ font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #b0872f; margin: 22px 0 8px; }}
+.summary {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }}
+.stat {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; text-align: center; }}
+.stat .n {{ font-size: 22px; font-weight: 700; }}
+.stat .l {{ font-size: 10px; text-transform: uppercase; color: #6b7280; }}
+.tbl {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+.tbl th {{ background: #f3f4f6; text-align: left; padding: 7px 8px; border: 1px solid #e5e7eb; text-transform: uppercase; font-size: 10px; letter-spacing: .5px; }}
+.tbl td {{ padding: 6px 8px; border: 1px solid #e5e7eb; }}
+.tbl tr:nth-child(even) td {{ background: #fbfaf6; }}
+.num {{ font-size: 10px; color: #6b7280; }}
+.mono {{ font-family: "Courier New", monospace; letter-spacing: .5px; }}
+.flag {{ color: #b91c1c; font-weight: 700; font-size: 10px; }}
+.empty {{ color: #6b7280; font-style: italic; }}
+.absent-box {{ border: 1px dashed #d1d5db; padding: 10px; font-size: 12px; }}
+.notes {{ border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; min-height: 120px; }}
+.notes .line {{ border-bottom: 1px dashed #e5e7eb; height: 18px; }}
+.footer {{ text-align: center; font-size: 10px; color: #9ca3af; margin-top: 24px; }}
+@media print {{ body {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }} }}
+</style></head><body>
+<div class="header">
+  <div class="org">Masterly Air Academy</div>
+  <h1>{escape(exam.title)}</h1>
+  <div class="subtitle">Final Examination Report — {escape(subject.title_en)}</div>
+</div>
+<div class="meta">
+  <div><span class="k">Subject:</span> <span class="v">{escape(subject.title_en)}</span></div>
+  <div><span class="k">Duration:</span> <span class="v">{exam.duration_minutes} minutes</span></div>
+  <div><span class="k">Status:</span> <span class="v">{exam.status}</span></div>
+  <div><span class="k">Promotions:</span> <span class="v">{", ".join(escape(p.code or p.name) for p in exam.promotions.all()) or '—'}</span></div>
+  <div><span class="k">Exam Portal:</span> <span class="v">/exams/{escape(exam.hash)}</span></div>
+  <div><span class="k">Generated:</span> <span class="v">{timezone.now().strftime('%d/%m/%Y %H:%M')}</span></div>
+</div>
+<h2>Summary</h2>
+<div class="summary">
+  <div class="stat"><div class="n">{len(assignments)}</div><div class="l">Assigned</div></div>
+  <div class="stat"><div class="n">{len(submitted)}</div><div class="l">Submitted</div></div>
+  <div class="stat"><div class="n">{len(in_progress)}</div><div class="l">In Progress</div></div>
+  <div class="stat"><div class="n">{len(absent)}</div><div class="l">Absent</div></div>
+</div>
+<div class="stat" style="margin-bottom:8px;"><div class="l">Average score (submitted)</div><div class="n">{avg if avg is not None else '—'}%</div></div>
+<h2>Results</h2>
+{rows}
+<h2>Absent Students</h2>
+<div class="absent-box">{absent_names}</div>
+<h2>Notes</h2>
+<div class="notes">
+  <div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div>
+</div>
+<div class="footer">Masterly Air Academy — Final Exam Report</div>
+</body></html>'''
+
+        resp = HttpResponse(html, content_type='text/html; charset=utf-8')
+        resp['Content-Disposition'] = f'inline; filename="final-exam-report-{exam.hash}.html"'
+        return resp
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
