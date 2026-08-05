@@ -247,8 +247,8 @@ function AttemptsPanel({ examId }: { examId: string }) {
       ) : attempts.length === 0 ? (
         <p className="text-xs text-gray-500">No attempts yet. Generate assignments first.</p>
       ) : (
-        <div className="border border-navy-700 rounded-xl overflow-hidden">
-          <table className="w-full text-left text-xs">
+        <div className="border border-navy-700 rounded-xl overflow-x-auto">
+          <table className="w-full text-left text-xs min-w-[560px]">
             <thead className="bg-navy-800 text-gray-400">
               <tr>
                 <th className="px-3 py-2">Student</th>
@@ -284,28 +284,30 @@ function AttemptsPanel({ examId }: { examId: string }) {
                       ? <span className="text-red-400">{a.violations.length} — {a.violations.slice(0, 3).map(v => v.type).join(", ")}</span>
                       : "0"}
                   </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    {a.status === "submitted" && (
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex items-center justify-end gap-1.5 min-w-[120px]">
+                      {a.status === "submitted" && (
+                        <button
+                          onClick={() => openGrading(a)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gold-500 hover:bg-gold-600 text-navy-900 text-xs font-bold transition-colors"
+                          title="Grade essay answers"
+                        >
+                          <ClipboardCheck className="w-3.5 h-3.5" /> Grade
+                        </button>
+                      )}
                       <button
-                        onClick={() => openGrading(a)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-gold-500 hover:bg-gold-500/10 transition-colors"
-                        title="Grade essay answers"
+                        onClick={() => handleReset(a)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                          a.status === "pending"
+                            ? "text-gray-600 cursor-not-allowed border border-gray-700"
+                            : "text-red-400 border border-red-500/40 hover:bg-red-500/15"
+                        }`}
+                        disabled={a.status === "pending"}
+                        title={a.status === "pending" ? "Nothing to reset — attempt not started" : "Reset this attempt"}
                       >
-                        <ClipboardCheck className="w-3 h-3" /> Grade
+                        <RotateCcw className="w-3.5 h-3.5" /> Reset
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleReset(a)}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                        a.status === "pending"
-                          ? "text-gray-500 cursor-not-allowed"
-                          : "text-red-400 hover:bg-red-500/10"
-                      }`}
-                      disabled={a.status === "pending"}
-                      title={a.status === "pending" ? "Nothing to reset — attempt not started" : "Reset this attempt"}
-                    >
-                      <RotateCcw className="w-3 h-3" /> Reset
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -370,7 +372,7 @@ function GradingModal({ examId, attempt, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-navy-800 border border-navy-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-navy-800 border border-navy-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-navy-700">
           <div className="min-w-0">
             <h3 className="text-white font-semibold">Grade Essays — {attempt.student_name}</h3>

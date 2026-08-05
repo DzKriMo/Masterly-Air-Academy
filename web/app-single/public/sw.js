@@ -1,4 +1,4 @@
-const CACHE = 'maa-v2';
+const CACHE = 'maa-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
