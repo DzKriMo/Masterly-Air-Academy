@@ -8,7 +8,7 @@ import { useUnreadCounts } from "@/lib/use-unread-counts";
 import {
   LayoutDashboard, CalendarDays, PlaneTakeoff, BookOpen, FileText,
   Users, MessageSquare, ClipboardCheck, Target, ClipboardList,
-  Menu, BarChart3, GitBranch, DoorOpen, Clock, Bell, FolderOpen,
+  Menu, BarChart3, GitBranch, DoorOpen, Clock, Bell, FolderOpen, Monitor,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -22,9 +22,9 @@ const ROLE_LABELS: Record<Role, { label: string; color: string; portal: string }
 };
 
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
-  flight_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/logbook-validation", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/library"],
+  flight_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/simulator", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/library"],
   ground_instructor: ["/instructor/dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/library"],
-  chief_flight_instructor: ["/instructor/cfi-dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/logbook-validation", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/instructor-management", "/instructor/flight-programs", "/instructor/student-progress", "/instructor/library"],
+  chief_flight_instructor: ["/instructor/cfi-dashboard", "/instructor/schedule", "/instructor/flights", "/instructor/simulator", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/instructor-management", "/instructor/flight-programs", "/instructor/student-progress", "/instructor/library"],
   chief_ground_instructor: ["/instructor/cgi-dashboard", "/instructor/schedule", "/instructor/courses", "/instructor/modules", "/instructor/rooms", "/instructor/time-tracking", "/instructor/students", "/instructor/exams", "/instructor/messages", "/instructor/notifications", "/instructor/progression-overview", "/instructor/reports", "/instructor/subject-management", "/instructor/library"],
 };
 
@@ -54,6 +54,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     if (isFI || isCFI) {
       items.push({ href: "/instructor/schedule", label: t("instructor.calendar"), Icon: CalendarDays });
       items.push({ href: "/instructor/flights", label: t("instructor.flightSchedule"), Icon: PlaneTakeoff });
+      items.push({ href: "/instructor/simulator", label: t("instructor.simulator", "Simulator"), Icon: Monitor });
     }
     if (isGI || isCGI) {
       items.push({ href: "/instructor/schedule", label: t("instructor.calendar"), Icon: CalendarDays });
@@ -76,7 +77,6 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     items.push({ href: "/instructor/notifications", label: t("instructor.notifications", "Notifications"), Icon: Bell, badge: unread.notifications });
 
     if (isFI || isCFI) {
-      items.push({ href: "/instructor/logbook-validation", label: t("instructor.logbookValidation", "Logbook"), Icon: ClipboardCheck });
       items.push({ href: "/instructor/flights/progress-check", label: t("instructor.progressChecks"), Icon: ClipboardCheck });
       items.push({ href: "/instructor/flights/skill-test", label: t("instructor.skillTests"), Icon: Target });
     }

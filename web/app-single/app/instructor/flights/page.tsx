@@ -17,6 +17,7 @@ import { DetailField } from "@/components/detail-field";
 import { useToast } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ExportButton } from "@/components/export-button";
+import { LogbookValidationPanel } from "@/components/instructor-logbook-panel";
 
 interface Flight {
   id: string; student_name: string; instructor_name: string;
@@ -49,6 +50,7 @@ export default function FlightsPage() {
   const [saving, setSaving] = useState(false);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [searchValue, setSearchValue] = useState("");
+  const [activeTab, setActiveTab] = useState<"schedule" | "logbook">("schedule");
 
   // Cancel state
   const [cancelFlightId, setCancelFlightId] = useState<string | null>(null);
@@ -283,6 +285,16 @@ export default function FlightsPage() {
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex gap-4 mb-6 border-b border-navy-700">
+          <button onClick={() => setActiveTab("schedule")} className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "schedule" ? "border-gold-500 text-gold-500" : "border-transparent text-gray-400 hover:text-white"}`}>
+            {t('instructor.flightSchedule')}
+          </button>
+          <button onClick={() => setActiveTab("logbook")} className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "logbook" ? "border-gold-500 text-gold-500" : "border-transparent text-gray-400 hover:text-white"}`}>
+            {t('instructor.logbookValidation', 'Logbook')}
+          </button>
+        </div>
+
+        {activeTab === "schedule" && (<>
         {error && <ErrorCard message={error} onRetry={fetchFlights} />}
 
         <FilterBar
@@ -497,6 +509,8 @@ export default function FlightsPage() {
         ) : (
           <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(f) => { setDetailFlight(f as Flight); setShowFlightDetail(true); }} />
         )}
+        </>)}
+        {activeTab === "logbook" && <LogbookValidationPanel />}
       </main>
     </div>
   );

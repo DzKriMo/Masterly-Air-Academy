@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useUnreadCounts } from "@/lib/use-unread-counts";
-import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, CreditCard, BarChart, Bell, Clock, Menu, X, Heart, AlertTriangle, FolderOpen } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Plane, BookOpen, Calendar, Award, MessageSquare, User, CreditCard, BarChart, Bell, Clock, Menu, X, Heart, AlertTriangle, FolderOpen, Monitor } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +20,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/dashboard", label: t("student.dashboard"), Icon: LayoutDashboard },
     { href: "/student/exams", label: t("student.exams_quizzes"), Icon: ClipboardCheck },
     { href: "/student/flights", label: t("student.flightLog"), Icon: Plane },
+    { href: "/student/simulator", label: t("student.simulator", "Simulator"), Icon: Monitor },
     { href: "/student/courses", label: t("student.myCourses"), Icon: BookOpen },
     { href: "/student/schedule", label: t("student.schedule"), Icon: Calendar },
     { href: "/student/library", label: t("student.library", "Library"), Icon: FolderOpen },
