@@ -16,8 +16,8 @@ import { PageHeader } from "@/components/page-header";
 
 interface Instructor {
   id: string; name: string; email: string; role: string;
-  status: string; license?: string; qualifications?: string[];
-  students_count?: number; flight_hours?: number;
+  status: string; license_number?: string; qualifications?: string[];
+  student_count?: number; total_flight_hours?: number;
 }
 
 export default function InstructorManagementPage() {
@@ -33,13 +33,17 @@ export default function InstructorManagementPage() {
   const load = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true); setError(null);
-    Promise.all([
-      api.get<any>("/users/?role=flight_instructor"),
-      api.get<any>("/users/?role=chief_flight_instructor"),
-    ]).then(([fiRes, cfiRes]) => {
-      setInstructors([...(fiRes.results || []), ...(cfiRes.results || [])]);
-      setError(null);
-    }).catch(err => { console.error(err); setError("Failed to load instructors."); })
+    api.get<any>("/flight-instructors/")
+      .then(fiRes => {
+        setInstructors((fiRes.results || []).map((i: any) => ({
+          ...i,
+          role: "flight_instructor",
+          license_number: i.license_number || i.license,
+          student_count: i.student_count,
+          total_flight_hours: i.total_flight_hours,
+        })));
+        setError(null);
+      }).catch(err => { console.error(err); setError("Failed to load instructors."); })
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
@@ -69,8 +73,8 @@ export default function InstructorManagementPage() {
     { key: "email", header: "Email" },
     { key: "role", header: "Role", render: (i) => <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded">{i.role.replace(/_/g, " ")}</span> },
     { key: "status", header: "Status", render: (i) => statusBadge(i.status) },
-    { key: "students_count", header: "Students", render: (i) => <span className="text-sm">{i.students_count ?? "—"}</span> },
-    { key: "flight_hours", header: "Hours", render: (i) => <span className="text-sm">{i.flight_hours ? `${i.flight_hours}h` : "—"}</span> },
+    { key: "student_count", header: "Students", render: (i) => <span className="text-sm">{i.student_count ?? "—"}</span> },
+    { key: "total_flight_hours", header: "Hours", render: (i) => <span className="text-sm">{i.total_flight_hours ? `${i.total_flight_hours}h` : "—"}</span> },
   ];
 
   return (
@@ -97,9 +101,9 @@ export default function InstructorManagementPage() {
                       <DetailField label="Email" value={selected.email} />
                       <DetailField label="Role" value={selected.role.replace(/_/g, " ")} />
                       <DetailField label="Status" value={selected.status} />
-                      <DetailField label="License" value={selected.license || "—"} />
-                      <DetailField label="Students" value={String(selected.students_count ?? "—")} />
-                      <DetailField label="Flight Hours" value={selected.flight_hours ? `${selected.flight_hours}h` : "—"} />
+                      <DetailField label="License" value={selected.license_number || "—"} />
+                      <DetailField label="Students" value={String(selected.student_count ?? "—")} />
+                      <DetailField label="Flight Hours" value={selected.total_flight_hours ? `${selected.total_flight_hours}h` : "—"} />
                     </div>
                   </section>
                   {selected.qualifications && selected.qualifications.length > 0 && (

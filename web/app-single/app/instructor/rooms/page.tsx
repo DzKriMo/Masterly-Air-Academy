@@ -31,9 +31,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function InstructorRoomsPage() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const isCGI = user?.role === 'chief_ground_instructor';
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +123,9 @@ export default function InstructorRoomsPage() {
     )},
     { key: "actions", header: "", render: (r) => (
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-        <button onClick={() => openEdit(r)} className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">Edit</button>
+        {isCGI && (
+          <button onClick={() => openEdit(r)} className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">Edit</button>
+        )}
       </div>
     )},
   ];
@@ -179,9 +182,11 @@ export default function InstructorRoomsPage() {
         {loading ? <LoadingSkeleton type="table" rows={5} /> : rooms.length === 0 ? (
           <>
             <EmptyState message="No classrooms found." />
-            <div className="text-center">
-              <button onClick={openCreate} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">Create Room</button>
-            </div>
+            {isCGI && (
+              <div className="text-center">
+                <button onClick={openCreate} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">Create Room</button>
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -190,7 +195,9 @@ export default function InstructorRoomsPage() {
                 values={filterValues} onChange={(k, v) => setFilterValues(p => ({ ...p, [k]: v }))}
                 onClear={() => { setFilterValues({}); setSearchValue(""); }}
                 searchPlaceholder="Search rooms..." searchValue={searchValue} onSearchChange={setSearchValue} />
-              <button onClick={openCreate} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm whitespace-nowrap shrink-0">+ Create</button>
+              {isCGI && (
+                <button onClick={openCreate} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm whitespace-nowrap shrink-0">+ Create</button>
+              )}
             </div>
             <DataTable columns={columns} data={filtered as any} keyField="id" />
 

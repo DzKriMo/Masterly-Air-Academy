@@ -41,12 +41,6 @@ export default function CFIDashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: instructorsRaw } = useQuery({
-    queryKey: ['cfi-all-instructors'],
-    queryFn: () => api.get<any>("/users/?role=flight_instructor&role=chief_flight_instructor").then(r => (r as unknown as any).results || []),
-    enabled: isAuthenticated,
-  });
-
   const { data: alertsData } = useQuery({
     queryKey: ['cfi-alerts'],
     queryFn: () => api.get<any>("/notifications/").then(r => (r as unknown as any).results || []),
@@ -63,7 +57,7 @@ export default function CFIDashboard() {
 
   const activeAircraft = aircraft.filter((a: any) => a.status === "active").length;
   const inMaintenance = aircraft.filter((a: any) => a.status === "in_maintenance").length;
-  const availableInstructors = Array.isArray(instructorsRaw) ? instructorsRaw.length : Array.isArray(instructors) ? instructors.length : 0;
+  const availableInstructors = Array.isArray(instructors) ? instructors.length : 0;
 
   // Flight status distribution for chart
   const statusCounts: Record<string, number> = {};

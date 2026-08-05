@@ -39,7 +39,7 @@ export default function ReportsPage() {
     Promise.all([
       api.get("/dashboard/kpis/").catch(() => null),
       api.get("/students/").catch(() => ({ results: [] })),
-      api.get("/users/?role=flight_instructor&role=chief_flight_instructor").catch(() => ({ results: [] })),
+      api.get("/flight-instructors/").catch(() => ({ results: [] })),
       api.get("/courses/").catch(() => ({ results: [] })),
       api.get("/exam-attempts/").catch(() => ({ results: [] })),
       api.get("/flight-lessons/").catch(() => ({ results: [] })),

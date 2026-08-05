@@ -60,6 +60,8 @@ export default function InstructorExamsPage() {
     if (!authLoading && !isAuthenticated) { router.push("/login"); }
   }, [authLoading, isAuthenticated, router]);
 
+  const canCreate = user?.role === "chief_ground_instructor" || user?.role === "chief_flight_instructor";
+
   const { data: exams, isLoading, error, refetch } = useQuery<Exam[]>({
     queryKey: ["instructor-exams"],
     queryFn: async () => {
@@ -175,10 +177,12 @@ export default function InstructorExamsPage() {
         backHref="/instructor/dashboard"
         backLabel={t("instructor.backToDashboard", "Back to Dashboard")}
         actions={
-          <button onClick={() => { setForm(emptyForm); setMutationError(null); setCreateOpen(true); }}
-            className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">
-            + Create Exam
-          </button>
+          canCreate && (
+            <button onClick={() => { setForm(emptyForm); setMutationError(null); setCreateOpen(true); }}
+              className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors">
+              + Create Exam
+            </button>
+          )
         }
       />
 

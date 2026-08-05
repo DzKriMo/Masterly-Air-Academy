@@ -36,18 +36,22 @@ export default function InstructorStudentsPage() {
 
   useAuthGuard(isAuthenticated, authLoading);
 
+  const hasFlightAccess = user?.role === 'flight_instructor' || user?.role === 'chief_flight_instructor';
+
   const fetchData = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
-    Promise.all([
-      api.get<any>("/students/"),
-      api.get<any>("/flight-lessons/").catch(() => ({ results: [] })),
-    ]).then(([studentsData, flightsData]) => {
+    const calls: Promise<any>[] = [api.get<any>("/students/")];
+    if (hasFlightAccess) {
+      calls.push(api.get<any>("/flight-lessons/").catch(() => ({ results: [] })));
+    }
+    Promise.all(calls).then(([studentsData, flightsData]) => {
       const studentList = (studentsData as any).results || [];
-      const flights = (flightsData as any).results || [];
+      const flights = (flightsData || { results: [] }) as any;
+      const flightList = (flights as any).results || [];
 
       const flightByStudent: Record<string, any[]> = {};
-      flights.forEach((f: any) => {
+      flightList.forEach((f: any) => {
         const sid = f.student || f.student_id;
         if (sid) { if (!flightByStudent[sid]) flightByStudent[sid] = []; flightByStudent[sid].push(f); }
       });
@@ -76,7 +80,7 @@ export default function InstructorStudentsPage() {
       console.error("Failed to load data:", err);
       setError(t("instructor.failedToLoadStudents", "Failed to load students."));
     }).finally(() => setLoading(false));
-  }, [isAuthenticated, t]);
+  }, [isAuthenticated, t, hasFlightAccess]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -90,39 +94,50 @@ export default function InstructorStudentsPage() {
     return result;
   }, [students, filterValues, searchValue]);
 
-  const columns: Column<StudentWithFlights>[] = useMemo(() => [
-    { key: "student_number", header: t("common.id", "ID"), render: (s) => (
-      <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono">{s.student_number}</span>
-    )},
-    { key: "full_name", header: t("common.name", "Name") },
-    { key: "program", header: t("common.program", "Program") },
-    { key: "flights_completed", header: "Flights", render: (s) => (
-      <div className="flex items-center gap-2">
-        <span className="text-sm">{s.flights_completed}<span className="text-gray-500">/{s.flights_completed + s.flights_scheduled}</span></span>
-      </div>
-    )},
-    { key: "total_hours", header: "Hours", render: (s) => <span className="text-sm">{s.total_hours}h</span> },
-    { key: "avg_grade", header: "Avg Grade", render: (s) => (
-      <span className={`text-sm font-medium ${s.avg_grade != null ? (s.avg_grade >= 80 ? "text-green-400" : s.avg_grade >= 60 ? "text-yellow-400" : "text-red-400") : "text-gray-500"}`}>
-        {s.avg_grade != null ? `${s.avg_grade}%` : "—"}
-      </span>
-    )},
-    { key: "status", header: t("common.status", "Status"), render: (s) => (
-      <span className={`text-xs px-2 py-0.5 rounded ${s.status === "active" ? "bg-green-500/10 text-green-400" : s.status === "graduated" ? "bg-blue-500/10 text-blue-400" : "bg-gray-500/10 text-gray-400"}`}>{s.status}</span>
-    )},
-    { key: "actions", header: "", sortable: false, render: (s) => (
-      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => router.push(`/instructor/flights?student=${s.id}`)}
-          className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
-          {t("instructor.scheduleFlight", "Schedule")}
-        </button>
-        <button onClick={() => router.push(`/instructor/student-progress`)}
-          className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">
-          {t("instructor.viewProgress", "Progress")}
-        </button>
-      </div>
-    )},
-  ], [router, t]);
+  const columns: Column<StudentWithFlights>[] = useMemo(() => {
+    const cols: Column<StudentWithFlights>[] = [
+      { key: "student_number", header: t("common.id", "ID"), render: (s) => (
+        <span className="text-xs text-gold-500 bg-gold-500/10 px-2 py-0.5 rounded font-mono">{s.student_number}</span>
+      )},
+      { key: "full_name", header: t("common.name", "Name") },
+      { key: "program", header: t("common.program", "Program") },
+    ];
+    if (hasFlightAccess) {
+      cols.push(
+        { key: "flights_completed", header: "Flights", render: (s) => (
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{s.flights_completed}<span className="text-gray-500">/{s.flights_completed + s.flights_scheduled}</span></span>
+          </div>
+        )},
+        { key: "total_hours", header: "Hours", render: (s) => <span className="text-sm">{s.total_hours}h</span> },
+        { key: "avg_grade", header: "Avg Grade", render: (s) => (
+          <span className={`text-sm font-medium ${s.avg_grade != null ? (s.avg_grade >= 80 ? "text-green-400" : s.avg_grade >= 60 ? "text-yellow-400" : "text-red-400") : "text-gray-500"}`}>
+            {s.avg_grade != null ? `${s.avg_grade}%` : "—"}
+          </span>
+        )},
+      );
+    }
+    cols.push(
+      { key: "status", header: t("common.status", "Status"), render: (s) => (
+        <span className={`text-xs px-2 py-0.5 rounded ${s.status === "active" ? "bg-green-500/10 text-green-400" : s.status === "graduated" ? "bg-blue-500/10 text-blue-400" : "bg-gray-500/10 text-gray-400"}`}>{s.status}</span>
+      )},
+      { key: "actions", header: "", sortable: false, render: (s) => (
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          {hasFlightAccess && (
+            <button onClick={() => router.push(`/instructor/flights?student=${s.id}`)}
+              className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">
+              {t("instructor.scheduleFlight", "Schedule")}
+            </button>
+          )}
+          <button onClick={() => router.push(`/instructor/student-progress`)}
+            className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-xs hover:bg-blue-500/20 transition-colors">
+            {t("instructor.viewProgress", "Progress")}
+          </button>
+        </div>
+      )},
+    );
+    return cols;
+  }, [router, t, hasFlightAccess]);
 
   return (
     <div className="flex-1 min-w-0">
@@ -164,10 +179,12 @@ export default function InstructorStudentsPage() {
             <ModalForm open={!!selected} onClose={() => setSelected(null)} title={`${selected?.full_name || ""}`}
               footer={
                 <div className="flex gap-3">
-                  <button onClick={() => { router.push(`/instructor/flights?student=${selected?.id}`); setSelected(null); }}
-                    className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors">
-                    {t("instructor.scheduleFlight", "Schedule Flight")}
-                  </button>
+                  {hasFlightAccess && (
+                    <button onClick={() => { router.push(`/instructor/flights?student=${selected?.id}`); setSelected(null); }}
+                      className="px-5 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors">
+                      {t("instructor.scheduleFlight", "Schedule Flight")}
+                    </button>
+                  )}
                   <button onClick={() => setSelected(null)}
                     className="px-5 py-2 bg-navy-700 hover:bg-navy-600 text-white rounded-lg text-sm">Close</button>
                 </div>
@@ -184,33 +201,37 @@ export default function InstructorStudentsPage() {
                       <DetailField label="Enrolled" value={selected.enrollment_date || ""} />
                     </div>
                   </section>
-                  <section>
-                    <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Flight Tracking</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
-                        <p className="text-xs text-gray-500">Completed</p>
-                        <p className="text-xl font-bold text-white">{selected.flights_completed}</p>
+                  {hasFlightAccess && (
+                    <section>
+                      <h3 className="text-sm font-semibold text-gold-500 mb-3 uppercase tracking-wider">Flight Tracking</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
+                          <p className="text-xs text-gray-500">Completed</p>
+                          <p className="text-xl font-bold text-white">{selected.flights_completed}</p>
+                        </div>
+                        <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
+                          <p className="text-xs text-gray-500">Scheduled</p>
+                          <p className="text-xl font-bold text-white">{selected.flights_scheduled}</p>
+                        </div>
+                        <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
+                          <p className="text-xs text-gray-500">Total Hours</p>
+                          <p className="text-xl font-bold text-white">{selected.total_hours}h</p>
+                        </div>
+                        <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
+                          <p className="text-xs text-gray-500">Avg Grade</p>
+                          <p className="text-xl font-bold text-white">{selected.avg_grade != null ? `${selected.avg_grade}%` : "—"}</p>
+                        </div>
                       </div>
-                      <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
-                        <p className="text-xs text-gray-500">Scheduled</p>
-                        <p className="text-xl font-bold text-white">{selected.flights_scheduled}</p>
+                    </section>
+                  )}
+                  {hasFlightAccess && (
+                    <section>
+                      <div className="grid grid-cols-2 gap-4">
+                        <DetailField label="Last Flight" value={selected.last_flight || "—"} />
+                        <DetailField label="Next Flight" value={selected.next_flight || "—"} />
                       </div>
-                      <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
-                        <p className="text-xs text-gray-500">Total Hours</p>
-                        <p className="text-xl font-bold text-white">{selected.total_hours}h</p>
-                      </div>
-                      <div className="bg-navy-800 rounded-lg p-3 border border-navy-700">
-                        <p className="text-xs text-gray-500">Avg Grade</p>
-                        <p className="text-xl font-bold text-white">{selected.avg_grade != null ? `${selected.avg_grade}%` : "—"}</p>
-                      </div>
-                    </div>
-                  </section>
-                  <section>
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField label="Last Flight" value={selected.last_flight || "—"} />
-                      <DetailField label="Next Flight" value={selected.next_flight || "—"} />
-                    </div>
-                  </section>
+                    </section>
+                  )}
                 </div>
               )}
             </ModalForm>

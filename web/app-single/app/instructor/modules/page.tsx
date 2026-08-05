@@ -53,6 +53,7 @@ export default function ModulesPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const isCGI = user?.role === 'chief_ground_instructor';
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [modules, setModules] = useState<Module[]>([]);
@@ -290,7 +291,7 @@ export default function ModulesPage() {
             !loading && <span className="text-gray-500 text-sm">{t("instructor.noSubjects", "No subjects available.")}</span>
           )}
           <div className="ml-auto">
-            {selectedSubject && (
+            {isCGI && selectedSubject && (
               <button onClick={openCreateModule} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
                 + {t("instructor.addModule", "Add Module")}
               </button>
@@ -317,8 +318,12 @@ export default function ModulesPage() {
                       <p className="text-sm text-gray-400 mt-1">{m.duration}h | {m.lessons.length} {t("instructor.lessons", "lessons")} | {m.documents.length} {t("instructor.documents", "documents")}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => openEditModule(m)} className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">Edit</button>
-                      <button onClick={() => setDeleteModuleId(m.id)} className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">Del</button>
+                      {isCGI && (
+                        <>
+                          <button onClick={() => openEditModule(m)} className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">Edit</button>
+                          <button onClick={() => setDeleteModuleId(m.id)} className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">Del</button>
+                        </>
+                      )}
                       <svg className={`w-5 h-5 text-gray-400 transition-transform ${expandedModule === m.id ? "rotate-180" : ""}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -332,13 +337,15 @@ export default function ModulesPage() {
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">{t("instructor.lessons", "Lessons")}</h4>
-                          <button onClick={() => openLessonForm(m.id, Math.max(...m.lessons.map(l => l.lesson_no), 0) + 1)}
-                            className="px-3 py-1 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded text-xs transition-colors">
-                            + {t("instructor.addLesson", "Add Lesson")}
-                          </button>
+                          {isCGI && (
+                            <button onClick={() => openLessonForm(m.id, Math.max(...m.lessons.map(l => l.lesson_no), 0) + 1)}
+                              className="px-3 py-1 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded text-xs transition-colors">
+                              + {t("instructor.addLesson", "Add Lesson")}
+                            </button>
+                          )}
                         </div>
                         {m.lessons.length === 0 && lessonFormModule !== m.id ? (
-                          <p className="text-sm text-gray-500">{t("instructor.noLessons", "No lessons yet. Click \"Add Lesson\" to create one.")}</p>
+                          <p className="text-sm text-gray-500">{isCGI ? t("instructor.noLessons", "No lessons yet. Click \"Add Lesson\" to create one.") : "No lessons yet."}</p>
                         ) : (
                           <div className="space-y-2">
                             {m.lessons.map(l => (
@@ -408,14 +415,18 @@ export default function ModulesPage() {
                                           className="px-2 py-1 text-xs text-gray-400 border border-navy-600 rounded hover:text-white hover:border-gray-500 transition-colors">
                                           {t("instructor.view", "View")}
                                         </button>
-                                        <button onClick={() => startEdit(l)}
-                                          className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">
-                                          {t("instructor.edit", "Edit")}
-                                        </button>
-                                        <button onClick={() => setDeleteLessonId(l.id)}
-                                          className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">
-                                          {t("instructor.delete", "Del")}
-                                        </button>
+                                        {isCGI && (
+                                          <>
+                                            <button onClick={() => startEdit(l)}
+                                              className="px-2 py-1 text-xs text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/10 transition-colors">
+                                              {t("instructor.edit", "Edit")}
+                                            </button>
+                                            <button onClick={() => setDeleteLessonId(l.id)}
+                                              className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">
+                                              {t("instructor.delete", "Del")}
+                                            </button>
+                                          </>
+                                        )}
                                       </div>
                                     </div>
                                     {l.content && (
@@ -492,7 +503,7 @@ export default function ModulesPage() {
                       <div>
                         <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{t("instructor.documents", "Documents")}</h4>
                         {m.documents.length === 0 ? (
-                          <p className="text-sm text-gray-500">{t("instructor.noDocuments", "No documents yet. Use the upload form below.")}</p>
+                          <p className="text-sm text-gray-500">{isCGI ? t("instructor.noDocuments", "No documents yet. Use the upload form below.") : "No documents yet."}</p>
                         ) : (
                           <div className="space-y-2">
                             {m.documents.map(d => (
@@ -505,10 +516,12 @@ export default function ModulesPage() {
                                   {d.file_url && (
                                     <a href={`/api/module-documents/${d.id}/download/`} target="_blank" className="text-xs text-gold-500 hover:underline">{t("instructor.view", "View")}</a>
                                   )}
-                                  <button onClick={() => setDeleteDocId(d.id)}
-                                    className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">
-                                    {t("instructor.delete", "Del")}
-                                  </button>
+                                  {isCGI && (
+                                    <button onClick={() => setDeleteDocId(d.id)}
+                                      className="px-2 py-1 text-xs text-red-400 border border-red-500/30 rounded hover:bg-red-500/10 transition-colors">
+                                      {t("instructor.delete", "Del")}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -517,6 +530,7 @@ export default function ModulesPage() {
                       </div>
 
                       {/* Upload form */}
+                      {isCGI && (
                       <div>
                         <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{t("instructor.uploadDocument", "Upload Document")}</h4>
                         <form onSubmit={async (e) => {
@@ -552,6 +566,7 @@ export default function ModulesPage() {
                           </button>
                         </form>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>

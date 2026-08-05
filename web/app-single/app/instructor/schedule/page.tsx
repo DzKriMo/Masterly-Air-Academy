@@ -25,19 +25,24 @@ export default function SchedulePage() {
 
   useAuthGuard(isAuthenticated, authLoading);
 
+  const hasFlightAccess = user?.role === 'flight_instructor' || user?.role === 'chief_flight_instructor';
+
   const fetchSchedule = () => {
     if (!isAuthenticated) return;
     setLoading(true);
-    Promise.all([
+    const calls: Promise<any>[] = [
       api.get<any>("/flight-lessons/").catch(() => ({ results: [] })),
       api.get<any>("/courses/").catch(() => ({ results: [] })),
       api.get<any>("/exams/").catch(() => ({ results: [] })),
-      api.get<any>("/simulator-sessions/").catch(() => ({ results: [] })),
-    ]).then(([flightsResp, coursesResp, examsResp, simSessionsResp]) => {
+    ];
+    if (hasFlightAccess) {
+      calls.push(api.get<any>("/simulator-sessions/").catch(() => ({ results: [] })));
+    }
+    Promise.all(calls).then(([flightsResp, coursesResp, examsResp, simSessionsResp]) => {
       const flights = flightsResp as unknown as any;
       const courses = coursesResp as unknown as any;
       const exams = examsResp as unknown as any;
-      const simSessions = simSessionsResp as unknown as any;
+      const simSessions = (simSessionsResp || { results: [] }) as unknown as any;
       const evts: any[] = [];
       (flights.results || []).forEach((f: any) => { if (f.start_time) evts.push({ title: `✈ ${f.student_name} - ${f.aircraft_reg}`, start: f.start_time, end: f.end_time || f.start_time, backgroundColor: "#3b82f6", borderColor: "#3b82f6", extendedProps: { type: "flight", id: f.id, status: f.status } }); });
       (courses.results || []).forEach((c: any) => { evts.push({ title: `📚 ${c.subject_code}: ${c.title}`, start: `${c.scheduled_date}T${c.start_time}`, end: `${c.scheduled_date}T${c.end_time}`, backgroundColor: "#c4943c", borderColor: "#c4943c", extendedProps: { type: "course", id: c.id, status: c.status } }); });
@@ -66,7 +71,7 @@ export default function SchedulePage() {
           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#3b82f6"}}/><span className="text-xs text-gray-400">{t("instructor.flights", "Flights")}</span></div>
           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#c4943c"}}/><span className="text-xs text-gray-400">{t("instructor.courses", "Courses")}</span></div>
           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#8b5cf6"}}/><span className="text-xs text-gray-400">{t("instructor.exams", "Exams")}</span></div>
-          <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#f59e0b"}}/><span className="text-xs text-gray-400">{t("instructor.simulator", "Simulator")}</span></div>
+          {hasFlightAccess && <div className="flex items-center gap-2"><div className="w-4 h-4 rounded" style={{backgroundColor:"#f59e0b"}}/><span className="text-xs text-gray-400">{t("instructor.simulator", "Simulator")}</span></div>}
         </div>
 
         {loading ? (
