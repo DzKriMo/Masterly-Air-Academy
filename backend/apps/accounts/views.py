@@ -178,7 +178,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
             s = self.get_serializer(data=request.data)
-            s.is_valid()
+            s.is_valid(raise_exception=True)
             if getattr(s, 'user', None):
                 s.user.last_login_at = timezone.now()
                 s.user.last_login_ip = request.META.get('REMOTE_ADDR', '')

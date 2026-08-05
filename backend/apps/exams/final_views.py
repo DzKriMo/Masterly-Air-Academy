@@ -1,5 +1,6 @@
 import random
 from datetime import timedelta
+from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -50,7 +51,7 @@ def compute_assignment_points(assignment):
 
 
 def final_score_percent(max_points, earned_points):
-    return round((earned_points / max_points * 100) if max_points else 0, 2)
+    return round((earned_points / max_points * 100) if max_points > 0 else 0, 2)
 
 
 class FinalExamQuestionViewSet(viewsets.ModelViewSet):
@@ -128,8 +129,7 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         return FinalExamSerializer
 
     def perform_create(self, serializer):
-        user = self.request.user
-        serializer.save(created_by=user if user.is_authenticated else None)
+        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['post'])
     def generate(self, request, pk=None):
@@ -148,49 +148,54 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         assignments = []
         errors = []
 
-        for student in students:
-            question_ids = []
-            for cfg in configs:
-                module_questions = list(FinalExamQuestion.objects.filter(
-                    subject=exam.subject, module=cfg.module, is_active=True
-                ))
-                if not module_questions:
-                    errors.append(f'No questions for module {cfg.module.title}')
-                    continue
+        with transaction.atomic():
+            for student in students:
+                question_ids = []
+                for cfg in configs:
+                    module_questions = list(FinalExamQuestion.objects.filter(
+                        subject=exam.subject, module=cfg.module, is_active=True
+                    ))
+                    if not module_questions:
+                        errors.append(f'No questions for module {cfg.module.title}')
+                        continue
 
-                by_difficulty = {}
-                for q in module_questions:
-                    by_difficulty.setdefault(q.difficulty, []).append(q)
+                    by_difficulty = {}
+                    for q in module_questions:
+                        by_difficulty.setdefault(q.difficulty, []).append(q)
 
-                dist = cfg.difficulty_distribution or {}
-                picked = []
-                selected = set(question_ids)
-                for diff, count in dist.items():
-                    pool = [q for q in by_difficulty.get(diff, []) if str(q.id) not in selected]
-                    for q in random.sample(pool, min(int(count), len(pool))):
-                        picked.append(str(q.id))
-                        selected.add(str(q.id))
+                    dist = cfg.difficulty_distribution or {}
+                    picked = []
+                    selected = set(question_ids)
+                    for diff, count in dist.items():
+                        try:
+                            count = int(count)
+                        except (ValueError, TypeError):
+                            count = 0
+                        pool = [q for q in by_difficulty.get(diff, []) if str(q.id) not in selected]
+                        for q in random.sample(pool, min(count, len(pool))):
+                            picked.append(str(q.id))
+                            selected.add(str(q.id))
 
-                module_ids = {str(q.id) for q in module_questions}
-                module_picked = [qid for qid in picked if qid in module_ids]
-                remaining = max(0, cfg.question_count - len(module_picked))
-                if remaining > 0:
-                    unused = [q for q in module_questions if str(q.id) not in selected]
-                    for q in random.sample(unused, min(remaining, len(unused))):
-                        picked.append(str(q.id))
-                        selected.add(str(q.id))
+                    module_ids = {str(q.id) for q in module_questions}
+                    module_picked = [qid for qid in picked if qid in module_ids]
+                    remaining = max(0, cfg.question_count - len(module_picked))
+                    if remaining > 0:
+                        unused = [q for q in module_questions if str(q.id) not in selected]
+                        for q in random.sample(unused, min(remaining, len(unused))):
+                            picked.append(str(q.id))
+                            selected.add(str(q.id))
 
-                question_ids.extend(picked)
+                    question_ids.extend(picked)
 
-            random.shuffle(question_ids)
+                random.shuffle(question_ids)
 
-            assignment = FinalExamAssignment.objects.create(
-                exam=exam, student=student, questions=question_ids,
-            )
-            assignments.append(assignment)
+                assignment = FinalExamAssignment.objects.create(
+                    exam=exam, student=student, questions=question_ids,
+                )
+                assignments.append(assignment)
 
-        exam.status = FinalExamStatus.GENERATED
-        exam.save()
+            exam.status = FinalExamStatus.GENERATED
+            exam.save()
 
         return Response({
             'status': 'generated',
@@ -475,7 +480,7 @@ def exam_access(request):
     code = serializer.validated_data['access_code'].strip().upper()
 
     try:
-        assignment = FinalExamAssignment.objects.select_related('exam', 'student').get(access_code=code)
+        assignment = FinalExamAssignment.objects.select_for_update().select_related('exam', 'student').get(access_code=code)
     except FinalExamAssignment.DoesNotExist:
         return Response({'error': 'Invalid access code'}, status=404)
 

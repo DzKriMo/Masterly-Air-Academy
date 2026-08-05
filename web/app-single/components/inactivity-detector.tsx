@@ -18,9 +18,7 @@ export function InactivityDetector() {
   const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(60);
-
-  // Never auto-logout inside the exam portal
-  if (isExamPortalPath(pathname)) return null;
+  const isExam = isExamPortalPath(pathname);
 
   const resetTimers = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -45,7 +43,7 @@ export function InactivityDetector() {
 
   // Countdown ticker
   useEffect(() => {
-    if (!showWarning) return;
+    if (!showWarning || isExam) return;
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -56,11 +54,11 @@ export function InactivityDetector() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [showWarning]);
+  }, [showWarning, isExam]);
 
   // Activity listeners
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (isExam || !isAuthenticated) return;
 
     const events = ["mousedown", "keydown", "touchstart", "scroll"];
     events.forEach(e => window.addEventListener(e, resetTimers));
@@ -72,7 +70,10 @@ export function InactivityDetector() {
       if (warningRef.current) clearTimeout(warningRef.current);
       events.forEach(e => window.removeEventListener(e, resetTimers));
     };
-  }, [isAuthenticated]);
+  }, [isExam, isAuthenticated]);
+
+  // Never auto-logout or show UI inside the exam portal
+  if (isExam) return null;
 
   if (!showWarning) return null;
 

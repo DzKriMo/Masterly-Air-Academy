@@ -437,7 +437,7 @@ function GradingModal({ examId, attempt, onClose, onSaved }: {
                           max={q.points}
                           step={0.25}
                           value={scores[q.question_id] ?? 0}
-                          onChange={(e) => setScores({ ...scores, [q.question_id]: Math.max(0, Math.min(q.points, Number(e.target.value) || 0)) })}
+                          onChange={(e) => { const n = Number(e.target.value); setScores({ ...scores, [q.question_id]: isNaN(n) ? 0 : Math.max(0, Math.min(q.points, n)) }); }}
                           className="w-24 px-2 py-1 bg-navy-800 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
                         />
                         <span className="text-xs text-gray-500">/ {q.points}</span>
@@ -564,10 +564,10 @@ export default function FinalExamsPage() {
               )}
               {e.assignments_count > 0 && (
                 <>
-                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
+                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch (err: any) { showToast("error", err?.message || "Failed to download access codes"); } }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
                     <Download className="w-4 h-4 inline-block mr-1" />Access Codes
                   </button>
-                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/report/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg text-sm">
+                  <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/report/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch (err: any) { showToast("error", err?.message || "Failed to download report"); } }} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg text-sm">
                     <Printer className="w-4 h-4 inline-block mr-1" />Printable Report
                   </button>
                 </>

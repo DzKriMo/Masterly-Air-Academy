@@ -59,7 +59,6 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        from django.db.models import Count
         qs = self.get_queryset()
         total = qs.count()
         total_active = qs.filter(status='active').count()

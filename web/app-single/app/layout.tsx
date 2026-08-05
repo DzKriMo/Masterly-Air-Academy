@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/notification-bell";
 import { ErrorBoundary } from "@/components/error-boundary";
 
-const BASE_URL = "https://185.185.80.188.nip.io";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://localhost";
 
 const seoByLang: Record<string, { title: string; description: string; keywords: string }> = {
   en: {

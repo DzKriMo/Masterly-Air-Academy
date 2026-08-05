@@ -1,4 +1,3 @@
-import uuid
 from rest_framework import viewsets, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action

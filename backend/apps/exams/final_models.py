@@ -61,7 +61,7 @@ def generate_exam_hash():
 
 
 def generate_access_code():
-    return secrets.token_hex(4).upper()
+    return secrets.token_hex(8).upper()
 
 
 class FinalExam(models.Model):

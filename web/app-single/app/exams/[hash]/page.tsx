@@ -55,7 +55,12 @@ export default function ExamPortalPage() {
         setExam(saved.exam);
         setAccessCode(saved.accessCode);
         setAnswers(saved.answers || {});
-        setStep(saved.step === "exam" ? "warn" : "code");
+        violationsRef.current = saved.violations || [];
+        if (saved.violations) countRef.current = saved.violations.length;
+        setStep("exam");
+        const startedAt = saved.exam.started_at ? new Date(saved.exam.started_at).getTime() : Date.now();
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        setTimeLeft(Math.max(0, saved.exam.duration_minutes * 60 - elapsed));
       }
     } catch {}
   }, [sessionKey]);
@@ -65,6 +70,7 @@ export default function ExamPortalPage() {
     try {
       sessionStorage.setItem(sessionKey, JSON.stringify({
         exam, accessCode, answers, step,
+        violations: violationsRef.current,
       }));
     } catch {}
   }, [exam, accessCode, answers, step, sessionKey]);
@@ -100,12 +106,14 @@ export default function ExamPortalPage() {
 
   const forceSubmit = useCallback(async (reason: string) => {
     if (autoSubmitLockRef.current) return;
+    autoSubmitLockRef.current = true;
     violationsRef.current.push({ type: "auto_submit", at: new Date().toISOString(), detail: reason });
     const { ok, data } = await doSubmit(true, true);
     if (ok) {
       setResult(data);
       setStep("done");
     } else {
+      autoSubmitLockRef.current = false;
       setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
       setStep("code");
       setError("Submit failed — check your connection and try again.");
@@ -225,13 +233,14 @@ export default function ExamPortalPage() {
   };
 
   useEffect(() => {
-    if (step !== "exam" || timeLeft <= 0) return;
-    const t = setInterval(() => setTimeLeft(prev => {
-      if (prev <= 1) { clearInterval(t); return 0; }
-      return prev - 1;
-    }), 1000);
+    if (step !== "exam" || !exam) return;
+    const startedAt = exam.started_at ? new Date(exam.started_at).getTime() : Date.now();
+    const total = exam.duration_minutes * 60;
+    const tick = () => setTimeLeft(Math.max(0, total - Math.floor((Date.now() - startedAt) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [step, timeLeft]);
+  }, [step, exam]);
 
   // Auto-submit when the timer expires (00:00)
   useEffect(() => {
@@ -242,6 +251,7 @@ export default function ExamPortalPage() {
   }, [step, timeLeft, forceSubmit, exam]);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (timeLeft <= 0) { setError("Time is up!"); return; }
     if (!confirm("Submit your exam? You cannot change answers after submission.")) return;
     setSubmitting(true); setError("");

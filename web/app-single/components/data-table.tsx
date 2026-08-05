@@ -89,7 +89,7 @@ export function DataTable<T>({
           <tbody>
             {pageData.map((item, i) => (
               <tr
-                key={String((item as any)[keyField])}
+                key={String((item as any)[keyField]) || `row-${i}`}
                 onClick={() => onRowClick?.(item)}
                 className={`border-b border-navy-700/50 ${onRowClick ? 'cursor-pointer hover:bg-navy-700/20' : ''} transition-colors`}
               >

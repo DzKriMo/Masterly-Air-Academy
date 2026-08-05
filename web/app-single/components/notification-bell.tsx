@@ -16,9 +16,7 @@ export function NotificationBell() {
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  // Hidden entirely inside the exam portal (no polling, no logout-on-401)
-  if (isExamPortalPath(pathname)) return null;
+  const isExam = isExamPortalPath(pathname);
 
   const fetchNotifications = () => {
     if (!api.isAuthenticated()) return;
@@ -28,10 +26,11 @@ export function NotificationBell() {
   };
 
   useEffect(() => {
+    if (isExam) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isExam]);
 
   useNotificationStream((n: StreamNotification) => {
     setNotifs(prev => [{ ...n, is_read: false } as Notif, ...prev]);
@@ -39,9 +38,14 @@ export function NotificationBell() {
       showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
     }
     try { window.dispatchEvent(new CustomEvent("maa:notifications-changed")); } catch {}
-  }, { enabled: api.isAuthenticated() });
+  }, { enabled: api.isAuthenticated() && !isExam });
 
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
+
+  // Hidden entirely inside the exam portal (no polling, no auto-logout)
+  if (isExam) return null;
+
+
 
   const unread = notifs.filter(n => !n.is_read).length;
 

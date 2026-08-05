@@ -102,7 +102,7 @@ class ApiClient {
 
     // Unwrap standard API envelope {success, data, meta} if present
     if (raw && typeof raw === 'object' && raw.success === true && 'data' in raw) {
-      return raw.data;
+      return raw.data ?? raw;
     }
 
     return raw;

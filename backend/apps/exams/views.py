@@ -204,8 +204,11 @@ class ExamViewSet(viewsets.ModelViewSet):
         attempt.save()
 
         # Notify student of exam result
-        from apps.notifications.services import NotificationService
-        NotificationService.exam_result(attempt)
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.exam_result(attempt)
+        except Exception:
+            pass
 
         if result['is_passed']:
             # Auto-issue certificate on first pass
@@ -213,10 +216,13 @@ class ExamViewSet(viewsets.ModelViewSet):
                 student=attempt.student, type=exam.type or 'exam', program=exam.program
             ).exists()
             if not cert_exists and exam.program:
-                CertificateService.issue_certificate(
-                    attempt.student, exam.program, exam.type or 'exam',
-                    title=f'{exam.code} - Passed'
-                )
+                try:
+                    CertificateService.issue_certificate(
+                        attempt.student, exam.program, exam.type or 'exam',
+                        title=f'{exam.code} - Passed'
+                    )
+                except Exception:
+                    pass
 
         return Response({
             'score': result['score'],
@@ -301,19 +307,21 @@ class QuizViewSet(viewsets.ModelViewSet):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
 
-        existing = QuizAttempt.objects.filter(quiz=quiz, student=student).count()
-        if existing >= quiz.max_attempts:
-            return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
+        from django.db import transaction
+        with transaction.atomic():
+            existing = QuizAttempt.objects.select_for_update().filter(quiz=quiz, student=student).count()
+            if existing >= quiz.max_attempts:
+                return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
 
-        all_questions = list(QuestionBank.objects.filter(subject__modules=quiz.module))
-        if not all_questions:
-            return Response({'error': 'No questions available for this quiz module'}, status=400)
-        questions = random.sample(all_questions, min(10, len(all_questions)))
+            all_questions = list(QuestionBank.objects.filter(subject__modules=quiz.module))
+            if not all_questions:
+                return Response({'error': 'No questions available for this quiz module'}, status=400)
+            questions = random.sample(all_questions, min(10, len(all_questions)))
 
-        attempt = QuizAttempt.objects.create(
-            quiz=quiz, student=student,
-            answers={'question_ids': [str(q.id) for q in questions]},
-        )
+            attempt = QuizAttempt.objects.create(
+                quiz=quiz, student=student,
+                answers={'question_ids': [str(q.id) for q in questions]},
+            )
 
         return Response({
             'attempt_id': str(attempt.id),
@@ -477,15 +485,18 @@ class SkillTestViewSet(viewsets.ModelViewSet):
 
         # If passed, auto-issue certificate
         if skill_test.result == 'passed':
-            from .services import CertificateService
-            certificate = CertificateService.issue_certificate(
-                skill_test.student,
-                skill_test.student.program,
-                'skill_test',
-                title=f'Skill Test - Passed'
-            )
-            from apps.notifications.services import NotificationService
-            NotificationService.certificate_issued(certificate)
+            try:
+                from .services import CertificateService
+                certificate = CertificateService.issue_certificate(
+                    skill_test.student,
+                    skill_test.student.program,
+                    'skill_test',
+                    title=f'Skill Test - Passed'
+                )
+                from apps.notifications.services import NotificationService
+                NotificationService.certificate_issued(certificate)
+            except Exception:
+                pass
 
         return Response(SkillTestSerializer(skill_test).data)
 

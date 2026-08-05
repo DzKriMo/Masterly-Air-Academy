@@ -100,6 +100,7 @@ export default function LandingPage() {
   // Drag state
   const [dragOffset, setDragOffset] = useState(0);
   const dragMeta = useRef({ active: false, startX: 0, moved: false });
+  const dragOffsetRef = useRef(0);
 
   const handleTransitionEnd = useCallback(() => {
     if (rawSlide >= totalSlides * 2) {
@@ -144,6 +145,7 @@ export default function LandingPage() {
     if (!m.active) return;
     const offset = clientX - m.startX;
     if (Math.abs(offset) > 5) m.moved = true;
+    dragOffsetRef.current = offset;
     setDragOffset(offset);
   }, []);
 
@@ -152,11 +154,11 @@ export default function LandingPage() {
     if (!m.active) return;
     m.active = false;
     if (m.moved) {
-      if (dragOffset > SWIPE_THRESHOLD) prevSlide();
-      else if (dragOffset < -SWIPE_THRESHOLD) nextSlide();
+      if (dragOffsetRef.current > SWIPE_THRESHOLD) prevSlide();
+      else if (dragOffsetRef.current < -SWIPE_THRESHOLD) nextSlide();
     }
     setDragOffset(0);
-  }, [dragOffset, prevSlide, nextSlide, SWIPE_THRESHOLD]);
+  }, [prevSlide, nextSlide, SWIPE_THRESHOLD]);
 
   useEffect(() => {
     if (isHovering) return;
