@@ -44,6 +44,31 @@ export default function ExamPortalPage() {
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { codeRef.current = accessCode; }, [accessCode]);
 
+  // ── Session persistence: survive hard refresh mid-exam ─────
+  const sessionKey = `maa_exam_${hash}`;
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(sessionKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.exam && saved?.accessCode) {
+        setExam(saved.exam);
+        setAccessCode(saved.accessCode);
+        setAnswers(saved.answers || {});
+        setStep(saved.step === "exam" ? "warn" : "code");
+      }
+    } catch {}
+  }, [sessionKey]);
+
+  useEffect(() => {
+    if (!exam || !accessCode || step === "done") return;
+    try {
+      sessionStorage.setItem(sessionKey, JSON.stringify({
+        exam, accessCode, answers, step,
+      }));
+    } catch {}
+  }, [exam, accessCode, answers, step, sessionKey]);
+
   const recordViolation = useCallback((type: string, detail?: string): number => {
     if (Date.now() - mountedAtRef.current < GRACE_MS) return countRef.current;
     violationsRef.current.push({ type, at: new Date().toISOString(), detail });
@@ -62,19 +87,29 @@ export default function ExamPortalPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      if (res.ok) {
+        try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
+      }
       return { ok: res.ok, data: (data?.data ?? data) };
     } catch {
       return { ok: false, data: null };
     } finally {
-      if (force) setStep("done");
+      autoSubmitLockRef.current = false;
     }
-  }, []);
+  }, [hash]);
 
-  const forceSubmit = useCallback((reason: string) => {
+  const forceSubmit = useCallback(async (reason: string) => {
     if (autoSubmitLockRef.current) return;
     violationsRef.current.push({ type: "auto_submit", at: new Date().toISOString(), detail: reason });
-    doSubmit(true, true);
-    setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
+    const { ok, data } = await doSubmit(true, true);
+    if (ok) {
+      setResult(data);
+      setStep("done");
+    } else {
+      setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
+      setStep("code");
+      setError("Submit failed — check your connection and try again.");
+    }
   }, [doSubmit]);
 
   // ── Only mount anti-cheat listeners once, during the exam ─
@@ -85,10 +120,15 @@ export default function ExamPortalPage() {
     antiCheatAttachedRef.current = true;
     mountedAtRef.current = Date.now();
 
+    // Block disruptive events, but only COUNT real copy/paste/cut as violations.
+    // selectstart/contextmenu/dragstart fire constantly during normal use
+    // (clicking options, selecting text in textareas, right-clicks) and are NOT cheating.
     const blockEvents = ["copy", "paste", "cut", "contextmenu", "selectstart", "dragstart"];
     const onBlock = (e: Event) => {
       e.preventDefault();
-      recordViolation("copy_paste");
+      if (e.type === "copy" || e.type === "paste" || e.type === "cut") {
+        recordViolation("copy_paste");
+      }
     };
     blockEvents.forEach(ev => document.addEventListener(ev, onBlock));
 
@@ -96,13 +136,13 @@ export default function ExamPortalPage() {
       if (document.hidden) {
         const n = recordViolation("tab_switch");
         setWarning({ type: "tab_switch", message: `Tab switch detected (${n}). Repeated violations will auto-submit your exam.` });
-        if (n > MAX_VIOLATIONS) forceSubmit("Too many tab switches");
+        if (n >= MAX_VIOLATIONS) forceSubmit("Too many tab switches");
       }
     };
     const onBlur = () => {
       const n = recordViolation("window_blur");
       setWarning({ type: "window_blur", message: `Focus lost (${n}). Stay on this tab during the exam.` });
-      if (n > MAX_VIOLATIONS) forceSubmit("Repeated focus loss");
+      if (n >= MAX_VIOLATIONS) forceSubmit("Repeated focus loss");
     };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
@@ -112,7 +152,8 @@ export default function ExamPortalPage() {
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
       if (widthThreshold || heightThreshold) {
         const n = recordViolation("devtools");
-        if (n > MAX_VIOLATIONS) setWarning({ type: "devtools", message: "DevTools detected — this is recorded." });
+        if (n >= MAX_VIOLATIONS) forceSubmit("Repeated DevTools detection");
+        else setWarning({ type: "devtools", message: "DevTools detected — this is recorded." });
       }
     };
     const devInterval = setInterval(detectDevtools, 2000);
@@ -139,7 +180,7 @@ export default function ExamPortalPage() {
       if (!document.fullscreenElement && Date.now() - mountedAtRef.current >= GRACE_MS) {
         const n = recordViolation("fullscreen_exit");
         setWarning({ type: "fullscreen_exit", message: `Fullscreen exited (${n}). Return to fullscreen or the exam may auto-submit.` });
-        if (n > MAX_VIOLATIONS) forceSubmit("Exited fullscreen repeatedly");
+        if (n >= MAX_VIOLATIONS) forceSubmit("Exited fullscreen repeatedly");
         else enterFullscreen();
       }
     };
@@ -191,6 +232,14 @@ export default function ExamPortalPage() {
     }), 1000);
     return () => clearInterval(t);
   }, [step, timeLeft]);
+
+  // Auto-submit when the timer expires (00:00)
+  useEffect(() => {
+    if (step === "exam" && timeLeft <= 0 && !autoSubmitLockRef.current && exam) {
+      setWarning({ type: "expired", message: "Time is up — submitting your exam now." });
+      forceSubmit("Time expired");
+    }
+  }, [step, timeLeft, forceSubmit, exam]);
 
   const handleSubmit = async () => {
     if (timeLeft <= 0) { setError("Time is up!"); return; }

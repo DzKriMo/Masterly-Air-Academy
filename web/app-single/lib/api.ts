@@ -15,6 +15,7 @@ class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private onLogoutHandler: (() => void) | null = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
   getBaseUrl(): string {
     return API_BASE;
@@ -107,27 +108,48 @@ class ApiClient {
     return raw;
   }
 
-  private async tryRefreshToken(): Promise<boolean> {
+  /**
+   * Refresh the access token using the given refresh token.
+   * Shares a single in-flight promise with all callers (401-retry and the
+   * auth context) so concurrent refreshes can never race — important when the
+   * backend rotates refresh tokens.
+   */
+  async refreshAccessToken(refresh: string): Promise<boolean> {
+    if (this.refreshPromise) return this.refreshPromise;
+    this.refreshPromise = this.performRefresh(refresh);
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
+    }
+  }
+
+  private async performRefresh(refresh: string): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/api/token/refresh/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: this.refreshToken }),
+        body: JSON.stringify({ refresh }),
       });
 
       if (res.ok) {
         const data = await res.json();
         this.accessToken = data.access;
-        // Update in sessionStorage
+        // Persist to localStorage (shared with auth-context)
         try {
-          const session = JSON.parse(sessionStorage.getItem('maa_session') || '{}');
+          const session = JSON.parse(localStorage.getItem('maa_session') || '{}');
           session.token = data.access;
-          sessionStorage.setItem('maa_session', JSON.stringify(session));
+          localStorage.setItem('maa_session', JSON.stringify(session));
         } catch {}
         return true;
       }
     } catch {}
     return false;
+  }
+
+  private async tryRefreshToken(): Promise<boolean> {
+    if (!this.refreshToken) return false;
+    return this.refreshAccessToken(this.refreshToken);
   }
 
   async get<T = any>(endpoint: string): Promise<T> {

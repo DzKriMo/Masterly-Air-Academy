@@ -1,4 +1,5 @@
 import random
+from datetime import timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -125,25 +126,29 @@ class FinalExamViewSet(viewsets.ModelViewSet):
                     errors.append(f'No questions for module {cfg.module.title}')
                     continue
 
-                by_difficulty = {'easy': [], 'medium': [], 'hard': []}
+                by_difficulty = {}
                 for q in module_questions:
                     by_difficulty.setdefault(q.difficulty, []).append(q)
 
                 dist = cfg.difficulty_distribution or {}
+                picked = []
+                selected = set(question_ids)
                 for diff, count in dist.items():
-                    pool = by_difficulty.get(diff, [])
-                    if not pool:
-                        pool = module_questions
-                    sample = random.sample(pool, min(int(count), len(pool)))
-                    question_ids.extend([str(q.id) for q in sample])
+                    pool = [q for q in by_difficulty.get(diff, []) if str(q.id) not in selected]
+                    for q in random.sample(pool, min(int(count), len(pool))):
+                        picked.append(str(q.id))
+                        selected.add(str(q.id))
 
-                remaining = cfg.question_count - len([q for q in question_ids if any(
-                    q == str(mq.id) for mq in module_questions if str(mq.id) == q
-                )])
+                module_ids = {str(q.id) for q in module_questions}
+                module_picked = [qid for qid in picked if qid in module_ids]
+                remaining = max(0, cfg.question_count - len(module_picked))
                 if remaining > 0:
-                    unused = [q for q in module_questions if str(q.id) not in question_ids]
-                    extra = random.sample(unused, min(remaining, len(unused)))
-                    question_ids.extend([str(q.id) for q in extra])
+                    unused = [q for q in module_questions if str(q.id) not in selected]
+                    for q in random.sample(unused, min(remaining, len(unused))):
+                        picked.append(str(q.id))
+                        selected.add(str(q.id))
+
+                question_ids.extend(picked)
 
             random.shuffle(question_ids)
 
@@ -236,6 +241,12 @@ def exam_access(request):
     if assignment.status == 'submitted':
         return Response({'error': 'Exam already submitted', 'score': float(assignment.score) if assignment.score else None}, status=400)
 
+    # Enforce exam duration — a timed-out exam cannot be started or resumed
+    if assignment.started_at:
+        elapsed = timezone.now() - assignment.started_at
+        if elapsed > timedelta(minutes=assignment.exam.duration_minutes):
+            return Response({'error': 'Exam time has expired'}, status=400)
+
     if assignment.status == 'pending':
         assignment.status = 'in_progress'
         assignment.started_at = timezone.now()
@@ -276,6 +287,14 @@ def exam_submit(request):
     if assignment.status == 'submitted':
         return Response({'error': 'Already submitted'}, status=400)
 
+    if assignment.status != 'in_progress' or not assignment.started_at:
+        return Response({'error': 'Exam has not been started'}, status=400)
+
+    # Enforce exam duration — reject submissions after the time limit
+    elapsed = timezone.now() - assignment.started_at
+    if elapsed > timedelta(minutes=assignment.exam.duration_minutes):
+        return Response({'error': 'Exam time has expired'}, status=400)
+
     submit_serializer = FinalExamSubmitSerializer(data=request.data)
     submit_serializer.is_valid(raise_exception=True)
     answers = submit_serializer.validated_data['answers']
@@ -284,9 +303,10 @@ def exam_submit(request):
     # Auto-grade MCQ/SCQ/TrueFalse
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
     qmap = {str(q.id): q for q in questions}
+    valid_answers = {k: v for k, v in answers.items() if k in qmap}
     correct = 0
     total = 0
-    for qid, answer in answers.items():
+    for qid, answer in valid_answers.items():
         if qid in qmap:
             q = qmap[qid]
             if q.question_type in ('mcq', 'scq', 'true_false'):
@@ -296,14 +316,14 @@ def exam_submit(request):
 
     score = round((correct / total * 100) if total > 0 else 0, 2)
 
-    assignment.answers = answers
+    assignment.answers = valid_answers
     assignment.score = score
     assignment.status = 'submitted'
     assignment.submitted_at = timezone.now()
     if violations:
         assignment.violations = violations
         serious = [v for v in violations if v.get('type') in (
-            'tab_switch', 'window_blur', 'fullscreen_exit', 'copy_paste', 'right_click', 'devtools'
+            'tab_switch', 'window_blur', 'fullscreen_exit', 'copy_paste', 'right_click', 'devtools', 'auto_submit'
         )]
         if len(serious) >= 3:
             assignment.is_flagged = True

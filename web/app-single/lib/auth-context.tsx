@@ -115,26 +115,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     tokenRef.current = token;
   }, [user, token]);
 
+  const scheduleRefreshRef = useRef<(tok?: string | null) => void>(() => {});
+
   // ── Refresh token ──────────────────────────────────────────
 
   const refreshToken = useCallback(async () => {
     const session = loadSession();
     if (!session.refresh) return false;
     try {
-      const res = await fetch(`${api.getBaseUrl()}/api/token/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: session.refresh }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        api.setTokens(data.access, session.refresh);
-        saveSession(data.access, session.refresh, session.user!);
-        setToken(data.access);
-        tokenRef.current = data.access;
-        useAuthStore.getState().setAuth(session.user!, data.access);
-        scheduleRefresh(data.access);
-        return true;
+      const ok = await api.refreshAccessToken(session.refresh);
+      if (ok) {
+        const fresh = loadSession();
+        const access = fresh.token;
+        if (access) {
+          api.setTokens(access, session.refresh);
+          saveSession(access, session.refresh, session.user!);
+          setToken(access);
+          tokenRef.current = access;
+          useAuthStore.getState().setAuth(session.user!, access);
+          scheduleRefreshRef.current(access);
+          return true;
+        }
       }
     } catch {}
     return false;
@@ -153,6 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshToken();
     }, delay);
   }, [refreshToken]);
+
+  scheduleRefreshRef.current = scheduleRefresh;
 
   // ── Activity tracking ──────────────────────────────────────
 
