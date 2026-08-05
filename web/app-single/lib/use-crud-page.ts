@@ -23,7 +23,7 @@ export type CrudOptions = CrudOption[] | ((lookups: CrudLookups) => CrudOption[]
 export interface CrudField {
   name: string;
   label: string;
-  type: "text" | "select" | "textarea" | "datetime" | "date" | "time" | "checkbox" | "file";
+  type: "text" | "select" | "multiselect" | "textarea" | "datetime" | "date" | "time" | "checkbox" | "file" | "custom";
   span?: "full" | "half";
   required?: boolean;
   requiredForSubmit?: boolean;
@@ -37,6 +37,8 @@ export interface CrudField {
   uploadErrorFallback?: string;
   uploadSuccessKey?: string;
   uploadSuccessFallback?: string;
+  /** Custom renderer (used with type "custom"). */
+  render?: (value: any, onChange: (v: any) => void, lookups: CrudLookups, form: CrudForm) => React.ReactNode;
 }
 
 export interface CrudFilterField {

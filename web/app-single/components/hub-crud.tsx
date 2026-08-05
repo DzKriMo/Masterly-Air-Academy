@@ -36,11 +36,13 @@ function FormField({
   value,
   onChange,
   lookups,
+  form,
 }: {
   field: CrudField;
   value: any;
   onChange: (value: any) => void;
   lookups: CrudLookups;
+  form: CrudForm;
 }) {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -66,6 +68,38 @@ function FormField({
               </option>
             ))}
           </select>
+        </div>
+      );
+    }
+    case "multiselect": {
+      const options = resolveOptions(field.options, lookups);
+      const selected: string[] = Array.isArray(value) ? value : [];
+      const toggle = (v: string) =>
+        onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+      return (
+        <div>
+          {label}
+          {field.placeholder && <p className="text-xs text-gray-500 mb-2">{field.placeholder}</p>}
+          <div className="flex flex-wrap gap-2">
+            {options.length === 0 && <span className="text-sm text-gray-500">Loading options...</span>}
+            {options.map((o) => {
+              const on = selected.includes(o.value);
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => toggle(o.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                    on
+                      ? "bg-gold-500/20 border-gold-500 text-gold-500"
+                      : "bg-navy-900 border-navy-700 text-gray-400 hover:border-navy-500 hover:text-white"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -171,6 +205,13 @@ function FormField({
           </div>
         </div>
       );
+    case "custom":
+      return field.render ? (
+        <div>
+          {label}
+          {field.render(value, onChange, lookups, form)}
+        </div>
+      ) : null;
     default:
       return (
         <div>
@@ -202,7 +243,7 @@ function FormFields({
     <div className="grid grid-cols-2 gap-4">
       {fields.map((field) => (
         <div key={field.name} className={field.span === "half" ? "" : "col-span-2"}>
-          <FormField field={field} value={values[field.name]} onChange={(v) => onChange(field.name, v)} lookups={lookups} />
+          <FormField field={field} value={values[field.name]} onChange={(v) => onChange(field.name, v)} lookups={lookups} form={values} />
         </div>
       ))}
     </div>

@@ -75,6 +75,20 @@ class FinalExamCreateSerializer(serializers.ModelSerializer):
             FinalExamModuleConfig.objects.create(exam=exam, **cfg_data)
         return exam
 
+    def update(self, instance, validated_data):
+        configs_data = validated_data.pop('module_configs', None)
+        promotions = validated_data.pop('promotions', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if promotions is not None:
+            instance.promotions.set(promotions)
+        if configs_data is not None:
+            instance.module_configs.all().delete()
+            for cfg_data in configs_data:
+                FinalExamModuleConfig.objects.create(exam=instance, **cfg_data)
+        return instance
+
 
 class FinalExamAssignmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)

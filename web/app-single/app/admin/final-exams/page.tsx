@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { HubCrud } from "@/components/hub-crud";
 import { ModalForm } from "@/components/modal-form";
-import { DetailField } from "@/components/detail-field";
 import { fmtLabel } from "@/lib/format-utils";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
+import { Trash2, Plus } from "lucide-react";
 
 interface FinalExam {
   id: string; hash: string; subject: string; subject_name: string;
@@ -17,10 +17,164 @@ interface FinalExam {
   assignments_count: number;
 }
 
+interface ModuleConfigRow {
+  module: string;
+  module_name?: string;
+  question_count: number;
+  easy: number; medium: number; hard: number;
+  mcq: number; scq: number; essay: number; true_false: number;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-500/10 text-gray-400", generated: "bg-blue-500/10 text-blue-400",
   in_progress: "bg-amber-500/10 text-amber-400", completed: "bg-green-500/10 text-green-400",
 };
+
+const DIFF_KEYS: Array<{ key: "easy" | "medium" | "hard"; label: string }> = [
+  { key: "easy", label: "Easy" },
+  { key: "medium", label: "Medium" },
+  { key: "hard", label: "Hard" },
+];
+
+const TYPE_KEYS: Array<{ key: "mcq" | "scq" | "essay" | "true_false"; label: string }> = [
+  { key: "mcq", label: "Multiple Choice" },
+  { key: "scq", label: "Single Choice" },
+  { key: "essay", label: "Essay" },
+  { key: "true_false", label: "True / False" },
+];
+
+const numberInput = (v: any, onChange: (n: number) => void, min = 0) => (
+  <input
+    type="number"
+    min={min}
+    value={Number(v) || 0}
+    onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+    className="w-full px-2 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
+  />
+);
+
+function getModuleOptions(modules: any[], subjectId: string) {
+  const list = (modules || []).filter(
+    (m) => !subjectId || !m.subject || m.subject === subjectId
+  );
+  return list.map((m) => ({
+    value: m.id,
+    label: m.subject_name ? `${m.title} — ${m.subject_name}` : m.title,
+  }));
+}
+
+function ModuleConfigEditor({
+  value,
+  onChange,
+  modules,
+  subjectId,
+}: {
+  value: ModuleConfigRow[];
+  onChange: (rows: ModuleConfigRow[]) => void;
+  modules: any[];
+  subjectId: string;
+}) {
+  const rows: ModuleConfigRow[] = Array.isArray(value) ? value : [];
+  const updateRow = (i: number, patch: Partial<ModuleConfigRow>) =>
+    onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const addRow = () =>
+    onChange([
+      ...rows,
+      { module: "", question_count: 20, easy: 7, medium: 8, hard: 5, mcq: 10, scq: 5, essay: 3, true_false: 2 },
+    ]);
+  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i));
+
+  const moduleOptions = getModuleOptions(modules, subjectId);
+
+  return (
+    <div className="space-y-3">
+      {rows.length === 0 && (
+        <p className="text-sm text-gray-500">No modules configured yet. Add one to choose which modules feed into this exam and how many questions each contributes.</p>
+      )}
+      {rows.map((row, i) => {
+        const diffSum = row.easy + row.medium + row.hard;
+        const typeSum = row.mcq + row.scq + row.essay + row.true_false;
+        const count = Number(row.question_count) || 0;
+        const warn = (count > 0 && (diffSum !== count || typeSum !== count)) || count <= 0;
+        return (
+          <div key={i} className="p-4 bg-navy-900 border border-navy-700 rounded-xl space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">Module</label>
+                <select
+                  value={row.module}
+                  onChange={(e) => updateRow(i, { module: e.target.value })}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none"
+                >
+                  <option value="">Select module...</option>
+                  {moduleOptions.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeRow(i)}
+                className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+                title="Remove module"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Number of questions</label>
+              {numberInput(row.question_count, (n) => updateRow(i, { question_count: n }), 1)}
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Difficulty mix (must total {count || "question count"})</label>
+              <div className="grid grid-cols-3 gap-2">
+                {DIFF_KEYS.map((d) => (
+                  <div key={d.key}>
+                    <span className="block text-[11px] text-gray-500 mb-1">{d.label}</span>
+                    {numberInput(row[d.key], (n) => updateRow(i, { [d.key]: n } as any))}
+                  </div>
+                ))}
+              </div>
+              <p className={`text-[11px] mt-1 ${diffSum === count ? "text-green-400" : "text-amber-400"}`}>
+                {diffSum} of {count} allocated
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Question types (must total {count || "question count"})</label>
+              <div className="grid grid-cols-4 gap-2">
+                {TYPE_KEYS.map((ty) => (
+                  <div key={ty.key}>
+                    <span className="block text-[11px] text-gray-500 mb-1">{ty.label}</span>
+                    {numberInput(row[ty.key], (n) => updateRow(i, { [ty.key]: n } as any))}
+                  </div>
+                ))}
+              </div>
+              <p className={`text-[11px] mt-1 ${typeSum === count ? "text-green-400" : "text-amber-400"}`}>
+                {typeSum} of {count} allocated
+              </p>
+            </div>
+
+            {warn && (
+              <p className="text-[11px] text-amber-400">
+                Tip: the difficulty and type allocations should each add up to the number of questions. The system fills any remainder automatically.
+              </p>
+            )}
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        onClick={addRow}
+        className="flex items-center gap-2 px-3 py-2 text-sm text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500/10"
+      >
+        <Plus className="w-4 h-4" /> Add module
+      </button>
+    </div>
+  );
+}
 
 export default function FinalExamsPage() {
   const { t } = useTranslation();
@@ -28,7 +182,6 @@ export default function FinalExamsPage() {
   const [selected, setSelected] = useState<FinalExam | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [showPdfBtn, setShowPdfBtn] = useState(false);
 
   const handleGenerate = async () => {
     if (!selected) return;
@@ -42,6 +195,28 @@ export default function FinalExamsPage() {
       showToast("error", err.message || "Generation failed");
     } finally { setGenerating(false); }
   };
+
+  const buildRows = (configs: FinalExam["module_configs"]): ModuleConfigRow[] =>
+    (configs || []).map((c) => ({
+      module: c.module,
+      module_name: c.module_name,
+      question_count: c.question_count || 0,
+      easy: c.difficulty_distribution?.easy || 0,
+      medium: c.difficulty_distribution?.medium || 0,
+      hard: c.difficulty_distribution?.hard || 0,
+      mcq: c.type_distribution?.mcq || 0,
+      scq: c.type_distribution?.scq || 0,
+      essay: c.type_distribution?.essay || 0,
+      true_false: c.type_distribution?.true_false || 0,
+    }));
+
+  const rowsToPayload = (rows: ModuleConfigRow[]) =>
+    (rows || []).map((r) => ({
+      module: r.module,
+      question_count: Number(r.question_count) || 10,
+      difficulty_distribution: { easy: Number(r.easy) || 0, medium: Number(r.medium) || 0, hard: Number(r.hard) || 0 },
+      type_distribution: { mcq: Number(r.mcq) || 0, scq: Number(r.scq) || 0, essay: Number(r.essay) || 0, true_false: Number(r.true_false) || 0 },
+    }));
 
   return (
     <div className="min-h-screen bg-navy-900 p-6">
@@ -68,19 +243,14 @@ export default function FinalExamsPage() {
           { key: "modules", queryKey: ["admin-fe-modules"], endpoint: "/modules/" },
           { key: "promotions", queryKey: ["admin-fe-promos"], endpoint: "/promotions/" },
         ]}
-        initialCreate={{ subject: "", title: "", title_ar: "", title_fr: "", promotions: [] as string[], duration_minutes: "120", module_configs: [] as any[] }}
-        buildForm={(e) => ({ subject: e.subject, title: e.title, title_ar: e.title_ar || "", title_fr: e.title_fr || "", promotions: e.promotions || [], duration_minutes: String(e.duration_minutes || 120), module_configs: e.module_configs || [] })}
+        initialCreate={{ subject: "", title: "", title_ar: "", title_fr: "", promotions: [] as string[], duration_minutes: "120", module_configs: [] as ModuleConfigRow[] }}
+        buildForm={(e) => ({ subject: e.subject, title: e.title, title_ar: e.title_ar || "", title_fr: e.title_fr || "", promotions: e.promotions || [], duration_minutes: String(e.duration_minutes || 120), module_configs: buildRows(e.module_configs) })}
         buildPayload={(f) => ({
           subject: f.subject, title: f.title,
           title_ar: f.title_ar || null, title_fr: f.title_fr || null,
-          promotions: f.promotions,
+          promotions: Array.isArray(f.promotions) ? f.promotions : [],
           duration_minutes: parseInt(f.duration_minutes, 10) || 120,
-          module_configs: f.module_configs.map((c: any) => ({
-            module: c.module,
-            question_count: parseInt(c.question_count, 10) || 10,
-            difficulty_distribution: c.difficulty_distribution || {},
-            type_distribution: c.type_distribution || {},
-          })),
+          module_configs: rowsToPayload(f.module_configs),
         })}
         fields={(mode) => [
           { name: "subject", label: "Subject", type: "select", required: true, options: (lk) => (lk.subjects || []).map((s: any) => ({ value: s.id, label: s.title_en || s.title })) },
@@ -88,8 +258,8 @@ export default function FinalExamsPage() {
           { name: "title_fr", label: "Title (FR)", type: "text", span: "half" },
           { name: "title_ar", label: "Title (AR)", type: "text", span: "half" },
           { name: "duration_minutes", label: "Duration (minutes)", type: "text", required: true, span: "half" },
-          { name: "promotions", label: "Promotions", type: "text", placeholder: "Select after creating (set in edit)" },
-          { name: "module_configs", label: "Module Configs (JSON)", type: "textarea", rows: 6, placeholder: `[\n  {"module": "uuid", "question_count": 20, "difficulty_distribution": {"easy": 8, "medium": 7, "hard": 5}, "type_distribution": {"mcq": 10, "scq": 5, "essay": 5}}\n]` },
+          { name: "promotions", label: "Promotions", type: "multiselect", placeholder: "Select the student groups that will take this exam.", options: (lk) => (lk.promotions || []).map((p: any) => ({ value: p.id, label: p.code || p.name })) },
+          { name: "module_configs", label: "Module Configs", type: "custom", render: (v, onChange, lk, form) => <ModuleConfigEditor value={v} onChange={onChange} modules={lk.modules} subjectId={form?.subject || ""} /> },
         ]}
         columns={[
           { key: "title", header: "Title", render: (e) => <span className="text-sm text-white font-semibold">{e.title}</span> },
@@ -120,6 +290,7 @@ export default function FinalExamsPage() {
           { label: "Duration", value: `${e.duration_minutes} minutes` },
           { label: "Exam Portal", value: `/exams-${e.hash}` },
           { label: "Assignments", value: String(e.assignments_count || 0) },
+          { label: "Promotions", value: (e.promotions || []).length ? String((e.promotions || []).length) : "—" },
           ...(e.module_configs || []).map((c, i) => ({
             label: `Module Config ${i + 1}`,
             value: `${c.module_name || c.module}: ${c.question_count} questions, Difficulty: ${JSON.stringify(c.difficulty_distribution)}, Types: ${JSON.stringify(c.type_distribution)}`,

@@ -90,7 +90,7 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         ).all()
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ('create', 'update', 'partial_update'):
             return FinalExamCreateSerializer
         return FinalExamSerializer
 
