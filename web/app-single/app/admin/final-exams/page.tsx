@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { HubCrud } from "@/components/hub-crud";
 import { ModalForm } from "@/components/modal-form";
 import { fmtLabel } from "@/lib/format-utils";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/use-translation";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Download, Users } from "lucide-react";
 
 interface FinalExam {
   id: string; hash: string; subject: string; subject_name: string;
@@ -176,6 +176,84 @@ function ModuleConfigEditor({
   );
 }
 
+interface Attempt {
+  id: string; student_name: string; student_number: string;
+  access_code: string; status: string; score: string | number | null;
+  started_at: string | null; submitted_at: string | null;
+  violations: any[]; is_flagged: boolean;
+}
+
+function AttemptsPanel({ examId }: { examId: string }) {
+  const [attempts, setAttempts] = useState<Attempt[] | null>(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setError("");
+    try {
+      const res: any = await api.get(`/final-exams/${examId}/assignments/`);
+      const list = Array.isArray(res) ? res : res?.results ?? [];
+      setAttempts(list);
+    } catch (err: any) {
+      setError(err.message || "Failed to load attempts");
+    }
+  }, [examId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="mt-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+          <Users className="w-4 h-4 text-gold-500" /> Student Attempts
+        </h3>
+        <button onClick={load} className="text-xs text-gold-500 hover:underline">Refresh</button>
+      </div>
+      {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
+      {attempts === null ? (
+        <p className="text-xs text-gray-500">Loading attempts...</p>
+      ) : attempts.length === 0 ? (
+        <p className="text-xs text-gray-500">No attempts yet. Generate assignments first.</p>
+      ) : (
+        <div className="border border-navy-700 rounded-xl overflow-hidden">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-navy-800 text-gray-400">
+              <tr>
+                <th className="px-3 py-2">Student</th>
+                <th className="px-3 py-2">Access Code</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Score</th>
+                <th className="px-3 py-2">Violations</th>
+              </tr>
+            </thead>
+            <tbody className="bg-navy-900">
+              {attempts.map((a) => (
+                <tr key={a.id} className="border-t border-navy-800">
+                  <td className="px-3 py-2 text-white">{a.student_name}
+                    {a.student_number && <span className="block text-[10px] text-gray-500">{a.student_number}</span>}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-gold-500">{a.access_code}</td>
+                  <td className="px-3 py-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${a.status === "submitted" ? "bg-green-500/10 text-green-400" : a.status === "in_progress" ? "bg-amber-500/10 text-amber-400" : "bg-gray-500/10 text-gray-400"}`}>
+                      {fmtLabel(a.status)}
+                    </span>
+                    {a.is_flagged && <span className="ml-1 text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400">FLAGGED</span>}
+                  </td>
+                  <td className="px-3 py-2 text-white">{a.score != null ? `${a.score}%` : "—"}</td>
+                  <td className="px-3 py-2 text-gray-400">
+                    {Array.isArray(a.violations) && a.violations.length > 0
+                      ? <span className="text-red-400">{a.violations.length} — {a.violations.slice(0, 3).map(v => v.type).join(", ")}</span>
+                      : "0"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FinalExamsPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -270,17 +348,20 @@ export default function FinalExamsPage() {
         ]}
         detailTitle="Exam Details"
         detailExtra={(e) => (
-          <div className="mt-4 pt-4 border-t border-navy-700 flex gap-3">
-            {e.status === "draft" && (
-              <button onClick={() => { setSelected(e); setShowDetail(true); }} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
-                Generate Assignments
-              </button>
-            )}
-            {e.assignments_count > 0 && (
-              <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
-                Download Access Codes PDF
-              </button>
-            )}
+          <div>
+            <div className="mt-4 pt-4 border-t border-navy-700 flex gap-3">
+              {e.status === "draft" && (
+                <button onClick={() => { setSelected(e); setShowDetail(true); }} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm">
+                  Generate Assignments
+                </button>
+              )}
+              {e.assignments_count > 0 && (
+                <button onClick={async () => { try { const res = await api.download(`/final-exams/${e.id}/pdf/`); const blob = await res.blob(); window.open(URL.createObjectURL(blob), '_blank'); } catch {} }} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">
+                  <Download className="w-4 h-4 inline-block mr-1" />Download Access Codes PDF
+                </button>
+              )}
+            </div>
+            <AttemptsPanel examId={e.id} />
           </div>
         )}
         detailFields={(e) => [

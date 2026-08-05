@@ -19,7 +19,7 @@ export default function ExamPortalPage() {
   const params = useParams();
   const hash = params?.hash as string || "";
 
-  const [step, setStep] = useState<"code" | "exam" | "done">("code");
+  const [step, setStep] = useState<"code" | "warn" | "exam" | "done">("code");
   const [accessCode, setAccessCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,47 +31,67 @@ export default function ExamPortalPage() {
 
   // ── Anti-cheat ──────────────────────────────────────────────
   const violationsRef = useRef<{ type: string; at: string; detail?: string }[]>([]);
-  const [warning, setWarning] = useState<{ type: string; message: string } | null>(null);
-  const violationCountRef = useRef(0);
-  const MAX_VIOLATIONS = 3;
+  const countRef = useRef(0);
   const autoSubmitLockRef = useRef(false);
+  const answersRef = useRef<Record<string, string>>({});
+  const codeRef = useRef("");
+  const MAX_VIOLATIONS = 4;
+  const GRACE_MS = 15000; // ignore normal startup / fullscreen transition for 15s
+  const mountedAtRef = useRef(0);
+  const [warning, setWarning] = useState<{ type: string; message: string } | null>(null);
 
-  const recordViolation = useCallback((type: string, detail?: string) => {
+  // Keep refs in sync without loop churn
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { codeRef.current = accessCode; }, [accessCode]);
+
+  const recordViolation = useCallback((type: string, detail?: string): number => {
+    if (Date.now() - mountedAtRef.current < GRACE_MS) return countRef.current;
     violationsRef.current.push({ type, at: new Date().toISOString(), detail });
-    violationCountRef.current += 1;
-    return violationCountRef.current;
+    countRef.current += 1;
+    return countRef.current;
   }, []);
 
-  // Called when the candidate has repeatedly cheated — force submit
-  const forceSubmit = useCallback(async (reason: string) => {
-    if (autoSubmitLockRef.current) return;
+  const doSubmit = useCallback(async (withViolations: boolean, force = false) => {
+    if (autoSubmitLockRef.current) return { ok: false, data: null };
     autoSubmitLockRef.current = true;
-    violationsRef.current.push({ type: "auto_submit", at: new Date().toISOString(), detail: reason });
     try {
-      await fetch("/api/exam/submit/", {
+      const body: Record<string, any> = { access_code: codeRef.current.trim(), answers: answersRef.current };
+      if (withViolations) body.violations = violationsRef.current;
+      const res = await fetch("/api/exam/submit/", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_code: accessCode.trim(), answers, violations: violationsRef.current }),
+        body: JSON.stringify(body),
       });
-    } catch {}
-    setStep("done");
-    setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
-  }, [accessCode, answers]);
+      const data = await res.json();
+      return { ok: res.ok, data: (data?.data ?? data) };
+    } catch {
+      return { ok: false, data: null };
+    } finally {
+      if (force) setStep("done");
+    }
+  }, []);
 
+  const forceSubmit = useCallback((reason: string) => {
+    if (autoSubmitLockRef.current) return;
+    violationsRef.current.push({ type: "auto_submit", at: new Date().toISOString(), detail: reason });
+    doSubmit(true, true);
+    setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
+  }, [doSubmit]);
+
+  // ── Only mount anti-cheat listeners once, during the exam ─
+  const antiCheatAttachedRef = useRef(false);
   useEffect(() => {
     if (step !== "exam") return;
+    if (antiCheatAttachedRef.current) return;
+    antiCheatAttachedRef.current = true;
+    mountedAtRef.current = Date.now();
 
-    // Lock the page: block copy/paste/cut, context menu, text selection, dragging
     const blockEvents = ["copy", "paste", "cut", "contextmenu", "selectstart", "dragstart"];
     const onBlock = (e: Event) => {
       e.preventDefault();
       recordViolation("copy_paste");
-      if (violationCountRef.current > MAX_VIOLATIONS) {
-        setWarning({ type: "copy_paste", message: "Copy/paste is disabled during the exam." });
-      }
     };
     blockEvents.forEach(ev => document.addEventListener(ev, onBlock));
 
-    // Detect tab switching / alt-tab / leaving the window
     const onVisibility = () => {
       if (document.hidden) {
         const n = recordViolation("tab_switch");
@@ -87,7 +107,6 @@ export default function ExamPortalPage() {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
 
-    // Detect DevTools via window size heuristics
     const detectDevtools = () => {
       const widthThreshold = window.outerWidth - window.innerWidth > 160;
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
@@ -98,27 +117,28 @@ export default function ExamPortalPage() {
     };
     const devInterval = setInterval(detectDevtools, 2000);
 
-    // Warn before leaving / refreshing mid-exam
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      recordViolation("beforeunload");
-      e.preventDefault();
-      e.returnValue = "";
+      if (Date.now() - mountedAtRef.current >= GRACE_MS) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
 
-    // Try to lock fullscreen
+    // Enter fullscreen once. Don't record the initial fullscreenchange noise.
     const enterFullscreen = () => {
       try {
-        if (document.documentElement.requestFullscreen) {
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
       } catch {}
     };
     enterFullscreen();
     const onFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      // Only act on a real exit, after the grace period (ignores mount transition)
+      if (!document.fullscreenElement && Date.now() - mountedAtRef.current >= GRACE_MS) {
         const n = recordViolation("fullscreen_exit");
-        setWarning({ type: "fullscreen_exit", message: `Fullscreen exited (${n}). Return to fullscreen to continue.` });
+        setWarning({ type: "fullscreen_exit", message: `Fullscreen exited (${n}). Return to fullscreen or the exam may auto-submit.` });
         if (n > MAX_VIOLATIONS) forceSubmit("Exited fullscreen repeatedly");
         else enterFullscreen();
       }
@@ -151,11 +171,16 @@ export default function ExamPortalPage() {
       if (!res.ok) throw new Error(data.error || "Invalid code");
       const payload = data.data ?? data;
       setExam(payload);
-      const elapsed = payload.started_at ? Math.floor((Date.now() - new Date(payload.started_at).getTime()) / 1000) : 0;
-      setTimeLeft(Math.max(0, (payload.duration_minutes * 60) - elapsed));
-      setStep("exam");
+      setStep("warn");
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
+  };
+
+  const beginExam = () => {
+    const payload = exam!;
+    const elapsed = payload.started_at ? Math.floor((Date.now() - new Date(payload.started_at).getTime()) / 1000) : 0;
+    setTimeLeft(Math.max(0, (payload.duration_minutes * 60) - elapsed));
+    setStep("exam");
   };
 
   useEffect(() => {
@@ -171,17 +196,11 @@ export default function ExamPortalPage() {
     if (timeLeft <= 0) { setError("Time is up!"); return; }
     if (!confirm("Submit your exam? You cannot change answers after submission.")) return;
     setSubmitting(true); setError("");
-    try {
-      const res = await fetch("/api/exam/submit/", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_code: accessCode.trim(), answers, violations: violationsRef.current }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Submit failed");
-      setResult(data.data ?? data);
-      setStep("done");
-    } catch (err: any) { setError(err.message); }
-    finally { setSubmitting(false); }
+    const { ok, data } = await doSubmit(true);
+    if (!ok) { setError(data?.error || "Submit failed"); setSubmitting(false); return; }
+    setResult(data);
+    setStep("done");
+    setSubmitting(false);
   };
 
   const formatTime = (s: number) => {
@@ -194,13 +213,47 @@ export default function ExamPortalPage() {
       <div className="min-h-screen bg-navy-900 flex items-center justify-center p-6">
         <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-md w-full text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Exam Submitted</h1>
-          {result && (
+          {result?.auto_submitted && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
+              <p className="text-red-400 font-bold text-xl">Automatically Submitted</p>
+              <p className="text-sm text-gray-400">The exam was auto-submitted due to repeated rule violations.</p>
+            </div>
+          )}
+          {result && !result.auto_submitted && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
               <p className="text-green-400 font-bold text-xl">{result.score}%</p>
               <p className="text-sm text-gray-400">{result.correct}/{result.total_auto_graded} auto-graded correct</p>
             </div>
           )}
           <p className="text-gray-400 text-sm">Your answers have been recorded. You may now close this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "warn" && exam) {
+    return (
+      <div className="min-h-screen bg-navy-900 flex items-center justify-center p-6">
+        <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-lg w-full">
+          <div className="text-center mb-6">
+            <Image src="/logo.png" alt="MAA" width={90} height={90} className="mx-auto" />
+            <h1 className="text-xl font-bold text-white mt-3">Exam Guidelines</h1>
+            <p className="text-sm text-gray-400 mt-1">{exam.exam_title}</p>
+          </div>
+          <div className="space-y-3 mb-6">
+            <p className="text-sm text-gray-300">By beginning this exam you agree to the following rules:</p>
+            <ul className="space-y-2 text-sm text-gray-300 list-disc pl-5">
+              <li>You are monitored while the exam is open.</li>
+              <li>The exam runs in fullscreen. Leaving fullscreen is logged.</li>
+              <li>Switching tabs or windows is logged and treated as a violation.</li>
+              <li>Copying, pasting or opening developer tools is prohibited.</li>
+              <li>Repeated violations ({MAX_VIOLATIONS}+) will automatically submit your exam.</li>
+              <li>Your access will NOT expire due to inactivity while taking the exam.</li>
+            </ul>
+          </div>
+          <button onClick={beginExam} disabled={loading} className="w-full py-3 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg">
+            I understand — Begin Exam
+          </button>
         </div>
       </div>
     );
@@ -251,13 +304,13 @@ export default function ExamPortalPage() {
                     <label key={v} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
                       answers[q.id] === v ? "border-gold-500 bg-gold-500/10" : "border-navy-600 hover:border-navy-500"
                     }`}>
-                      <input type="radio" name={q.id} value={v} checked={answers[q.id] === v} onChange={e => setAnswers({...answers, [q.id]: e.target.value})} className="text-gold-500" />
+                      <input type="radio" name={q.id} value={v} checked={answers[q.id] === v} onChange={e => setAnswers({...answers, [q.id]: e.target.value })} className="text-gold-500" />
                       <span className="text-sm text-gray-300">{v}</span>
                     </label>
                   ))}
                 </div>
               ) : (
-                <textarea value={answers[q.id] || ""} onChange={e => setAnswers({...answers, [q.id]: e.target.value})} rows={4} className="w-full ml-4 px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder="Type your answer..." />
+                <textarea value={answers[q.id] || ""} onChange={e => setAnswers({...answers, [q.id]: e.target.value })} rows={4} className="w-full ml-4 px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder="Type your answer..." />
               )}
             </div>
           ))}
