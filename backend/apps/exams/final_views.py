@@ -280,9 +280,9 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         ])
         return Response({'status': 'reset', 'assignment_id': str(assignment.id)})
 
-    @action(detail=True, methods=['get'], url_path='assignments/(?P<assignment_id>[^/.]+)/grade')
-    def grade_detail(self, request, pk=None, assignment_id=None):
-        """Return the full breakdown of a submitted assignment for manual grading (essays + auto results)."""
+    @action(detail=True, methods=['get', 'post'], url_path='assignments/(?P<assignment_id>[^/.]+)/grade')
+    def grade(self, request, pk=None, assignment_id=None):
+        """GET: breakdown of a submitted assignment for manual grading. POST: save essay scores and recompute the final score."""
         exam = self.get_object()
         assignment = exam.assignments.select_related('student').filter(pk=assignment_id).first()
         if not assignment:
@@ -293,6 +293,40 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         max_points, earned_points, auto_correct, auto_total, essays = compute_assignment_points(assignment)
         answers = assignment.answers or {}
         manual = assignment.manual_scores or {}
+
+        if request.method == 'POST':
+            scores = request.data.get('scores') or {}
+            if not isinstance(scores, dict):
+                return Response({'error': 'scores must be an object of question_id -> points'}, status=400)
+
+            qs = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
+            qmap = {str(q.id): q for q in qs}
+            for qid, val in scores.items():
+                if qid not in qmap:
+                    continue
+                q = qmap[qid]
+                if q.question_type in ('mcq', 'scq', 'true_false'):
+                    continue  # only essays are manually graded
+                try:
+                    pts = float(val)
+                except (TypeError, ValueError):
+                    continue
+                pts = max(0.0, min(float(q.points), pts))
+                manual[qid] = pts
+
+            assignment.manual_scores = manual
+            max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
+            assignment.score = final_score_percent(max_points, earned_points)
+            assignment.essay_graded = all(str(qid) in manual for qid in essays)
+            assignment.save()
+
+            return Response({
+                'status': 'graded',
+                'score': assignment.score,
+                'earned_points': earned_points,
+                'max_points': max_points,
+                'essay_graded': assignment.essay_graded,
+            })
 
         essay_questions = []
         qs = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
@@ -319,51 +353,6 @@ class FinalExamViewSet(viewsets.ModelViewSet):
             'essay_graded': assignment.essay_graded,
             'is_flagged': assignment.is_flagged,
             'essay_questions': essay_questions,
-        })
-
-    @action(detail=True, methods=['post'], url_path='assignments/(?P<assignment_id>[^/.]+)/grade')
-    def grade(self, request, pk=None, assignment_id=None):
-        """Save manual scores for essay questions and recompute the final score."""
-        exam = self.get_object()
-        assignment = exam.assignments.select_related('student').filter(pk=assignment_id).first()
-        if not assignment:
-            return Response({'error': 'Assignment not found for this exam'}, status=404)
-        if assignment.status != 'submitted':
-            return Response({'error': 'Only submitted exams can be graded'}, status=400)
-
-        scores = request.data.get('scores') or {}
-        if not isinstance(scores, dict):
-            return Response({'error': 'scores must be an object of question_id -> points'}, status=400)
-
-        qs = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
-        qmap = {str(q.id): q for q in qs}
-
-        manual = dict(assignment.manual_scores or {})
-        for qid, val in scores.items():
-            if qid not in qmap:
-                continue
-            q = qmap[qid]
-            if q.question_type in ('mcq', 'scq', 'true_false'):
-                continue  # only essays are manually graded
-            try:
-                pts = float(val)
-            except (TypeError, ValueError):
-                continue
-            pts = max(0.0, min(float(q.points), pts))
-            manual[qid] = pts
-
-        assignment.manual_scores = manual
-        max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
-        assignment.score = final_score_percent(max_points, earned_points)
-        assignment.essay_graded = all(str(qid) in manual for qid in essays)
-        assignment.save()
-
-        return Response({
-            'status': 'graded',
-            'score': assignment.score,
-            'earned_points': earned_points,
-            'max_points': max_points,
-            'essay_graded': assignment.essay_graded,
         })
 
     @action(detail=True, methods=['get'], url_path='report')
