@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/use-translation";
+import { isExamPortalPath } from "@/lib/exam-portal";
 
 const TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const WARNING_BEFORE = 60 * 1000; // Show warning 1 minute before timeout
@@ -11,11 +12,15 @@ const WARNING_BEFORE = 60 * 1000; // Show warning 1 minute before timeout
 export function InactivityDetector() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useTranslation();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(60);
+
+  // Never auto-logout inside the exam portal
+  if (isExamPortalPath(pathname)) return null;
 
   const resetTimers = () => {
     if (timerRef.current) clearTimeout(timerRef.current);

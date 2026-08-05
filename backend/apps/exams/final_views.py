@@ -279,6 +279,7 @@ def exam_submit(request):
     submit_serializer = FinalExamSubmitSerializer(data=request.data)
     submit_serializer.is_valid(raise_exception=True)
     answers = submit_serializer.validated_data['answers']
+    violations = submit_serializer.validated_data.get('violations') or []
 
     # Auto-grade MCQ/SCQ/TrueFalse
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
@@ -299,6 +300,13 @@ def exam_submit(request):
     assignment.score = score
     assignment.status = 'submitted'
     assignment.submitted_at = timezone.now()
+    if violations:
+        assignment.violations = violations
+        serious = [v for v in violations if v.get('type') in (
+            'tab_switch', 'window_blur', 'fullscreen_exit', 'copy_paste', 'right_click', 'devtools'
+        )]
+        if len(serious) >= 3:
+            assignment.is_flagged = True
     assignment.save()
 
     return Response({

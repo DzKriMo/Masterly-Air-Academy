@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 
@@ -28,6 +28,115 @@ export default function ExamPortalPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  // ── Anti-cheat ──────────────────────────────────────────────
+  const violationsRef = useRef<{ type: string; at: string; detail?: string }[]>([]);
+  const [warning, setWarning] = useState<{ type: string; message: string } | null>(null);
+  const violationCountRef = useRef(0);
+  const MAX_VIOLATIONS = 3;
+  const autoSubmitLockRef = useRef(false);
+
+  const recordViolation = useCallback((type: string, detail?: string) => {
+    violationsRef.current.push({ type, at: new Date().toISOString(), detail });
+    violationCountRef.current += 1;
+    return violationCountRef.current;
+  }, []);
+
+  // Called when the candidate has repeatedly cheated — force submit
+  const forceSubmit = useCallback(async (reason: string) => {
+    if (autoSubmitLockRef.current) return;
+    autoSubmitLockRef.current = true;
+    violationsRef.current.push({ type: "auto_submit", at: new Date().toISOString(), detail: reason });
+    try {
+      await fetch("/api/exam/submit/", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_code: accessCode.trim(), answers, violations: violationsRef.current }),
+      });
+    } catch {}
+    setStep("done");
+    setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
+  }, [accessCode, answers]);
+
+  useEffect(() => {
+    if (step !== "exam") return;
+
+    // Lock the page: block copy/paste/cut, context menu, text selection, dragging
+    const blockEvents = ["copy", "paste", "cut", "contextmenu", "selectstart", "dragstart"];
+    const onBlock = (e: Event) => {
+      e.preventDefault();
+      recordViolation("copy_paste");
+      if (violationCountRef.current > MAX_VIOLATIONS) {
+        setWarning({ type: "copy_paste", message: "Copy/paste is disabled during the exam." });
+      }
+    };
+    blockEvents.forEach(ev => document.addEventListener(ev, onBlock));
+
+    // Detect tab switching / alt-tab / leaving the window
+    const onVisibility = () => {
+      if (document.hidden) {
+        const n = recordViolation("tab_switch");
+        setWarning({ type: "tab_switch", message: `Tab switch detected (${n}). Repeated violations will auto-submit your exam.` });
+        if (n > MAX_VIOLATIONS) forceSubmit("Too many tab switches");
+      }
+    };
+    const onBlur = () => {
+      const n = recordViolation("window_blur");
+      setWarning({ type: "window_blur", message: `Focus lost (${n}). Stay on this tab during the exam.` });
+      if (n > MAX_VIOLATIONS) forceSubmit("Repeated focus loss");
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+
+    // Detect DevTools via window size heuristics
+    const detectDevtools = () => {
+      const widthThreshold = window.outerWidth - window.innerWidth > 160;
+      const heightThreshold = window.outerHeight - window.innerHeight > 160;
+      if (widthThreshold || heightThreshold) {
+        const n = recordViolation("devtools");
+        if (n > MAX_VIOLATIONS) setWarning({ type: "devtools", message: "DevTools detected — this is recorded." });
+      }
+    };
+    const devInterval = setInterval(detectDevtools, 2000);
+
+    // Warn before leaving / refreshing mid-exam
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      recordViolation("beforeunload");
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Try to lock fullscreen
+    const enterFullscreen = () => {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch {}
+    };
+    enterFullscreen();
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        const n = recordViolation("fullscreen_exit");
+        setWarning({ type: "fullscreen_exit", message: `Fullscreen exited (${n}). Return to fullscreen to continue.` });
+        if (n > MAX_VIOLATIONS) forceSubmit("Exited fullscreen repeatedly");
+        else enterFullscreen();
+      }
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+
+    return () => {
+      blockEvents.forEach(ev => document.removeEventListener(ev, onBlock));
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      clearInterval(devInterval);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [step, recordViolation, forceSubmit]);
 
   const handleAccess = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -65,7 +174,7 @@ export default function ExamPortalPage() {
     try {
       const res = await fetch("/api/exam/submit/", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_code: accessCode.trim(), answers }),
+        body: JSON.stringify({ access_code: accessCode.trim(), answers, violations: violationsRef.current }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
@@ -100,6 +209,11 @@ export default function ExamPortalPage() {
   if (step === "exam" && exam) {
     return (
       <div className="min-h-screen bg-navy-900">
+        {warning && (
+          <div className="fixed top-0 inset-x-0 z-50 bg-red-600/95 text-white text-center text-sm font-semibold px-4 py-2.5">
+            {warning.message}
+          </div>
+        )}
         <div className="sticky top-0 z-40 bg-navy-800 border-b border-navy-700 px-4 py-3 flex items-center justify-between">
           <div>
             <p className="text-white font-bold text-sm">{exam.exam_title}</p>

@@ -7,8 +7,10 @@
 // ============================================================
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { api } from './api';
 import { useAuthStore } from './auth-store';
+import { isExamPortalPath } from './exam-portal';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -226,8 +228,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Forced-logout redirect handler ─────────────────────────
 
+  const pathname = usePathname();
+  const onExamPortal = isExamPortalPath(pathname);
+
   useEffect(() => {
     api.onLogout(() => {
+      // Auto-logout is disabled entirely inside the exam portal
+      if (onExamPortal) return;
       const storedRole = userRef.current?.role || loadSession().user?.role;
       setToken(null);
       setUser(null);
@@ -237,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = storedRole && studentRoles.includes(storedRole) ? '/student/login' : '/login';
       }
     });
-  }, []);
+  }, [onExamPortal]);
 
   // ── Auth methods ───────────────────────────────────────────
 

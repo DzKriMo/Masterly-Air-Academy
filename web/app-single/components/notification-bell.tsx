@@ -4,15 +4,21 @@ import { api } from "@/lib/api";
 import { useTranslation } from "@/lib/use-translation";
 import { useNotificationStream, type StreamNotification } from "@/lib/use-notification-stream";
 import { useToast } from "@/components/toast";
+import { usePathname } from "next/navigation";
+import { isExamPortalPath } from "@/lib/exam-portal";
 
 interface Notif { id: string; type: string; title: string; message: string; is_read: boolean; created_at: string; }
 
 export function NotificationBell() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const pathname = usePathname();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Hidden entirely inside the exam portal (no polling, no logout-on-401)
+  if (isExamPortalPath(pathname)) return null;
 
   const fetchNotifications = () => {
     if (!api.isAuthenticated()) return;

@@ -98,8 +98,8 @@ class FinalExamAssignmentSerializer(serializers.ModelSerializer):
         model = FinalExamAssignment
         fields = [
             'id', 'exam', 'student', 'student_name', 'student_number',
-            'access_code', 'questions', 'score',
-            'status', 'started_at', 'submitted_at',
+            'access_code', 'questions', 'answers', 'violations', 'is_flagged',
+            'score', 'status', 'started_at', 'submitted_at',
         ]
 
 
@@ -109,3 +109,4 @@ class FinalExamAccessSerializer(serializers.Serializer):
 
 class FinalExamSubmitSerializer(serializers.Serializer):
     answers = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    violations = serializers.ListField(child=serializers.DictField(), required=False, default=list)

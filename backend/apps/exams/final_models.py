@@ -110,6 +110,8 @@ class FinalExamAssignment(models.Model):
     access_code = models.CharField(max_length=16, unique=True, default=generate_access_code)
     questions = models.JSONField(default=list)
     answers = models.JSONField(default=dict, blank=True)
+    violations = models.JSONField(default=list, blank=True)
+    is_flagged = models.BooleanField(default=False)
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, default='pending')
     started_at = models.DateTimeField(null=True, blank=True)
