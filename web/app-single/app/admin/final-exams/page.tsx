@@ -288,7 +288,7 @@ export default function FinalExamsPage() {
           { label: "Subject", value: e.subject_name },
           { label: "Status", value: fmtLabel(e.status) },
           { label: "Duration", value: `${e.duration_minutes} minutes` },
-          { label: "Exam Portal", value: `/exams-${e.hash}` },
+          { label: "Exam Portal", value: `/exams/${e.hash}` },
           { label: "Assignments", value: String(e.assignments_count || 0) },
           { label: "Promotions", value: (e.promotions || []).length ? String((e.promotions || []).length) : "—" },
           ...(e.module_configs || []).map((c, i) => ({

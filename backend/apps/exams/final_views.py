@@ -169,6 +169,7 @@ class FinalExamViewSet(viewsets.ModelViewSet):
         )
 
         from weasyprint import HTML
+        from django.http import HttpResponse
 
         cards = ''
         for i, a in enumerate(assignments):
@@ -181,7 +182,7 @@ class FinalExamViewSet(viewsets.ModelViewSet):
                     <div class="field"><span class="label">Student</span><span class="value">{s.full_name}</span></div>
                     <div class="field"><span class="label">Student #</span><span class="value">{s.student_number or '—'}</span></div>
                     <div class="field"><span class="label">Access Code</span><span class="value code">{a.access_code}</span></div>
-                    <div class="field"><span class="label">Portal</span><span class="value">/exams-{exam.hash}</span></div>
+                    <div class="field"><span class="label">Portal</span><span class="value">/exams/{exam.hash}</span></div>
                 </div>
             </div>
             '''
@@ -207,7 +208,7 @@ class FinalExamViewSet(viewsets.ModelViewSet):
 
         try:
             pdf_file = HTML(string=html).write_pdf()
-            resp = Response(pdf_file, content_type='application/pdf')
+            resp = HttpResponse(pdf_file, content_type='application/pdf')
             resp['Content-Disposition'] = f'attachment; filename="access-codes-{exam.hash}.pdf"'
             return resp
         except ImportError:
