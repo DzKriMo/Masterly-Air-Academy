@@ -188,6 +188,45 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  mailserver:
+    image: docker.io/mailserver/docker-mailserver:latest
+    hostname: masterly-air-academy.dz
+    env_file: ./mailserver.env
+    ports:
+      - "25:25"
+      - "143:143"
+      - "587:587"
+    volumes:
+      - ./docker-data/mail/mail-data:/var/mail
+      - ./docker-data/mail/mail-state:/var/mail-state
+      - ./docker-data/mail/mail-logs:/var/log/mail
+      - ./docker-data/mail/config:/tmp/docker-mailserver
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  roundcube:
+    image: roundcube/roundcubemail:latest
+    ports:
+      - "127.0.0.1:8090:80"
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: mailserver
+      ROUNDCUBEMAIL_DEFAULT_PORT: 143
+      ROUNDCUBEMAIL_SMTP_SERVER: mailserver
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_SKIN: elastic
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload
+    volumes:
+      - ./docker-data/roundcube:/var/roundcube
+    depends_on:
+      - mailserver
+    restart: unless-stopped
+    networks:
+      - masterly
+
 volumes:
   postgres_data:
   redis_data:
