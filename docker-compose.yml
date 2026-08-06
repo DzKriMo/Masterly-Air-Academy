@@ -230,8 +230,6 @@ services:
     depends_on:
       - mailserver
     restart: unless-stopped
-    networks:
-      - masterly
 
 volumes:
   postgres_data:
