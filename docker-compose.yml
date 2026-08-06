@@ -221,6 +221,7 @@ services:
       ROUNDCUBEMAIL_PLUGINS: archive,zipdownload
     volumes:
       - ./docker-data/roundcube:/var/roundcube
+      - ./docker-data/roundcube/skins/elastic/custom.css:/usr/src/roundcubemail/skins/elastic/custom.css:ro
     depends_on:
       - mailserver
     restart: unless-stopped
