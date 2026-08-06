@@ -201,6 +201,7 @@ services:
       - ./docker-data/mail/mail-state:/var/mail-state
       - ./docker-data/mail/mail-logs:/var/log/mail
       - ./docker-data/mail/config:/tmp/docker-mailserver
+      - ./docker-data/mail/config/dovecot.cf:/tmp/docker-mailserver/dovecot.cf:ro
     cap_add:
       - NET_ADMIN
     restart: unless-stopped
