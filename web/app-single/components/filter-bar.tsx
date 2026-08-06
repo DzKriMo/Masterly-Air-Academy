@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 export interface FilterOption {
   key: string;
@@ -20,6 +20,16 @@ interface FilterBarProps {
 
 export function FilterBar({ filters, values, onChange, onClear, searchPlaceholder, searchValue, onSearchChange }: FilterBarProps) {
   const hasActive = Object.values(values).some(Boolean) || (searchValue && searchValue.length > 0);
+  const [localSearch, setLocalSearch] = useState(searchValue || '');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setLocalSearch(value);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onSearchChange?.(value);
+    }, 300);
+  }, [onSearchChange]);
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -30,8 +40,8 @@ export function FilterBar({ filters, values, onChange, onClear, searchPlaceholde
           </svg>
           <input
             type="text"
-            value={searchValue || ''}
-            onChange={e => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={e => handleSearchChange(e.target.value)}
             placeholder={searchPlaceholder || 'Search...'}
             className="w-full pl-10 pr-4 py-2 bg-navy-800 border border-navy-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold-500"
           />

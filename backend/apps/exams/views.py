@@ -339,6 +339,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not quiz.is_open:
             return Response({'error': 'This quiz is not open'}, status=400)
         answers = request.data.get('answers', {})
+        attempt_id = request.data.get('attempt_id')
         from apps.students.models import Student
         try:
             student = Student.objects.get(user=request.user)
@@ -351,7 +352,17 @@ class QuizViewSet(viewsets.ModelViewSet):
             if existing >= quiz.max_attempts:
                 return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
 
-            result = AutoGradingService.grade_quiz(quiz, answers)
+            # If attempt_id provided, use the exact questions from that start session
+            question_ids = None
+            if attempt_id:
+                try:
+                    start_attempt = QuizAttempt.objects.filter(id=attempt_id, quiz=quiz, student=student).first()
+                    if start_attempt and isinstance(start_attempt.answers, dict):
+                        question_ids = start_attempt.answers.get('question_ids')
+                except Exception:
+                    pass
+
+            result = AutoGradingService.grade_quiz(quiz, answers, question_ids=question_ids)
             QuizAttempt.objects.create(
                 quiz=quiz, student=student,
                 score=result['percentage'], completed_at=timezone.now(),

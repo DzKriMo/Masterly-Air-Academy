@@ -118,7 +118,7 @@ def generate_template(fmt='csv'):
         wb = Workbook()
         ws = wb.active
         ws.title = 'Final Exam Questions'
-        cols = FIELDNAMES + ['subject_code', 'module_title', 'question_text', 'question_type', 'difficulty', 'options', 'correct_answer', 'explanation']
+        cols = FIELDNAMES
         for col_idx, col_name in enumerate(cols, 1):
             cell = ws.cell(row=1, column=col_idx, value=col_name)
             cell.font = header_font

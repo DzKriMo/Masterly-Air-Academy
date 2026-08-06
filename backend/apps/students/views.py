@@ -128,6 +128,8 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         enroll_rows = ''
         for e in enrollments:
+            if not e.course:
+                continue
             c = e.course
             enroll_rows += f'''<tr>
 <td>{esc(c.title)}</td><td>{esc(c.subject.code if c.subject else '')}</td>

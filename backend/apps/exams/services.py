@@ -43,9 +43,12 @@ class AutoGradingService:
         }
 
     @staticmethod
-    def grade_quiz(quiz, answers):
+    def grade_quiz(quiz, answers, question_ids=None):
         from .models import QuestionBank
-        questions = QuestionBank.objects.filter(subject__modules=quiz.module)[:10]
+        if question_ids:
+            questions = QuestionBank.objects.filter(id__in=question_ids)
+        else:
+            questions = QuestionBank.objects.filter(subject__modules=quiz.module)[:10]
         if not questions.exists():
             return {'score': 0, 'total': 0, 'percentage': 0, 'is_passed': False}
 

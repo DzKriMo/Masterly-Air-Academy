@@ -117,8 +117,10 @@ export async function syncPendingEntries(apiPost: (data: any) => Promise<any>): 
         await apiPost(entry.data);
         toRemove.push(entry.id!);
         synced++;
-      } catch {
-        continue; // skip bad entries, continue with rest
+      } catch (err: any) {
+        // Abort on auth/permission errors — remaining entries will fail too
+        if (err?.status === 401 || err?.status === 403) break;
+        continue;
       }
     }
     if (toRemove.length > 0) {

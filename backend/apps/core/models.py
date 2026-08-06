@@ -17,7 +17,7 @@ class AuditLog(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='audit_logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     entity = models.CharField(max_length=100)
     entity_id = models.UUIDField(null=True, blank=True)
