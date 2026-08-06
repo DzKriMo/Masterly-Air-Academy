@@ -18,14 +18,18 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 let _nextId = 0;
+const MAX_TOASTS = 5;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const id = ++_nextId;
-    setToasts(prev => [...prev, { id, type, message }]);
-    // Auto-dismiss after 5s
+    setToasts(prev => {
+      const next = [...prev, { id, type, message }];
+      if (next.length > MAX_TOASTS) next.shift();
+      return next;
+    });
     setTimeout(() => {
       setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
       setTimeout(() => {

@@ -9,7 +9,13 @@ const STATIC_ASSETS = [
 // ── Install: precache static assets ──────────────────────────
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE).then((cache) =>
+      Promise.allSettled(
+        STATIC_ASSETS.map((url) =>
+          cache.add(url).catch(() => {})
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
@@ -48,7 +54,7 @@ self.addEventListener('fetch', (e) => {
           }
           return res;
         })
-        .catch(() => caches.match(e.request) || caches.match('/'))
+        .catch(() => caches.match(e.request).then(cached => cached || caches.match('/')).then(cached => cached || new Response('Offline — please check your connection.', { status: 503, headers: { 'Content-Type': 'text/plain' } })))
     );
     return;
   }
@@ -62,11 +68,12 @@ self.addEventListener('fetch', (e) => {
         .then((res) => {
           if (res.ok) {
             const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, clone));
+            caches.open(CACHE).then((c) => c.put(e.request, clone)).catch(() => {});
           }
           return res;
         })
-        .catch(() => cached);
+        .catch(() => cached)
+        .then(res => res || new Response('Offline', { status: 503 }));
       return cached || network;
     })
   );

@@ -238,8 +238,8 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
       invalidate();
     },
     onError: (err: any) => {
-      const msg = err?.data ? Object.values(err.data).flat().join(", ") : err.message;
-      setCreateError(msg || config.formErrorFallback || "");
+      const msg = err?.errors ? Object.values(err.errors).flat().join(", ") : (err.message || config.formErrorFallback || "");
+      setCreateError(msg);
     },
   });
 
@@ -251,8 +251,8 @@ export function useCrudPage<T>(config: CrudPageConfig<T>): UseCrudPageResult<T> 
       invalidate();
     },
     onError: (err: any) => {
-      const msg = err?.data ? Object.values(err.data).flat().join(", ") : err.message;
-      setEditError(msg || config.formErrorFallback || "");
+      const msg = err?.errors ? Object.values(err.errors).flat().join(", ") : (err.message || config.formErrorFallback || "");
+      setEditError(msg);
     },
   });
 

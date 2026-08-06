@@ -71,17 +71,25 @@ def get_authenticated_user():
     return None
 
 
+# Models that Django manages internally — never log them
+SILENT_MODELS = {'AuditLog', 'Session', 'ContentType', 'Permission', 'Group', 'LogEntry'}
+
+# Only log models from our project apps — skip third-party and Django internals
+def _is_project_model(sender):
+    module = sender.__module__
+    return module.startswith('apps.') or 'masterly' in module.split('.')[0] if module else False
+
+
 @receiver(pre_save)
 def audit_log_pre_save(sender, instance, **kwargs):
-    """Capture the DB state BEFORE an update so post_save has access to old_values."""
-    if sender.__name__ == 'AuditLog' or sender.__name__ == 'Session':
+    if sender.__name__ in SILENT_MODELS or not _is_project_model(sender):
         return
     _store_pre_save_snapshot(instance)
 
 
 @receiver(post_save)
 def audit_log_save(sender, instance, created, **kwargs):
-    if sender.__name__ == 'AuditLog' or sender.__name__ == 'Session':
+    if sender.__name__ in SILENT_MODELS or not _is_project_model(sender):
         return
 
     from .models import AuditLog
@@ -116,7 +124,7 @@ def audit_log_save(sender, instance, created, **kwargs):
 
 @receiver(post_delete)
 def audit_log_delete(sender, instance, **kwargs):
-    if sender.__name__ == 'AuditLog' or sender.__name__ == 'Session':
+    if sender.__name__ in SILENT_MODELS or not _is_project_model(sender):
         return
 
     from .models import AuditLog

@@ -20,6 +20,7 @@ export function PdfReader({ src, title }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const [dataUrl, setDataUrl] = useState("");
   const renderTask = useRef<any>(null);
+  const objectUrlRef = useRef<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +34,7 @@ export function PdfReader({ src, title }: Props) {
         const blob = await res.blob();
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
         setDataUrl(url);
 
         const pdfjs = await import("pdfjs-dist");
@@ -52,7 +54,13 @@ export function PdfReader({ src, title }: Props) {
     }
     loadPdf();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = "";
+      }
+    };
   }, [src]);
 
   const renderPage = useCallback((pageNumber: number) => {

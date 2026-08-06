@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface ExportButtonProps {
   label?: string;
@@ -16,6 +17,7 @@ interface ExportButtonProps {
 export function ExportButton({ label = 'Export', exports }: ExportButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleExport = async (url: string, filename: string) => {
     setLoading(filename);
@@ -34,8 +36,8 @@ export function ExportButton({ label = 'Export', exports }: ExportButtonProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
-    } catch (err) {
-      console.error('Export error:', err);
+    } catch (err: any) {
+      showToast("error", err?.message || 'Export failed');
     } finally {
       setLoading(null);
       setOpen(false);

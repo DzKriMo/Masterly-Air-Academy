@@ -72,7 +72,9 @@ export default function ExamPortalPage() {
         exam, accessCode, answers, step,
         violations: violationsRef.current,
       }));
-    } catch {}
+    } catch {
+      // SessionStorage quota exceeded — nothing we can do, but the exam continues
+    }
   }, [exam, accessCode, answers, step, sessionKey]);
 
   const recordViolation = useCallback((type: string, detail?: string): number => {
@@ -219,6 +221,9 @@ export default function ExamPortalPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid code");
       const payload = data.data ?? data;
+      if (!payload || !payload.questions || !payload.duration_minutes) {
+        throw new Error("Invalid exam data received");
+      }
       setExam(payload);
       setStep("warn");
     } catch (err: any) { setError(err.message); }

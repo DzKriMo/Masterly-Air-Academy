@@ -173,35 +173,37 @@ class ExamViewSet(viewsets.ModelViewSet):
         attempt_id = request.data.get('attempt_id')
         answers = request.data.get('answers', {})
 
-        try:
-            attempt = ExamAttempt.objects.get(id=attempt_id, exam=exam)
-        except ExamAttempt.DoesNotExist:
-            return Response({'error': 'Attempt not found'}, status=404)
+        from django.db import transaction
+        with transaction.atomic():
+            try:
+                attempt = ExamAttempt.objects.select_for_update().get(id=attempt_id, exam=exam)
+            except ExamAttempt.DoesNotExist:
+                return Response({'error': 'Attempt not found'}, status=404)
 
-        from apps.students.models import Student
-        try:
-            student = Student.objects.get(user=request.user)
-            if attempt.student_id != student.id:
-                return Response({'error': 'This attempt does not belong to you'}, status=403)
-        except Student.DoesNotExist:
-            return Response({'error': 'Student profile not found'}, status=400)
+            from apps.students.models import Student
+            try:
+                student = Student.objects.get(user=request.user)
+                if attempt.student_id != student.id:
+                    return Response({'error': 'This attempt does not belong to you'}, status=403)
+            except Student.DoesNotExist:
+                return Response({'error': 'Student profile not found'}, status=400)
 
-        if attempt.completed_at:
-            return Response({'error': 'This attempt is already completed'}, status=400)
+            if attempt.completed_at:
+                return Response({'error': 'This attempt is already completed'}, status=400)
 
-        if attempt.started_at and exam.duration:
-            from datetime import timedelta
-            if timezone.now() - attempt.started_at > timedelta(minutes=exam.duration):
-                return Response({'error': 'Exam duration has elapsed; this attempt can no longer be submitted.'}, status=400)
+            if attempt.started_at and exam.duration:
+                from datetime import timedelta
+                if timezone.now() - attempt.started_at > timedelta(minutes=exam.duration):
+                    return Response({'error': 'Exam duration has elapsed; this attempt can no longer be submitted.'}, status=400)
 
-        question_ids = attempt.answers.get('question_ids') if isinstance(attempt.answers, dict) else None
-        result = AutoGradingService.grade_exam(exam, answers, question_ids=question_ids)
+            question_ids = attempt.answers.get('question_ids') if isinstance(attempt.answers, dict) else None
+            result = AutoGradingService.grade_exam(exam, answers, question_ids=question_ids)
 
-        attempt.score = result['percentage']
-        attempt.is_passed = result['is_passed']
-        attempt.answers = answers
-        attempt.completed_at = timezone.now()
-        attempt.save()
+            attempt.score = result['percentage']
+            attempt.is_passed = result['is_passed']
+            attempt.answers = answers
+            attempt.completed_at = timezone.now()
+            attempt.save()
 
         # Notify student of exam result
         try:

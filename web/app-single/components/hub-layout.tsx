@@ -39,7 +39,7 @@ export function HubLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [active, setActive] = useState<string>(() => tabFromUrl(window.location.href, tabs, defaultTab));
+  const [active, setActive] = useState<string>(defaultTab);
 
   useEffect(() => {
     const apply = () => setActive(tabFromUrl(window.location.href, tabs, defaultTab));

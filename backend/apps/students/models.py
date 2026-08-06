@@ -104,9 +104,18 @@ class Student(models.Model):
         return f"{prefix}{seq:03d}"
 
     def save(self, *args, **kwargs):
+        from django.db import IntegrityError
         if not self.student_number or self.student_number.startswith(('APP-', 'AP-')):
             self.student_number = self.generate_student_number()
-        super().save(*args, **kwargs)
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                if attempt == max_retries - 1:
+                    raise
+                self.student_number = self.generate_student_number()
 
 
 class MedicalCertificate(models.Model):

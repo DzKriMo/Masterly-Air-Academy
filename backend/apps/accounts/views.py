@@ -98,10 +98,21 @@ class UpdateProfileView(views.APIView):
         if not file:
             return Response({'error': 'No photo provided'}, status=400)
 
+        ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+        ALLOWED_MIME = {'image/jpeg', 'image/png', 'image/webp'}
+        MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+        if file.size > MAX_SIZE:
+            return Response({'error': 'Photo must be under 5 MB'}, status=400)
+        if file.content_type not in ALLOWED_MIME:
+            return Response({'error': 'Invalid image type'}, status=400)
+
         # Save to local storage (MinIO bucket may not exist)
         import os, uuid
         from django.conf import settings
-        ext = os.path.splitext(file.name)[1] or '.jpg'
+        ext = os.path.splitext(file.name)[1].lower() or '.jpg'
+        if ext not in ALLOWED_EXTENSIONS:
+            return Response({'error': 'Invalid image type'}, status=400)
         local_name = f'photo_{uuid.uuid4().hex}{ext}'
         local_dir = os.path.join(settings.MEDIA_ROOT, 'students', 'photos')
         os.makedirs(local_dir, exist_ok=True)
@@ -176,13 +187,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            s = self.get_serializer(data=request.data)
-            s.is_valid(raise_exception=True)
-            if getattr(s, 'user', None):
-                s.user.last_login_at = timezone.now()
-                s.user.last_login_ip = request.META.get('REMOTE_ADDR', '')
-                s.user.save(update_fields=['last_login_at', 'last_login_ip'])
         return response
 
 

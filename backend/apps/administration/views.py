@@ -152,30 +152,30 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from django.conf import settings
-        from django.db import IntegrityError
+        from django.db import IntegrityError, transaction
         from apps.notifications.services import NotificationService
         year = timezone.now().year
         prefix = f'INV-{year}-'
         max_attempts = 10
         for attempt in range(max_attempts):
-            # Find the highest numeric invoice number for this year
-            max_num = 0
-            for inv in Invoice.objects.filter(invoice_number__startswith=prefix):
+            with transaction.atomic():
+                max_num = 0
+                for inv in Invoice.objects.select_for_update().filter(invoice_number__startswith=prefix):
+                    try:
+                        suffix = inv.invoice_number[len(prefix):]
+                        n = int(suffix)
+                        if n > max_num:
+                            max_num = n
+                    except (ValueError, IndexError):
+                        pass
+                num = max_num + 1
                 try:
-                    suffix = inv.invoice_number[len(prefix):]
-                    n = int(suffix)
-                    if n > max_num:
-                        max_num = n
-                except (ValueError, IndexError):
-                    pass
-            num = max_num + 1
-            try:
-                invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=year, num=num))
-                NotificationService.invoice_created(invoice)
-                return
-            except IntegrityError:
-                if attempt == max_attempts - 1:
-                    raise
+                    invoice = serializer.save(invoice_number=settings.INVOICE_NUMBER_FORMAT.format(year=year, num=num))
+                    NotificationService.invoice_created(invoice)
+                    return
+                except IntegrityError:
+                    if attempt == max_attempts - 1:
+                        raise
 
     @action(detail=False, methods=['get'])
     def overdue(self, request):

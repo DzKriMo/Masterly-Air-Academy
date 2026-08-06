@@ -17,7 +17,7 @@ def check_expiring_medicals():
         NotificationService.document_expiring(
             cert.student.user,
             'Medical Certificate',
-            cert.certificate_number or 'Medical Certificate',
+            f'Medical-{cert.id}',
             cert.expiry_date,
         )
         count += 1

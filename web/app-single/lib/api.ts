@@ -135,7 +135,6 @@ class ApiClient {
       if (res.ok) {
         const data = await res.json();
         this.accessToken = data.access;
-        // Persist to localStorage (shared with auth-context)
         try {
           const session = JSON.parse(localStorage.getItem('maa_session') || '{}');
           session.token = data.access;
@@ -143,7 +142,15 @@ class ApiClient {
         } catch {}
         return true;
       }
-    } catch {}
+
+      // Server rejected the refresh token — clear it so we don't retry forever
+      if (res.status === 401 || res.status === 400) {
+        this.refreshToken = null;
+        this.clearAuth();
+      }
+    } catch {
+      // Network error — token might still be valid, don't clear it
+    }
     return false;
   }
 

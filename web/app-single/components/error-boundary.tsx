@@ -19,9 +19,23 @@ interface ClassProps extends Props {
 
 class ErrorBoundaryClass extends Component<ClassProps, State> {
   state: State = { hasError: false, error: null };
+  private unhandledRejection?: (e: PromiseRejectionEvent) => void;
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
+  }
+
+  componentDidMount() {
+    this.unhandledRejection = (e: PromiseRejectionEvent) => {
+      this.setState({ hasError: true, error: e.reason instanceof Error ? e.reason : new Error(String(e.reason)) });
+    };
+    window.addEventListener("unhandledrejection", this.unhandledRejection);
+  }
+
+  componentWillUnmount() {
+    if (this.unhandledRejection) {
+      window.removeEventListener("unhandledrejection", this.unhandledRejection);
+    }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
