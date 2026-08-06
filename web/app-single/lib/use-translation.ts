@@ -37,7 +37,7 @@ const translations: Record<string, Record<string, string>> = {
     full_support: "Full Support", full_support_desc: "Dedicated ground school, briefing facilities, and student progress tracking.",
     accreditations_title: "Accreditations & Approvals", accreditations_heading: "Approved & Recognized By",
     accreditations_desc: "Masterly Air Academy is officially approved and recognized by the following national authorities and ministries.",
-    accred_ministry_interior: "Ministry of Interior & Transport", accred_ministry_defence: "Ministry of Defence", accred_anac: "National Civil Aviation Agency",
+    accred_ministry_interior: "Ministry of Interior & Transport", accred_anac: "National Civil Aviation Agency",
 
     // ── Auth ──
     login_title: "Staff Login", login_email: "Email", login_password: "Password",
@@ -669,7 +669,7 @@ const translations: Record<string, Record<string, string>> = {
     full_support: "Support Complet", full_support_desc: "Ecole au sol dediee, salles de briefing et suivi des progres.",
     accreditations_title: "Agrements et Approbations", accreditations_heading: "Approuve et Reconnu Par",
     accreditations_desc: "Masterly Air Academy est officiellement approuvee et reconnue par les autorites et ministeres nationaux suivants.",
-    accred_ministry_interior: "Ministere de l'Interieur et des Transports", accred_ministry_defence: "Ministere de la Defense", accred_anac: "Agence Nationale de l'Aviation Civile",
+    accred_ministry_interior: "Ministere de l'Interieur et des Transports", accred_anac: "Agence Nationale de l'Aviation Civile",
 
     // ── Auth ──
     login_title: "Connexion Personnel", login_email: "Email", login_password: "Mot de Passe",
@@ -1302,7 +1302,7 @@ const translations: Record<string, Record<string, string>> = {
     full_support: "دعم كامل", full_support_desc: "مدرسة أرضية مخصصة ومرافق إحاطة وتتبع تقدم الطالب.",
     accreditations_title: "الاعتمادات والموافقات", accreditations_heading: "معتمدة ومعترف بها من قبل",
     accreditations_desc: "أكاديمية ماسترلي للطيران معتمدة رسمياً ومعترف بها من قبل الجهات والوزارات الوطنية التالية.",
-    accred_ministry_interior: "وزارة الداخلية والنقل", accred_ministry_defence: "وزارة الدفاع", accred_anac: "الوكالة الوطنية للطيران المدني",
+    accred_ministry_interior: "وزارة الداخلية والنقل", accred_anac: "الوكالة الوطنية للطيران المدني",
 
     // ── Auth ──
     login_title: "تسجيل دخول الموظفين", login_email: "البريد الإلكتروني", login_password: "كلمة المرور",
