@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://185.185.80.188.nip.io";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterly-air-academy.dz";
 const locales = ["en", "fr", "ar"] as const;
 
 const routes = ["", "/login", "/verify-certificate"];
