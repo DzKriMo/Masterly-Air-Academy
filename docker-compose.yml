@@ -213,10 +213,12 @@ services:
       - "host.docker.internal:172.19.0.1"
     ports:
       - "127.0.0.1:8090:80"
+    networks:
+      - masterly
     environment:
-      ROUNDCUBEMAIL_DEFAULT_HOST: host.docker.internal
+      ROUNDCUBEMAIL_DEFAULT_HOST: mailserver
       ROUNDCUBEMAIL_DEFAULT_PORT: 143
-      ROUNDCUBEMAIL_SMTP_SERVER: host.docker.internal
+      ROUNDCUBEMAIL_SMTP_SERVER: mailserver
       ROUNDCUBEMAIL_SMTP_PORT: 587
       ROUNDCUBEMAIL_DB_TYPE: sqlite
       ROUNDCUBEMAIL_SKIN: elastic
