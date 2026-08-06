@@ -1,10 +1,16 @@
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+
+
+class ContactRateThrottle(AnonRateThrottle):
+    scope = 'contact'
 
 
 @api_view(['POST'])
 @permission_classes([])  # Public
+@throttle_classes([ContactRateThrottle])
 def submit_contact(request):
     """Handle contact form + application submissions from the landing page."""
     from apps.notifications.models import Notification

@@ -166,6 +166,14 @@ class UserViewSet(viewsets.ModelViewSet):
     def reset_password(self, request, pk=None):
         user = self.get_object()
         password = request.data.get('password', '')
+
+        if str(user.id) == str(request.user.id):
+            current = request.data.get('current_password', '')
+            if not current:
+                return Response({'error': 'Current password is required to change your own password'}, status=status.HTTP_400_BAD_REQUEST)
+            if not request.user.check_password(current):
+                return Response({'error': 'Current password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+
         if len(password) < 8:
             return Response({'error': 'Password must be at least 8 characters'}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(password)

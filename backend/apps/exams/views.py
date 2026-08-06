@@ -345,15 +345,17 @@ class QuizViewSet(viewsets.ModelViewSet):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
 
-        existing = QuizAttempt.objects.filter(quiz=quiz, student=student).count()
-        if existing >= quiz.max_attempts:
-            return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
+        from django.db import transaction
+        with transaction.atomic():
+            existing = QuizAttempt.objects.select_for_update().filter(quiz=quiz, student=student).count()
+            if existing >= quiz.max_attempts:
+                return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
 
-        result = AutoGradingService.grade_quiz(quiz, answers)
-        QuizAttempt.objects.create(
-            quiz=quiz, student=student,
-            score=result['percentage'], completed_at=timezone.now(),
-        )
+            result = AutoGradingService.grade_quiz(quiz, answers)
+            QuizAttempt.objects.create(
+                quiz=quiz, student=student,
+                score=result['percentage'], completed_at=timezone.now(),
+            )
         return Response(result)
 
 

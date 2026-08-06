@@ -33,13 +33,15 @@ export function useMessageStream(
   sinceRef.current = options?.since ?? sinceRef.current;
 
   useEffect(() => {
-    if (!enabled || !api.isAuthenticated()) return;
+    const authenticated = api.isAuthenticated();
+    if (!enabled || !authenticated) return;
     let controller: AbortController | null = null;
     let stopped = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 1000;
 
     const connect = async () => {
-      if (stopped) return;
+      if (stopped || !api.isAuthenticated()) return;
       controller = new AbortController();
       const qs = sinceRef.current ? `?since=${encodeURIComponent(sinceRef.current)}` : "";
       try {
@@ -52,8 +54,9 @@ export function useMessageStream(
           credentials: "include",
         });
         if (stopped || !res.ok || !res.body) {
-          throw new Error("message stream failed");
+          throw new Error("stream failed");
         }
+        retryDelay = 1000;
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -86,10 +89,12 @@ export function useMessageStream(
           }
         }
       } catch {
-        // dropped/aborted — reconnect below
+        // dropped/aborted — reconnect with exponential backoff
       } finally {
         if (!stopped) {
-          retryTimer = setTimeout(connect, 3000);
+          const jitter = Math.random() * 1000;
+          retryTimer = setTimeout(connect, retryDelay + jitter);
+          retryDelay = Math.min(retryDelay * 2, 30000);
         }
       }
     };

@@ -175,6 +175,7 @@ REST_FRAMEWORK = {
         'certificate_download': '30/hour',
         'export': '10/hour',
         'file_upload': '20/hour',
+        'contact': '5/hour',
     },
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
     'DEFAULT_RENDERER_CLASSES': (

@@ -268,7 +268,8 @@ class GroundEvaluationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GroundEvaluation
-        fields = '__all__'
+        fields = ['id', 'course', 'student', 'student_name', 'grade', 'appreciation', 'module_validated', 'recommend_remedial', 'flagged', 'created_at', 'course_title', 'subject_code']
+        read_only_fields = ['id', 'created_at', 'created_by']
 
     def get_student_name(self, obj):
         return obj.student.full_name
@@ -302,8 +303,8 @@ class TimeEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TimeEntry
-        fields = '__all__'
-        read_only_fields = ['instructor']
+        fields = ['id', 'instructor', 'instructor_name', 'date', 'clock_in', 'clock_out', 'break_minutes', 'notes', 'status', 'total_hours', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'instructor', 'created_at', 'updated_at']
 
     def get_instructor_name(self, obj):
         return obj.instructor.get_full_name() or obj.instructor.email
