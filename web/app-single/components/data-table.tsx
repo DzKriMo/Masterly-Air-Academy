@@ -118,20 +118,39 @@ export function DataTable<T>({
             >
               Prev
             </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i)}
-                aria-label={`Go to page ${i + 1}`}
-                className={`px-3 py-1 text-xs rounded border ${
-                  i === page
-                    ? 'bg-gold-500 border-gold-500 text-navy-900 font-semibold'
-                    : 'border-navy-700 text-gray-400 hover:text-white'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
+            {(() => {
+              const pages: (number | 'ellipsis')[] = [];
+              const total = totalPages;
+              const current = page;
+              const delta = 2;
+              const rangeStart = Math.max(2, current - delta);
+              const rangeEnd = Math.min(total - 1, current + delta);
+
+              pages.push(0);
+              if (rangeStart > 2) pages.push('ellipsis');
+              for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+              if (rangeEnd < total - 2) pages.push('ellipsis');
+              if (total > 1) pages.push(total - 1);
+
+              return pages.map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${i}`} className="px-2 py-1 text-xs text-gray-500">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    aria-label={`Go to page ${p + 1}`}
+                    className={`px-3 py-1 text-xs rounded border ${
+                      p === current
+                        ? 'bg-gold-500 border-gold-500 text-navy-900 font-semibold'
+                        : 'border-navy-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {p + 1}
+                  </button>
+                )
+              );
+            })()}
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
