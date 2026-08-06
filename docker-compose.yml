@@ -209,6 +209,8 @@ services:
 
   roundcube:
     image: roundcube/roundcubemail:latest
+    extra_hosts:
+      - "host.docker.internal:172.19.0.1"
     ports:
       - "127.0.0.1:8090:80"
     environment:
