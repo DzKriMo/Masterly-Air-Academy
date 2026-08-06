@@ -197,6 +197,7 @@ services:
       - "143:143"
       - "587:587"
     volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./docker-data/mail/mail-data:/var/mail
       - ./docker-data/mail/mail-state:/var/mail-state
       - ./docker-data/mail/mail-logs:/var/log/mail
