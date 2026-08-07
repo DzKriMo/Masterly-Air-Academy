@@ -30,6 +30,13 @@ export const invoiceSchema = z.object({
   due_at: z.string().optional(),
 });
 
+export const contractSchema = z.object({
+  student: z.string().min(1, "Student is required"),
+  type: z.string().min(1, "Type is required"),
+  start_date: z.string().min(1, "Start date is required"),
+  end_date: z.string().optional(),
+});
+
 export const safetySchema = z.object({
   title: z.string().min(1, "Title is required"),
   type: z.string().min(1, "Type is required"),

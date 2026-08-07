@@ -2,7 +2,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api } from "@/lib/api";
+import { api, withFullLimit } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { contractSchema } from "@/lib/validators";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
@@ -19,6 +21,7 @@ import { fmtDate } from "@/lib/format-utils";
 export default function ContractsPage() {
   const { isAuthenticated, isLoading } = useAuth();
   useAuthGuard(isAuthenticated, isLoading);
+  const qc = useQueryClient();
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -28,6 +31,8 @@ export default function ContractsPage() {
   const [selected, setSelected] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ type: "", status: "", start_date: "", end_date: "" });
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ student: "", type: "training", start_date: "", end_date: "" });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const { t } = useTranslation();
@@ -60,6 +65,36 @@ export default function ContractsPage() {
     setLoadingMore(true);
     setPage((p) => p + 1);
     loadContracts(page + 1, true);
+  };
+
+  const { data: studentsData } = useQuery({
+    queryKey: ["students"],
+    queryFn: () => api.get<any>(withFullLimit("/students/")),
+    enabled: isAuthenticated,
+  });
+  const students = studentsData?.results || [];
+
+  const createContract = useMutation({
+    mutationFn: async (data: typeof form) => {
+      return await api.post("/contracts/", data);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      setShowForm(false);
+      setForm({ student: "", type: "training", start_date: "", end_date: "" });
+      setPage(1);
+      setLoading(true);
+      loadContracts(1, false);
+      showToast("success", t('finance.createContract', 'Contract created.'));
+    },
+    onError: (e: Error) => showToast("error", e.message),
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = contractSchema.safeParse(form);
+    if (!v.success) { showToast("error", v.error.errors[0].message); return; }
+    createContract.mutate(form);
   };
 
   const filterOptions: FilterOption[] = [
@@ -98,8 +133,27 @@ export default function ContractsPage() {
   ];
 
   return (<div className="flex-1 min-w-0">
-    <PageHeader title={t('finance.contracts', 'Contracts')} />
-    <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); loadContracts(1, false); }} />}{loading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0?<EmptyState message={t('finance.noContracts', 'No contracts found.')}/>:<>
+    <PageHeader
+      title={t('finance.contracts', 'Contracts')}
+      actions={<button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-gold-500 text-navy-900 rounded-lg text-sm font-semibold">{showForm ? t('common.cancel', 'Cancel') : t('finance.createContract', '+ New Contract')}</button>}
+    />
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <ModalForm open={showForm} onClose={() => setShowForm(false)} title={t('finance.createContract', 'Create Contract')} wide footer={(
+        <>
+          <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">{t('common.cancel', 'Cancel')}</button>
+          <button type="submit" form="contract-form" disabled={createContract.isPending} className="px-6 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg text-sm">{createContract.isPending ? t('common.loading', 'Creating...') : t('finance.createContract', 'Create Contract')}</button>
+        </>
+      )}>
+        <form id="contract-form" onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-sm text-gray-400 mb-1">{t('finance.student', 'Student')}</label><select value={form.student} onChange={e => setForm({...form, student: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="">{t('common.select', 'Select...')}</option>{students.map((s:any) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_number})</option>)}</select></div>
+            <div><label className="block text-sm text-gray-400 mb-1">{t('common.type', 'Type')}</label><select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"><option value="training">{t('finance.training', 'Training')}</option><option value="employment">Employment</option><option value="service">Service</option><option value="other">{t('finance.other', 'Other')}</option></select></div>
+            <div><label className="block text-sm text-gray-400 mb-1">{t('finance.startDate', 'Start Date')}</label><input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} required className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">{t('finance.endDate', 'End Date')}</label><input type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" /></div>
+          </div>
+        </form>
+      </ModalForm>
+      {error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); loadContracts(1, false); }} />}{loading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0?<EmptyState message={t('finance.noContracts', 'No contracts found.')}/>:<>
       <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('finance.searchContracts', 'Search contracts...')}/>
       <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(c) => { setSelected(c as any); setEditing(false); setEditForm({ type: c.type || "", status: c.status || "", start_date: c.start_date || "", end_date: c.end_date || "" }); }}/>
       {hasMore && (
