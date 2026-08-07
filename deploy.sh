@@ -13,7 +13,7 @@ git pull origin main
 
 # Build fresh images
 echo "[2/5] Building Docker images..."
-docker compose build --no-cache api web
+docker compose build --no-cache api web celery
 
 # Stop running services
 echo "[3/5] Stopping services..."
