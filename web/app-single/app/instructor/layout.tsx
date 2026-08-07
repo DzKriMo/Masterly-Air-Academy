@@ -124,8 +124,8 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden" onClick={closeSidebar} />
       )}
 
-      <aside className={`w-64 bg-navy-800 border-r border-navy-700 h-dvh shrink-0 fixed md:sticky flex flex-col top-0 z-50 transition-transform duration-200 md:translate-x-0 md:block
-        ${sidebarOpen ? "translate-x-0 block" : "-translate-x-full hidden"}
+      <aside className={`w-64 bg-navy-800 border-r border-navy-700 h-dvh shrink-0 fixed md:sticky flex flex-col top-0 z-50 transition-transform duration-200 md:translate-x-0 md:flex
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full hidden"}
       `}>
         <div className="p-5 border-b border-navy-700 text-center">
           <Image src="/logo.png" alt="MAA" width={100} height={100} className="mx-auto" />
