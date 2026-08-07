@@ -128,8 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const fresh = loadSession();
         const access = fresh.token;
         if (access) {
-          api.setTokens(access, session.refresh);
-          saveSession(access, session.refresh, session.user!);
+          api.setTokens(access, ok);
+          saveSession(access, ok, session.user!);
           setToken(access);
           tokenRef.current = access;
           useAuthStore.getState().setAuth(session.user!, access);

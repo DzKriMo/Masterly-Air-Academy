@@ -15,7 +15,7 @@ class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private onLogoutHandler: (() => void) | null = null;
-  private refreshPromise: Promise<boolean> | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   getBaseUrl(): string {
     return API_BASE;
@@ -117,8 +117,9 @@ class ApiClient {
    * Shares a single in-flight promise with all callers (401-retry and the
    * auth context) so concurrent refreshes can never race — important when the
    * backend rotates refresh tokens.
+   * Returns the (possibly rotated) refresh token on success, or null on failure.
    */
-  async refreshAccessToken(refresh: string): Promise<boolean> {
+  async refreshAccessToken(refresh: string): Promise<string | null> {
     if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.performRefresh(refresh);
     try {
@@ -128,7 +129,7 @@ class ApiClient {
     }
   }
 
-  private async performRefresh(refresh: string): Promise<boolean> {
+  private async performRefresh(refresh: string): Promise<string | null> {
     try {
       const res = await fetch(`${API_BASE}/api/token/refresh/`, {
         method: 'POST',
@@ -138,13 +139,18 @@ class ApiClient {
 
       if (res.ok) {
         const data = await res.json();
+        // ROTATE_REFRESH_TOKENS=True → the server returns a NEW refresh token
+        // and blacklists the old one. Persist it or the next refresh 401s.
+        const nextRefresh = data.refresh || refresh;
         this.accessToken = data.access;
+        this.refreshToken = nextRefresh;
         try {
           const session = JSON.parse(localStorage.getItem('maa_session') || '{}');
           session.token = data.access;
+          session.refresh = nextRefresh;
           localStorage.setItem('maa_session', JSON.stringify(session));
         } catch {}
-        return true;
+        return nextRefresh;
       }
 
       // Server rejected the refresh token — clear it so we don't retry forever
@@ -155,11 +161,11 @@ class ApiClient {
     } catch {
       // Network error — token might still be valid, don't clear it
     }
-    return false;
+    return null;
   }
 
-  private async tryRefreshToken(): Promise<boolean> {
-    if (!this.refreshToken) return false;
+  private async tryRefreshToken(): Promise<string | null> {
+    if (!this.refreshToken) return null;
     return this.refreshAccessToken(this.refreshToken);
   }
 
