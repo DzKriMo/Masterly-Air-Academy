@@ -59,7 +59,7 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
       )}
 
       {/* Sidebar — hidden on mobile unless hamburger toggled, always visible lg+ */}
-      <aside className={`w-56 bg-navy-800 border-r border-navy-700 min-h-screen shrink-0 fixed lg:sticky top-0 z-50 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:block
+      <aside className={`w-56 bg-navy-800 border-r border-navy-700 h-dvh shrink-0 fixed lg:sticky top-0 z-50 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:block
         ${sidebarOpen ? "translate-x-0 block" : "-translate-x-full hidden"}
       `}>
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-navy-700">

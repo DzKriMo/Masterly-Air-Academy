@@ -53,9 +53,13 @@ def _stream_from_storage(key, content_type='application/octet-stream', filename=
         if range_match:
             start = int(range_match.group(1))
             end_str = range_match.group(2)
-            end = int(end_str) - 1 if end_str else file_size - 1
+            end = int(end_str) if end_str else file_size - 1
             if start >= file_size:
-                return HttpResponse(status=416)
+                resp = HttpResponse(status=416)
+                resp['Content-Range'] = f'bytes */{file_size}'
+                return resp
+            if end >= file_size:
+                end = file_size - 1
 
             length = end - start + 1
             f = default_storage.open(key, 'rb')

@@ -24,6 +24,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
   const [volume, setVolume] = useState(1);
   const [buffering, setBuffering] = useState(true);
   const [buffered, setBuffered] = useState(0);
+  const [error, setError] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -63,13 +64,29 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
     if (!el) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const v = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    el.volume = v;
+    try {
+      // iOS Safari ignores programmatic volume; only `muted` is supported.
+      el.volume = v;
+      el.muted = v === 0;
+    } catch {}
     setVolume(v);
     setMuted(v === 0);
   };
 
   const fullscreen = () => {
-    containerRef.current?.requestFullscreen?.();
+    const el = ref.current;
+    const container = containerRef.current;
+    if (!el) return;
+    // iOS Safari only supports fullscreen via the video element's
+    // WebKit-specific method; the Fullscreen API is unavailable there.
+    const video = el as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+    if (typeof video.webkitEnterFullscreen === "function") {
+      video.webkitEnterFullscreen();
+      return;
+    }
+    try {
+      container?.requestFullscreen?.();
+    } catch {}
   };
 
   const skip = (sec: number) => {
@@ -89,6 +106,27 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
   const handlePlay = () => { setPlaying(true); onPlay?.(); };
   const handlePause = () => { setPlaying(false); setShowControls(true); onPause?.(); };
 
+  const handleError = () => {
+    setBuffering(false);
+    setPlaying(false);
+    setShowControls(true);
+    setError(true);
+  };
+
+  // iOS Safari does not automatically load a <video> when its `src` attribute
+  // changes after mount (URLs are minted asynchronously here), so re-load the
+  // element explicitly whenever the source changes.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !src) return;
+    setError(false);
+    setBuffering(true);
+    setCurrentTime(0);
+    setDuration(0);
+    setPlaying(false);
+    el.load();
+  }, [src, ref]);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -104,6 +142,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
         setBuffered(el.buffered.end(el.buffered.length - 1));
       }
     };
+    const onErr = () => handleError();
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onDur);
     el.addEventListener("durationchange", onDur);
@@ -112,6 +151,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
     el.addEventListener("seeking", onSeeking);
     el.addEventListener("seeked", onSeeked);
     el.addEventListener("progress", onProgress);
+    el.addEventListener("error", onErr);
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onDur);
@@ -121,6 +161,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
       el.removeEventListener("seeking", onSeeking);
       el.removeEventListener("seeked", onSeeked);
       el.removeEventListener("progress", onProgress);
+      el.removeEventListener("error", onErr);
     };
   }, [ref, onTimeUpdate]);
 
@@ -129,22 +170,25 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
       ref={containerRef}
       className={`relative group w-full aspect-video bg-black rounded-xl overflow-hidden cursor-pointer ${className || ""}`}
       onMouseMove={showControlsTemp}
-      onClick={togglePlay}
+      onClick={error ? undefined : togglePlay}
     >
       <video
         ref={ref}
         src={src}
         playsInline
+        webkit-playsinline="true"
+        controls={error}
         preload="metadata"
         className="w-full h-full object-contain"
         onPlay={handlePlay}
         onPause={handlePause}
         onEnded={() => { setPlaying(false); onEnded?.(); }}
+        onError={handleError}
         onVolumeChange={() => { if (ref.current) { setVolume(ref.current.volume); setMuted(ref.current.muted); } }}
       />
 
       {/* Loading / buffering spinner */}
-      {buffering && (
+      {buffering && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
           <svg className="w-10 h-10 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="#c4943c" strokeWidth="3" />
@@ -154,7 +198,7 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
       )}
 
       {/* Big play button overlay */}
-      {!playing && (
+      {!playing && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
           <button className="w-16 h-16 flex items-center justify-center rounded-full bg-gold-500/90 hover:bg-gold-500 text-navy-900 transition-all hover:scale-110">
             <Play className="w-7 h-7 ml-1" fill="currentColor" />
@@ -162,10 +206,22 @@ export function VideoPlayer({ src, onTimeUpdate, onPause, onPlay, onEnded, video
         </div>
       )}
 
+      {/* Unsupported / failed playback overlay */}
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 text-center px-6 pointer-events-none">
+          <svg className="w-8 h-8 text-gold-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <p className="text-xs text-gray-300 leading-relaxed">
+            Your browser could not play this video. Use the native controls below to try again.
+          </p>
+        </div>
+      )}
+
       {/* Controls bar */}
       <div
         className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pt-8 pb-3 transition-opacity duration-300 ${
-          showControls || !playing ? "opacity-100" : "opacity-0"
+          error ? "hidden" : showControls || !playing ? "opacity-100" : "opacity-0"
         }`}
         onClick={(e) => e.stopPropagation()}
       >

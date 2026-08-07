@@ -256,7 +256,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={closeSidebar} />
       )}
 
-      <aside className={`w-56 bg-navy-800 border-r border-navy-700 min-h-screen shrink-0 fixed lg:sticky top-0 z-50 transition-transform duration-200 lg:translate-x-0 lg:flex lg:flex-col
+      <aside className={`w-56 bg-navy-800 border-r border-navy-700 h-dvh shrink-0 fixed lg:sticky top-0 z-50 transition-transform duration-200 lg:translate-x-0 lg:flex lg:flex-col
         ${sidebarOpen ? "translate-x-0 block" : "-translate-x-full hidden"}
       `}>
         <div className="p-4 border-b border-navy-700 shrink-0">

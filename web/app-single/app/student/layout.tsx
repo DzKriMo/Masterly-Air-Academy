@@ -55,7 +55,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       )}
 
       {/* Sidebar — hidden on mobile unless hamburger toggled, always visible md+ */}
-      <aside className={`w-64 bg-navy-800 border-r border-navy-700 min-h-screen shrink-0 fixed md:sticky top-0 z-50 flex flex-col transition-transform duration-200 md:translate-x-0 md:block
+      <aside className={`w-64 bg-navy-800 border-r border-navy-700 h-dvh shrink-0 fixed md:sticky top-0 z-50 flex flex-col transition-transform duration-200 md:translate-x-0 md:block
         ${sidebarOpen ? "translate-x-0 block" : "-translate-x-full hidden"}
       `}>
         <div className="p-5 border-b border-navy-700 text-center">
