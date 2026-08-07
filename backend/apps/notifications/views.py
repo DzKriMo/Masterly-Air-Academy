@@ -18,7 +18,7 @@ class NotificationBroadcastViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'notifications.broadcast'
 
-    def create(self, request):
+    def send(self, request):
         title = request.data.get('title', '')
         message = request.data.get('message', '')
         user_id = request.data.get('user_id', None)

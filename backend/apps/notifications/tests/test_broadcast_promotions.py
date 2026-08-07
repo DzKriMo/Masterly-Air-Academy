@@ -19,9 +19,16 @@ def _grant(user, codename):
 
 
 @pytest.fixture
-def admin_broadcaster(db, user_admin):
-    _grant(user_admin, 'notifications.broadcast')
-    return user_admin
+def admin_broadcaster(db):
+    """A non-superuser, non-system-admin user holding only notifications.broadcast."""
+    from apps.accounts.models import User
+    user = User.objects.create_user(
+        username='comm_admin', email='comm@masterly.test',
+        password='testpass123', role='training_admin',
+        first_name='Comm', last_name='Admin',
+    )
+    _grant(user, 'notifications.broadcast')
+    return user
 
 
 @pytest.fixture
