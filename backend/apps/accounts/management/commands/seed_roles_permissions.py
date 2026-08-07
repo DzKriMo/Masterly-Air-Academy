@@ -235,6 +235,7 @@ ROLE_DEFINITIONS = {
             'academic_years': ['view'], 'promotions': ['view'],
             'users': ['view'],
             'invoicing': ['view'],
+            'notifications': ['view', 'broadcast'],
         },
     },
     'scheduler': {
