@@ -35,6 +35,16 @@ interface Notification {
   created_at: string;
 }
 
+interface Promotion {
+  id: string;
+  code: string;
+  name: string;
+  program: string;
+  program_name: string;
+  status: string;
+  student_count: number;
+}
+
 // ── Constants ────────────────────────────────────────────
 
 const ROLES = [
@@ -57,6 +67,7 @@ function formatRole(role: string): string {
 
 const TABS = [
   { key: "role", label: "Send to Role" },
+  { key: "promotion", label: "Send to Promotion(s)" },
   { key: "user", label: "Send to User" },
   { key: "history", label: "History" },
 ];
@@ -85,6 +96,10 @@ export default function AdminCommunicationPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userForm, setUserForm] = useState({ title: "", message: "" });
 
+  // ── Tab: Send to Promotion(s) ──
+  const [promotionIds, setPromotionIds] = useState<string[]>([]);
+  const [promotionForm, setPromotionForm] = useState({ title: "", message: "" });
+
   // ── Tab 3: History ──
   const [filterType, setFilterType] = useState("");
 
@@ -112,6 +127,18 @@ export default function AdminCommunicationPage() {
     },
     enabled: isAuthenticated,
   });
+
+  // Promotions list for the promotion tab
+  const promotionsQuery = useQuery({
+    queryKey: ["admin-communication-promotions"],
+    queryFn: async () => {
+      const d: any = await api.get("/promotions/");
+      return ((d?.results || d || []) as Promotion[]).filter((p) => p.status !== "archived");
+    },
+    enabled: isAuthenticated,
+  });
+
+  const promotions = promotionsQuery.data ?? [];
 
   const historyData = historyQuery.data ?? [];
 
@@ -146,6 +173,21 @@ export default function AdminCommunicationPage() {
     },
   });
 
+  // Broadcast to promotion(s)
+  const sendToPromotionsMutation = useMutation({
+    mutationFn: (body: { promotion_ids: string[]; title: string; message: string }) =>
+      api.post("/notifications/broadcast/", body),
+    onSuccess: (data: any) => {
+      showToast("success", `Notification sent to ${data.sent} student(s)`);
+      setPromotionIds([]);
+      setPromotionForm({ title: "", message: "" });
+      queryClient.invalidateQueries({ queryKey: ["admin-communication-history"] });
+    },
+    onError: (err: any) => {
+      showToast("error", err.message || "Failed to send notification");
+    },
+  });
+
   // ── Handlers ──
 
   const handleBroadcastByRole = () => {
@@ -165,6 +207,22 @@ export default function AdminCommunicationPage() {
       user_id: selectedUser.id,
       title: userForm.title,
       message: userForm.message,
+    });
+  };
+
+  const togglePromotion = (id: string) => {
+    setPromotionIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  };
+
+  const handleSendToPromotions = () => {
+    if (promotionIds.length === 0 || !promotionForm.title) {
+      showToast("error", "Select at least one promotion and a title");
+      return;
+    }
+    sendToPromotionsMutation.mutate({
+      promotion_ids: promotionIds,
+      title: promotionForm.title,
+      message: promotionForm.message,
     });
   };
 
@@ -322,6 +380,102 @@ export default function AdminCommunicationPage() {
                   </span>
                 ) : (
                   "Send Notification"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════ */}
+        {/* TAB: Send to Promotion(s)                     */}
+        {/* ══════════════════════════════════════════════ */}
+        {activeTab === "promotion" && (
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-2xl">
+            <h2 className="text-lg font-semibold text-white mb-2">Send Notification to Promotion(s)</h2>
+            <p className="text-sm text-gray-400 mb-6">
+              Send a broadcast notification to all active students in the selected promotion(s).
+            </p>
+            <div className="space-y-4">
+              {/* Promotions multi-select */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Promotion(s) <span className="text-red-400">*</span>
+                </label>
+                {promotionsQuery.isLoading ? (
+                  <LoadingSkeleton type="table" rows={3} />
+                ) : promotions.length === 0 ? (
+                  <p className="text-sm text-gray-500">No promotions available.</p>
+                ) : (
+                  <div className="bg-navy-900 border border-navy-700 rounded-lg max-h-56 overflow-y-auto">
+                    {promotions.map((p) => {
+                      const checked = promotionIds.includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => togglePromotion(p.id)}
+                          className="w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm text-gray-300 hover:bg-navy-700 hover:text-white transition-colors border-b border-navy-700 last:border-0"
+                        >
+                          <span
+                            className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${
+                              checked
+                                ? "bg-gold-500 border-gold-500 text-navy-900"
+                                : "border-navy-500 text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <span className="font-medium">{p.code} — {p.name}</span>
+                          <span className="text-xs text-gray-500 ml-auto">{p.student_count ?? 0} student(s)</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {promotionIds.length > 0 && (
+                  <p className="text-xs text-gold-500 mt-2">{promotionIds.length} promotion(s) selected</p>
+                )}
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Title <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={promotionForm.title}
+                  onChange={(e) => setPromotionForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="Notification title"
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Message</label>
+                <textarea
+                  value={promotionForm.message}
+                  onChange={(e) => setPromotionForm((f) => ({ ...f, message: e.target.value }))}
+                  rows={4}
+                  placeholder="Notification message (optional)"
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              {/* Send button */}
+              <button
+                onClick={handleSendToPromotions}
+                disabled={sendToPromotionsMutation.isPending || promotionIds.length === 0 || !promotionForm.title}
+                className="px-6 py-2.5 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50"
+              >
+                {sendToPromotionsMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3 h-3 border-2 border-navy-900 border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </span>
+                ) : (
+                  "Send to Promotion(s)"
                 )}
               </button>
             </div>

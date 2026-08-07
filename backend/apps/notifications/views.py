@@ -14,7 +14,7 @@ from .services import NotificationService, get_redis_client, publish_message_eve
 
 
 class NotificationBroadcastViewSet(viewsets.ViewSet):
-    """POST /api/notifications/broadcast/ — send notification to users by role or individual user_id"""
+    """POST /api/notifications/broadcast/ — send notification by role, individual user_id, or promotion_ids"""
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'notifications.broadcast'
 
@@ -23,11 +23,22 @@ class NotificationBroadcastViewSet(viewsets.ViewSet):
         message = request.data.get('message', '')
         user_id = request.data.get('user_id', None)
         role = request.data.get('role', '')
+        promotion_ids = request.data.get('promotion_ids') or request.data.get('promotions')
 
         if not title:
             return Response({'error': 'Title is required'}, status=400)
 
         from apps.accounts.models import User
+
+        # If promotion_ids is provided, send to all active students in those promotions
+        if promotion_ids:
+            if isinstance(promotion_ids, str):
+                promotion_ids = [p for p in promotion_ids.split(',') if p]
+            if promotion_ids:
+                notifications = NotificationService.notify_students_in_promotions(
+                    promotion_ids, 'broadcast', title, message
+                )
+                return Response({'sent': len(notifications)})
 
         # If user_id is provided, send to that specific user
         if user_id:

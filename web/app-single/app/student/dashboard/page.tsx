@@ -52,7 +52,9 @@ export default function StudentDashboard() {
   const programProgress = dashData.program_progress || {};
 
   const lessons = (log as any).lessons || [];
-  const flightData = lessons.slice(-10).map((l: any, i: number) => ({ name: l.date?.slice(5) || `#${i + 1}`, hours: l.duration || 0 }));
+  const logEntries = (log as any).log_entries || [];
+  const allFlights = [...lessons, ...logEntries].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const flightData = allFlights.slice(-10).map((l: any, i: number) => ({ name: l.date?.slice(5) || `#${i + 1}`, hours: l.duration || 0 }));
 
   const groundValidated = groundList.filter((g: any) => g.module_validated).length;
   const groundTotal = groundList.length;

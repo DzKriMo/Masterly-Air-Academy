@@ -124,6 +124,27 @@ class NotificationService:
         return notifications
 
     @staticmethod
+    def notify_students_in_promotions(promotion_ids, type: str, title: str, message: str, data: dict = None):
+        """Send a notification to all active students in the given promotion(s)."""
+        from apps.students.models import Student
+        user_ids = Student.objects.filter(
+            promotion_id__in=promotion_ids,
+            status='active',
+            user__status='active',
+            user__is_active=True,
+        ).values_list('user_id', flat=True).distinct()
+        notifications = []
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                continue
+            n = NotificationService.notify(user, type, title, message, data)
+            if n is not None:
+                notifications.append(n)
+        return notifications
+
+    @staticmethod
     def notify_roles(roles: list, type: str, title: str, message: str, data: dict = None):
         """Send a notification to all active users with any of the given roles."""
         users = User.objects.filter(role__in=roles, status='active', is_active=True)
