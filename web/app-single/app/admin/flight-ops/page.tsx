@@ -1,7 +1,8 @@
 "use client";
-import { Map, BookOpen, Plane, ClipboardCheck, ListChecks } from "lucide-react";
+import { Map, BookOpen, Plane, ClipboardCheck, ListChecks, BookOpenCheck } from "lucide-react";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
+import { LogbookValidationPanel } from "@/components/instructor-logbook-panel";
 import { fmtLabel, formatDate, formatTime, todayLocal, STATUS_COLORS } from "@/lib/format-utils";
 import { api } from "@/lib/api";
 
@@ -11,6 +12,7 @@ const TABS: HubTab[] = [
   { id: "lessons", label: "Flight Lessons", icon: Plane },
   { id: "preps", label: "Preparations", icon: ClipboardCheck },
   { id: "exercises", label: "Exercise Bank", icon: ListChecks },
+  { id: "logbook", label: "Flight Log Validation", icon: BookOpenCheck },
 ];
 
 export default function FlightOpsHubPage() {
@@ -23,6 +25,7 @@ export default function FlightOpsHubPage() {
           {active === "lessons" && <LessonsTab />}
           {active === "preps" && <PrepsTab />}
           {active === "exercises" && <ExercisesTab />}
+          {active === "logbook" && <LogbookValidationPanel />}
         </>
       )}
     </HubLayout>
