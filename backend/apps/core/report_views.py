@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from apps.accounts.permissions import HasRolePermission
 from apps.students.models import Student, MedicalCertificate, TrainingProgram
 from apps.ground_training.models import Course, CourseEnrollment
-from apps.flight_training.models import Aircraft, FlightLesson
+from apps.flight_training.models import Aircraft, FlightLesson, FlightLogEntry
 from apps.administration.models import Invoice, Payment
 from apps.quality_safety.models import Audit, NonConformity
 from apps.exams.models import ExamAttempt, Certificate
@@ -42,12 +42,16 @@ class StudentDashboardView(APIView):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=404)
 
-        # Flight hours
-        flight_lessons = FlightLesson.objects.filter(student=student)
+        # Flight hours: completed lessons + approved log entries (matches flight log)
+        all_flight_lessons = FlightLesson.objects.filter(student=student)
+        completed_lessons = all_flight_lessons.filter(status='completed')
+        approved_log_entries = FlightLogEntry.objects.filter(student=student, status='approved')
         total_flight_hours = round(
-            sum(float(f.flight_duration or 0) for f in flight_lessons), 1
+            sum(float(f.flight_duration or 0) for f in completed_lessons)
+            + sum(float(e.flight_duration or 0) for e in approved_log_entries),
+            1,
         )
-        total_lessons_completed = flight_lessons.filter(status='completed').count()
+        total_lessons_completed = completed_lessons.count()
 
         # Theory progress
         enrollments = CourseEnrollment.objects.filter(student=student)
@@ -58,9 +62,9 @@ class StudentDashboardView(APIView):
         )
 
         # Flight progress
-        all_flight_lessons = flight_lessons.count()
+        all_flight_lessons_count = all_flight_lessons.count()
         flight_progress = round(
-            (total_lessons_completed / all_flight_lessons * 100) if all_flight_lessons > 0 else 0, 1
+            (total_lessons_completed / all_flight_lessons_count * 100) if all_flight_lessons_count > 0 else 0, 1
         )
 
         # Exam average
@@ -138,7 +142,7 @@ class StudentDashboardView(APIView):
         milestones = []
         if total_courses > 0:
             milestones.append({'label': 'Theory Progress', 'current': completed_courses, 'target': total_courses})
-        if all_flight_lessons > 0:
+        if all_flight_lessons_count > 0:
             program_hour_targets = {'PPL': 45, 'CPL': 200, 'IR': 50, 'MEP': 15, 'MCC': 40}
             milestones.append({'label': 'Flight Hours', 'current': total_flight_hours, 'target': program_hour_targets.get(student.program, 45)})
         competency_qs = StudentCompetency.objects.filter(student=student)

@@ -74,6 +74,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def dossier(self, request, pk=None):
         from django.http import HttpResponse
+        from apps.flight_training.models import FlightLogEntry
         student = self.get_object()
 
         med_certs = student.medical_certificates.all()
@@ -81,7 +82,9 @@ class StudentViewSet(viewsets.ModelViewSet):
         attendance = student.attendance_records.all()
         ground_evals = student.ground_evaluations.select_related('course').all()
         flight_lessons = student.flight_lessons.select_related('instructor', 'aircraft').all()
+        log_entries = FlightLogEntry.objects.filter(student=student, status='approved').select_related('aircraft', 'validated_by')
         exam_attempts = student.exam_attempts.select_related('exam').all()
+        final_exam_assignments = student.final_exam_assignments.select_related('exam').all()
         quiz_attempts = student.quiz_attempts.select_related('quiz').all()
         certs = student.certificates.all()
         progress_checks = student.progress_checks.select_related('examiner').all()
@@ -95,7 +98,8 @@ class StudentViewSet(viewsets.ModelViewSet):
             instructor_name = f'{student.main_instructor.first_name} {student.main_instructor.last_name}'
 
         html = self._dossier_html(student, med_certs, enrollments, attendance, ground_evals,
-                                  flight_lessons, exam_attempts, quiz_attempts, certs,
+                                  flight_lessons, log_entries, exam_attempts, final_exam_assignments,
+                                  quiz_attempts, certs,
                                   progress_checks, skill_tests, practical_evals,
                                   competencies, sim_sessions, instructor_name)
 
@@ -110,19 +114,22 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 
     def _dossier_html(self, student, med_certs, enrollments, attendance, ground_evals,
-                      flight_lessons, exam_attempts, quiz_attempts, certs,
+                      flight_lessons, log_entries, exam_attempts, final_exam_assignments,
+                      quiz_attempts, certs,
                       progress_checks, skill_tests, practical_evals,
                       competencies, sim_sessions, instructor_name):
         from datetime import datetime
         now = datetime.now()
         esc = lambda v: str(v).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;') if v else '—'
         fmt_date = lambda d: d.strftime('%d %b %Y') if d else '—'
+        fmt_dt = lambda d: d.strftime('%d %b %Y %H:%M') if d else '—'
 
         total_att = attendance.count()
         present_att = attendance.filter(status='present').count()
         absent_att = attendance.filter(status='absent').count()
-        total_flight_hours = sum(float(f.flight_duration or 0) for f in flight_lessons)
-        completed_flights = flight_lessons.filter(status='completed').count()
+        completed_lessons = flight_lessons.filter(status='completed')
+        total_flight_hours = sum(float(f.flight_duration or 0) for f in completed_lessons) + sum(float(e.flight_duration or 0) for e in log_entries)
+        completed_flights = completed_lessons.count()
 
         # ── Build table rows ──
 
@@ -147,6 +154,29 @@ class StudentViewSet(viewsets.ModelViewSet):
 <td>{esc(f.flight_duration)}h</td>
 <td style="color:{color};font-weight:bold">{esc(f.status)}</td>
 <td>{esc(f.grade)}</td><td>{esc(f.result)}</td>
+</tr>'''
+
+        log_entry_rows = ''
+        for e in log_entries:
+            validator = f'{e.validated_by.first_name} {e.validated_by.last_name}' if e.validated_by else '—'
+            ac = e.aircraft.registration if e.aircraft else (e.aircraft_text or '—')
+            log_entry_rows += f'''<tr>
+<td>{esc(e.date)}</td><td>{esc(ac)}</td><td>{esc(e.flight_duration)}h</td>
+<td style="color:#22c55e;font-weight:bold">approved</td><td>{esc(validator)}</td>
+</tr>'''
+
+        final_exam_rows = ''
+        for fa in final_exam_assignments:
+            fex = fa.exam
+            status_color = {'submitted': '#22c55e', 'in_progress': '#f59e0b', 'pending': '#6b7280'}.get(fa.status, '#6b7280')
+            score = f'{float(fa.score):.2f}%' if fa.score is not None else '—'
+            flag = ' <b style="color:#ef4444">FLAGGED</b>' if fa.is_flagged else ''
+            final_exam_rows += f'''<tr>
+<td>{esc(fex.title)}</td><td>{esc(fex.subject.title_en)}</td>
+<td>{esc(fa.access_code)}</td>
+<td style="color:{status_color};font-weight:bold">{esc(fa.status)}</td>
+<td>{esc(score)}</td><td>{fmt_dt(fa.started_at)}</td><td>{fmt_dt(fa.submitted_at)}</td>
+<td>{fex.duration_minutes} min</td><td>{flag or '—'}</td>
 </tr>'''
 
         exam_rows = ''
@@ -291,9 +321,13 @@ tr:nth-child(even) td {{ background: #f8fafc; }}
 <div class="stats-bar">
   <div class="stat"><div class="num">{total_flight_hours}</div><div class="lbl">Total Hours</div></div>
   <div class="stat"><div class="num">{completed_flights}</div><div class="lbl">Completed</div></div>
-  <div class="stat"><div class="num">{sum(1 for f in flight_lessons if f.grade and float(f.grade) >= 70)}</div><div class="lbl">Passed</div></div>
+  <div class="stat"><div class="num">{sum(1 for f in completed_lessons if f.grade and float(f.grade) >= 70)}</div><div class="lbl">Passed</div></div>
 </div>
 <table><thead><tr><th>Date</th><th>Instructor</th><th>Aircraft</th><th>Duration</th><th>Status</th><th>Grade</th><th>Result</th></tr></thead><tbody>{flight_rows or '<tr><td colspan="7" class="empty">No flight lessons found.</td></tr>'}</tbody></table>
+
+{section('Flight Log Entries (approved)', log_entry_rows, '<th>Date</th><th>Aircraft</th><th>Duration</th><th>Status</th><th>Validated By</th>')}
+
+{section('Final Exams', final_exam_rows, '<th>Exam</th><th>Subject</th><th>Access Code</th><th>Status</th><th>Score</th><th>Started</th><th>Submitted</th><th>Duration</th><th>Flag</th>')}
 
 {section('Exam Attempts', exam_rows, '<th>Code</th><th>Exam</th><th>Attempt</th><th>Score</th><th>Passed</th>')}
 

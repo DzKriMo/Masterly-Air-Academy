@@ -28,7 +28,7 @@ from apps.exams.views import (
 )
 from apps.exams.final_views import (
     FinalExamQuestionViewSet, FinalExamViewSet,
-    exam_access, exam_submit, exam_status,
+    exam_access, exam_submit, exam_status, exam_heartbeat,
 )
 from apps.administration.views import (
     ApplicationViewSet, InvoiceViewSet, PaymentViewSet, DocumentViewSet,
@@ -167,6 +167,7 @@ urlpatterns = [
     # Public final exam endpoints (no auth)
     path('exam/access/', exam_access, name='exam-access'),
     path('exam/submit/', exam_submit, name='exam-submit'),
+    path('exam/heartbeat/', exam_heartbeat, name='exam-heartbeat'),
     path('exam/status/<str:access_code>/', exam_status, name='exam-status'),
 
     path('reports/exams/', ExamReportsView.as_view(), name='report-exams'),

@@ -286,6 +286,21 @@ function AttemptsPanel({ examId }: { examId: string }) {
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1.5 min-w-[120px]">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.download(`/final-exams/${examId}/assignments/${a.id}/report/`);
+                            const blob = await res.blob();
+                            window.open(URL.createObjectURL(blob), '_blank');
+                          } catch (err: any) {
+                            showToast("error", err?.message || "Failed to load report");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors text-blue-400 border border-blue-500/40 hover:bg-blue-500/15"
+                        title="Open this student's printable answer report"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Report
+                      </button>
                       {a.status === "submitted" && (
                         <button
                           onClick={() => openGrading(a)}

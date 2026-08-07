@@ -55,6 +55,51 @@ def final_score_percent(max_points, earned_points):
     return round((earned_points / max_points * 100) if max_points > 0 else 0, 2)
 
 
+def _finalize_submission(assignment, answers, violations, submitted_at):
+    """Grade a submitted final exam assignment and persist it.
+
+    Returns ``(auto_correct, total_auto_graded)``. Shared by the client submit
+    endpoint and the server-side anti-cheat auto-submit (heartbeat). An exam is
+    flagged once it accumulates 2+ serious violations.
+    """
+    from .services import sanitize_violations
+    violations, serious_count, suspicious = sanitize_violations(
+        violations, assignment.started_at, submitted_at
+    )
+
+    questions = FinalExamQuestion.objects.filter(id__in=assignment.questions or [])
+    qmap = {str(q.id): q for q in questions}
+    valid_answers = {k: v for k, v in (answers or {}).items() if k in qmap}
+
+    assignment.answers = valid_answers
+    total_auto = sum(1 for q in qmap.values() if q.question_type in ('mcq', 'scq', 'true_false'))
+    auto_correct = 0
+    for qid, answer in valid_answers.items():
+        q = qmap[qid]
+        if q.question_type in ('mcq', 'scq', 'true_false'):
+            if str(answer).strip().lower() == str(q.correct_answer).strip().lower():
+                auto_correct += 1
+
+    max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
+    # Essays earn nothing until manually graded — don't present a provisional score as final.
+    if essays:
+        assignment.score = None
+        assignment.essay_graded = False
+    else:
+        assignment.score = final_score_percent(max_points, earned_points)
+        assignment.essay_graded = True
+    assignment.status = 'submitted'
+    assignment.submitted_at = submitted_at
+    if violations:
+        assignment.violations = violations
+        if serious_count >= 2 or suspicious:
+            assignment.is_flagged = True
+    elif suspicious:
+        assignment.is_flagged = True
+    assignment.save()
+    return auto_correct, total_auto
+
+
 class FinalExamQuestionViewSet(viewsets.ModelViewSet):
     queryset = FinalExamQuestion.objects.select_related('subject', 'module').all()
     serializer_class = FinalExamQuestionSerializer
@@ -472,6 +517,112 @@ h2 {{ font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #b
         resp['Content-Disposition'] = f'inline; filename="final-exam-report-{exam.hash}.html"'
         return resp
 
+    @action(detail=True, methods=['get'], url_path='assignments/(?P<assignment_id>[^/.]+)/report')
+    def student_report(self, request, pk=None, assignment_id=None):
+        """Printable per-student final exam report with the student's answers."""
+        from django.http import HttpResponse
+        from django.utils.html import escape
+        exam = self.get_object()
+        assignment = exam.assignments.select_related('student').filter(pk=assignment_id).first()
+        if not assignment:
+            return Response({'error': 'Assignment not found for this exam'}, status=404)
+
+        questions = list(FinalExamQuestion.objects.filter(id__in=assignment.questions or []))
+        answers = assignment.answers or {}
+        manual = assignment.manual_scores or {}
+        max_points, earned_points, auto_correct, auto_total, essays = compute_assignment_points(assignment)
+
+        rows = ''
+        for i, q in enumerate(questions, 1):
+            ans = answers.get(str(q.id), '')
+            is_auto = q.question_type in ('mcq', 'scq', 'true_false')
+            if is_auto and ans:
+                correct = str(ans).strip().lower() == str(q.correct_answer or '').strip().lower()
+                q_earned = float(q.points) if correct else 0.0
+            elif not is_auto:
+                correct = None
+                q_earned = float(manual.get(str(q.id), 0) or 0)
+            else:
+                correct = None
+                q_earned = 0.0
+            mark = 'correct' if correct is True else ('wrong' if correct is False else 'pending')
+            mark_label = 'Correct' if correct is True else ('Incorrect' if correct is False else ('Essay (manual)' if not is_auto else 'Unanswered'))
+            rows += f'''<tr class="{mark}">
+<td>{i}</td>
+<td class="qtext">{escape(q.question_text)}</td>
+<td>{escape(ans) if ans else '—'}</td>
+<td>{escape(q.correct_answer or '—')}</td>
+<td>{mark_label}</td>
+<td>{round(q_earned, 2)}/{float(q.points)}</td>
+</tr>'''
+
+        s = assignment.student
+        status_label = {'submitted': 'Submitted', 'in_progress': 'In Progress', 'pending': 'Pending'}.get(assignment.status, assignment.status)
+        score_html = f'{float(assignment.score):.2f}%' if assignment.score is not None else '—'
+        flag_badge = '<span class="flag">FLAGGED</span>' if assignment.is_flagged else ''
+        violations_count = len(assignment.violations or [])
+
+        html = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>Student Exam Report — {escape(exam.title)}</title>
+<style>
+@page {{ size: A4; margin: 1.6cm; }}
+* {{ box-sizing: border-box; }}
+body {{ font-family: "Helvetica Neue", Arial, sans-serif; color: #111827; margin: 0; font-size: 12px; }}
+.header {{ text-align: center; border-bottom: 3px solid #b0872f; padding-bottom: 12px; margin-bottom: 18px; }}
+.org {{ font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #b0872f; font-weight: 700; }}
+h1 {{ font-size: 19px; margin: 6px 0 2px; }}
+.subtitle {{ font-size: 12px; color: #6b7280; }}
+.meta {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; margin: 16px 0; font-size: 13px; }}
+.meta .k {{ color: #6b7280; }}
+.meta .v {{ font-weight: 600; }}
+.summary {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }}
+.stat {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; text-align: center; }}
+.stat .n {{ font-size: 21px; font-weight: 700; }}
+.stat .l {{ font-size: 10px; text-transform: uppercase; color: #6b7280; }}
+h2 {{ font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #b0872f; margin: 20px 0 8px; }}
+.flag {{ display: inline-block; background: #b91c1c; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 1px; }}
+.tbl {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
+.tbl th {{ background: #f3f4f6; text-align: left; padding: 7px 8px; border: 1px solid #e5e7eb; text-transform: uppercase; font-size: 10px; letter-spacing: .5px; }}
+.tbl td {{ padding: 6px 8px; border: 1px solid #e5e7eb; vertical-align: top; }}
+.tbl tr:nth-child(even) td {{ background: #fbfaf6; }}
+.qtext {{ font-weight: 600; }}
+tr.correct td {{ background: #f0fdf4; }}
+tr.wrong td {{ background: #fef2f2; }}
+tr.pending td {{ background: #fffbeb; }}
+.footer {{ text-align: center; font-size: 10px; color: #9ca3af; margin-top: 24px; }}
+@media print {{ body {{ print-color-adjust: exact; -webkit-print-color-adjust: exact; }} }}
+</style></head><body>
+<div class="header">
+  <div class="org">Masterly Air Academy</div>
+  <h1>{escape(exam.title)}</h1>
+  <div class="subtitle">Final Examination — Individual Student Report</div>
+</div>
+<div class="meta">
+  <div><span class="k">Student:</span> <span class="v">{escape(s.full_name)}</span></div>
+  <div><span class="k">Student #:</span> <span class="v">{escape(s.student_number or '—')}</span></div>
+  <div><span class="k">Subject:</span> <span class="v">{escape(exam.subject.title_en)}</span></div>
+  <div><span class="k">Access Code:</span> <span class="v">{escape(assignment.access_code)}</span></div>
+  <div><span class="k">Status:</span> <span class="v">{status_label} {flag_badge}</span></div>
+  <div><span class="k">Violations:</span> <span class="v">{violations_count}</span></div>
+  <div><span class="k">Started:</span> <span class="v">{assignment.started_at.strftime('%d/%m/%Y %H:%M') if assignment.started_at else '—'}</span></div>
+  <div><span class="k">Submitted:</span> <span class="v">{assignment.submitted_at.strftime('%d/%m/%Y %H:%M') if assignment.submitted_at else '—'}</span></div>
+</div>
+<h2>Summary</h2>
+<div class="summary">
+  <div class="stat"><div class="n">{score_html}</div><div class="l">Final Score</div></div>
+  <div class="stat"><div class="n">{round(earned_points, 2)}/{round(max_points, 2)}</div><div class="l">Points Earned</div></div>
+  <div class="stat"><div class="n">{auto_correct}/{auto_total}</div><div class="l">Auto-graded</div></div>
+  <div class="stat"><div class="n">{len(questions)}</div><div class="l">Questions</div></div>
+</div>
+<h2>Answer Sheet</h2>
+{('<table class="tbl"><thead><tr><th>#</th><th>Question</th><th>Student Answer</th><th>Correct Answer</th><th>Result</th><th>Points</th></tr></thead><tbody>' + rows + '</tbody></table>') if rows else '<p class="meta">No questions on this assignment.</p>'}
+<div class="footer">Masterly Air Academy — Student Final Exam Report — Generated {timezone.now().strftime('%d/%m/%Y %H:%M')}</div>
+</body></html>'''
+
+        resp = HttpResponse(html, content_type='text/html; charset=utf-8')
+        resp['Content-Disposition'] = f'inline; filename="final-exam-student-report-{assignment.access_code}.html"'
+        return resp
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -549,45 +700,8 @@ def exam_submit(request):
     answers = submit_serializer.validated_data['answers']
     violations = submit_serializer.validated_data.get('violations') or []
 
-    # Server-side anti-cheat validation: drop forged/out-of-window entries and
-    # compute the serious count independently of the client's own tally.
-    from .services import sanitize_violations
     submitted_at = timezone.now()
-    violations, serious_count, suspicious = sanitize_violations(
-        violations, assignment.started_at, submitted_at
-    )
-
-    # Auto-grade MCQ/SCQ/TrueFalse by points; essays postponed for manual grading.
-    questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
-    qmap = {str(q.id): q for q in questions}
-    valid_answers = {k: v for k, v in answers.items() if k in qmap}
-
-    assignment.answers = valid_answers
-    total_auto = sum(1 for q in qmap.values() if q.question_type in ('mcq', 'scq', 'true_false'))
-    auto_correct = 0
-    for qid, answer in valid_answers.items():
-        q = qmap[qid]
-        if q.question_type in ('mcq', 'scq', 'true_false'):
-            if str(answer).strip().lower() == str(q.correct_answer).strip().lower():
-                auto_correct += 1
-
-    max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
-    # Essays earn nothing until manually graded — don't present a provisional score as final.
-    if essays:
-        assignment.score = None
-        assignment.essay_graded = False
-    else:
-        assignment.score = final_score_percent(max_points, earned_points)
-        assignment.essay_graded = True
-    assignment.status = 'submitted'
-    assignment.submitted_at = submitted_at
-    if violations:
-        assignment.violations = violations
-        if serious_count >= 3 or suspicious:
-            assignment.is_flagged = True
-    elif suspicious:
-        assignment.is_flagged = True
-    assignment.save()
+    auto_correct, total_auto = _finalize_submission(assignment, answers, violations, submitted_at)
 
     return Response({
         'status': 'submitted',
@@ -595,6 +709,89 @@ def exam_submit(request):
         'correct': auto_correct,
         'total_auto_graded': total_auto,
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def exam_heartbeat(request):
+    """Real-time anti-cheat persistence during an in-progress exam.
+
+    The client reports violations (and a snapshot of answers) every few seconds
+    so the trail survives a closed tab or a dropped connection. If the stored
+    serious-violation count reaches the force-submit threshold (3), or the
+    exam window expires, the exam is auto-submitted server-side using the last
+    synced answers.
+    """
+    access_data = FinalExamAccessSerializer(data={'access_code': request.data.get('access_code', '')})
+    if not access_data.is_valid():
+        return Response({'error': 'Access code required'}, status=400)
+    code = access_data.validated_data['access_code'].strip().upper()
+
+    try:
+        with transaction.atomic():
+            assignment = FinalExamAssignment.objects.select_for_update().select_related('exam').get(access_code=code)
+    except FinalExamAssignment.DoesNotExist:
+        return Response({'error': 'Invalid access code'}, status=400)
+
+    def state():
+        return Response({
+            'status': assignment.status,
+            'score': float(assignment.score) if assignment.score is not None else None,
+            'violations': assignment.violations or [],
+            'is_flagged': assignment.is_flagged,
+            'auto_submitted': False,
+        })
+
+    if assignment.status == 'submitted':
+        return state()
+    if assignment.status != 'in_progress' or not assignment.started_at:
+        return state()
+
+    incoming = request.data.get('violations') or []
+    if not isinstance(incoming, list):
+        return Response({'error': 'violations must be a list'}, status=400)
+
+    from .services import sanitize_violations
+    now = timezone.now()
+
+    # Merge incoming violations with what is already stored (dedupe by type+timestamp).
+    stored = list(assignment.violations or [])
+    existing_keys = {(v.get('type'), v.get('at')) for v in stored if isinstance(v, dict)}
+    for v in incoming:
+        if isinstance(v, dict) and (v.get('type'), v.get('at')) not in existing_keys:
+            existing_keys.add((v.get('type'), v.get('at')))
+            stored.append({'type': v.get('type'), 'at': v.get('at')})
+
+    merged, serious_total, suspicious = sanitize_violations(stored, assignment.started_at, now)
+
+    # Keep the latest answers on the server so a force-submit grades current state.
+    incoming_answers = request.data.get('answers')
+    if isinstance(incoming_answers, dict) and incoming_answers:
+        assignment.answers = {
+            **(assignment.answers or {}),
+            **{k: v for k, v in incoming_answers.items()},
+        }
+        assignment.save(update_fields=['answers'])
+
+    timed_out = (now - assignment.started_at) > timedelta(minutes=assignment.exam.duration_minutes)
+
+    if serious_total >= 3 or suspicious or timed_out:
+        # Force-submit: too many serious violations (or the window expired).
+        stored.append({'type': 'auto_submit', 'at': now.isoformat()})
+        _finalize_submission(assignment, assignment.answers, stored, now)
+        return Response({
+            'status': assignment.status,
+            'score': float(assignment.score) if assignment.score is not None else None,
+            'violations': assignment.violations or [],
+            'is_flagged': assignment.is_flagged,
+            'auto_submitted': True,
+        })
+
+    assignment.violations = merged
+    if serious_total >= 2:
+        assignment.is_flagged = True
+    assignment.save(update_fields=['violations', 'is_flagged'])
+    return state()
 
 
 @api_view(['GET'])

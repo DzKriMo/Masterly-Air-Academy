@@ -35,11 +35,14 @@ export default function ExamPortalPage() {
   // ── Anti-cheat ──────────────────────────────────────────────
   const violationsRef = useRef<{ type: string; at: string; detail?: string }[]>([]);
   const countRef = useRef(0);
+  const seriousCountRef = useRef(0);
   const autoSubmitLockRef = useRef(false);
   const answersRef = useRef<Record<string, string>>({});
   const codeRef = useRef("");
-  const MAX_VIOLATIONS = 4;
-  const GRACE_MS = 15000; // ignore normal startup / fullscreen transition for 15s
+  const SERIOUS_TYPES = new Set(["tab_switch", "window_blur", "fullscreen_exit", "copy_paste", "right_click", "devtools"]);
+  const FLAG_THRESHOLD = 2;   // 2 serious violations -> flagged for review
+  const SUBMIT_THRESHOLD = 3; // 3 serious violations -> forced auto-submit
+  const GRACE_MS = 5000; // ignore normal startup / fullscreen transition for 5s
   const mountedAtRef = useRef(0);
   const [warning, setWarning] = useState<{ type: string; message: string } | null>(null);
 
@@ -59,7 +62,10 @@ export default function ExamPortalPage() {
         setAccessCode(saved.accessCode);
         setAnswers(saved.answers || {});
         violationsRef.current = saved.violations || [];
-        if (saved.violations) countRef.current = saved.violations.length;
+        if (saved.violations) {
+          countRef.current = saved.violations.length;
+          seriousCountRef.current = saved.violations.filter((v: any) => SERIOUS_TYPES.has(v?.type)).length;
+        }
         setStep("exam");
         const startedAt = saved.exam.started_at ? new Date(saved.exam.started_at).getTime() : Date.now();
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
@@ -81,10 +87,11 @@ export default function ExamPortalPage() {
   }, [exam, accessCode, answers, step, sessionKey]);
 
   const recordViolation = useCallback((type: string, detail?: string): number => {
-    if (Date.now() - mountedAtRef.current < GRACE_MS) return countRef.current;
+    if (Date.now() - mountedAtRef.current < GRACE_MS) return seriousCountRef.current;
     violationsRef.current.push({ type, at: new Date().toISOString(), detail });
     countRef.current += 1;
-    return countRef.current;
+    if (SERIOUS_TYPES.has(type)) seriousCountRef.current += 1;
+    return seriousCountRef.current;
   }, []);
 
   const doSubmit = useCallback(async (withViolations: boolean, force = false) => {
@@ -96,11 +103,33 @@ export default function ExamPortalPage() {
       const data = await api.post("/exam/submit/", body);
       try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
       return { ok: true, data };
-    } catch {
+    } catch (err: any) {
+      if (typeof err?.message === "string" && err.message.toLowerCase().includes("already submitted")) {
+        try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
+        return { ok: true, data: { status: "submitted", auto_submitted: true } };
+      }
       return { ok: false, data: null };
     } finally {
       autoSubmitLockRef.current = false;
     }
+  }, [hash]);
+
+  // Real-time server persistence: report violations + answers so a closed tab
+  // or dropped connection cannot erase the anti-cheat trail.
+  const sendHeartbeat = useCallback(async () => {
+    if (!codeRef.current.trim() || autoSubmitLockRef.current) return;
+    try {
+      const res = await api.post<any>("/exam/heartbeat/", {
+        access_code: codeRef.current.trim(),
+        violations: violationsRef.current,
+        answers: answersRef.current,
+      });
+      if (res?.status === "submitted" && !autoSubmitLockRef.current) {
+        try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
+        setResult({ score: res.score ?? null, correct: 0, total_auto_graded: 0, auto_submitted: true });
+        setStep("done");
+      }
+    } catch {}
   }, [hash]);
 
   const forceSubmit = useCallback(async (reason: string) => {
@@ -134,7 +163,10 @@ export default function ExamPortalPage() {
     const onBlock = (e: Event) => {
       e.preventDefault();
       if (e.type === "copy" || e.type === "paste" || e.type === "cut") {
-        recordViolation("copy_paste");
+        const n = recordViolation("copy_paste");
+        sendHeartbeat();
+        if (n >= SUBMIT_THRESHOLD) forceSubmit(t("examPortal.ruleTools"));
+        else if (n >= FLAG_THRESHOLD) setWarning({ type: "copy_paste", message: t("examPortal.devtoolsDetected") });
       }
     };
     blockEvents.forEach(ev => document.addEventListener(ev, onBlock));
@@ -142,14 +174,16 @@ export default function ExamPortalPage() {
     const onVisibility = () => {
       if (document.hidden) {
         const n = recordViolation("tab_switch");
-        setWarning({ type: "tab_switch", message: t("examPortal.tabSwitchWarning").replace("{n}", String(n)) });
-        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleTabs"));
+        sendHeartbeat();
+        if (n >= SUBMIT_THRESHOLD) forceSubmit(t("examPortal.ruleTabs"));
+        else if (n >= FLAG_THRESHOLD) setWarning({ type: "tab_switch", message: t("examPortal.tabSwitchWarning").replace("{n}", String(n)) });
       }
     };
     const onBlur = () => {
       const n = recordViolation("window_blur");
-      setWarning({ type: "window_blur", message: t("examPortal.focusLost").replace("{n}", String(n)) });
-      if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleMonitored"));
+      sendHeartbeat();
+      if (n >= SUBMIT_THRESHOLD) forceSubmit(t("examPortal.ruleMonitored"));
+      else if (n >= FLAG_THRESHOLD) setWarning({ type: "window_blur", message: t("examPortal.focusLost").replace("{n}", String(n)) });
     };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
@@ -159,8 +193,9 @@ export default function ExamPortalPage() {
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
       if (widthThreshold || heightThreshold) {
         const n = recordViolation("devtools");
-        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleTools"));
-        else setWarning({ type: "devtools", message: t("examPortal.devtoolsDetected") });
+        sendHeartbeat();
+        if (n >= SUBMIT_THRESHOLD) forceSubmit(t("examPortal.ruleTools"));
+        else if (n >= FLAG_THRESHOLD) setWarning({ type: "devtools", message: t("examPortal.devtoolsDetected") });
       }
     };
     const devInterval = setInterval(detectDevtools, 2000);
@@ -169,6 +204,16 @@ export default function ExamPortalPage() {
       if (Date.now() - mountedAtRef.current >= GRACE_MS) {
         e.preventDefault();
         e.returnValue = "";
+        // Fire-and-forget heartbeat so the last violations survive tab close.
+        try {
+          const url = `${api.getBaseUrl() || ""}/api/exam/heartbeat/`;
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ access_code: codeRef.current.trim(), violations: violationsRef.current, answers: answersRef.current }),
+            keepalive: true,
+          });
+        } catch {}
       }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
@@ -186,12 +231,17 @@ export default function ExamPortalPage() {
       // Only act on a real exit, after the grace period (ignores mount transition)
       if (!document.fullscreenElement && Date.now() - mountedAtRef.current >= GRACE_MS) {
         const n = recordViolation("fullscreen_exit");
-        setWarning({ type: "fullscreen_exit", message: t("examPortal.fullscreenExited").replace("{n}", String(n)) });
-        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleFullscreen"));
-        else enterFullscreen();
+        sendHeartbeat();
+        if (n >= SUBMIT_THRESHOLD) forceSubmit(t("examPortal.ruleFullscreen"));
+        else {
+          setWarning({ type: "fullscreen_exit", message: t("examPortal.fullscreenExited").replace("{n}", String(n)) });
+          enterFullscreen();
+        }
       }
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
+
+    const heartbeatInterval = setInterval(sendHeartbeat, 10000);
 
     return () => {
       blockEvents.forEach(ev => document.removeEventListener(ev, onBlock));
@@ -200,11 +250,12 @@ export default function ExamPortalPage() {
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       clearInterval(devInterval);
+      clearInterval(heartbeatInterval);
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [step, recordViolation, forceSubmit]);
+  }, [step, recordViolation, forceSubmit, sendHeartbeat]);
 
   const handleAccess = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -302,7 +353,7 @@ export default function ExamPortalPage() {
               <li>{t("examPortal.ruleFullscreen")}</li>
               <li>{t("examPortal.ruleTabs")}</li>
               <li>{t("examPortal.ruleTools")}</li>
-              <li>{t("examPortal.ruleRepeated").replace("{n}", String(MAX_VIOLATIONS))}</li>
+              <li>{t("examPortal.ruleRepeated").replace("{n}", String(SUBMIT_THRESHOLD))}</li>
               <li>{t("examPortal.ruleNoExpire")}</li>
             </ul>
           </div>
