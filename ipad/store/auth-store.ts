@@ -6,6 +6,8 @@ import {
   removeUser,
   clearTokens,
   clearAll,
+  getAccessToken,
+  getRefreshToken,
 } from '@/lib/storage';
 
 interface AuthState {
@@ -44,11 +46,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   hydrate: async () => {
-    const user = await getUser();
-    if (user) {
+    const [user, accessToken, refreshToken] = await Promise.all([
+      getUser(),
+      getAccessToken(),
+      getRefreshToken(),
+    ]);
+    if (user && accessToken && refreshToken) {
       set({ user, isAuthenticated: true, isLoading: false });
     } else {
-      set({ isLoading: false });
+      if (user) await removeUser();
+      if (accessToken || refreshToken) await clearTokens();
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 

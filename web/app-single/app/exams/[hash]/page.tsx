@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { useTranslation } from "@/lib/use-translation";
+import { api } from "@/lib/api";
 
 interface QuestionData {
   id: string; question_text: string; question_type: string;
@@ -18,6 +20,7 @@ interface ExamState {
 export default function ExamPortalPage() {
   const params = useParams();
   const hash = params?.hash as string || "";
+  const { t } = useTranslation();
 
   const [step, setStep] = useState<"code" | "warn" | "exam" | "done">("code");
   const [accessCode, setAccessCode] = useState("");
@@ -90,15 +93,9 @@ export default function ExamPortalPage() {
     try {
       const body: Record<string, any> = { access_code: codeRef.current.trim(), answers: answersRef.current };
       if (withViolations) body.violations = violationsRef.current;
-      const res = await fetch("/api/exam/submit/", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
-      }
-      return { ok: res.ok, data: (data?.data ?? data) };
+      const data = await api.post("/exam/submit/", body);
+      try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
+      return { ok: true, data };
     } catch {
       return { ok: false, data: null };
     } finally {
@@ -118,7 +115,7 @@ export default function ExamPortalPage() {
       autoSubmitLockRef.current = false;
       setResult({ score: null, correct: 0, total_auto_graded: 0, auto_submitted: true });
       setStep("code");
-      setError("Submit failed — check your connection and try again.");
+      setError(t("examPortal.submitFailedConnection"));
     }
   }, [doSubmit]);
 
@@ -145,14 +142,14 @@ export default function ExamPortalPage() {
     const onVisibility = () => {
       if (document.hidden) {
         const n = recordViolation("tab_switch");
-        setWarning({ type: "tab_switch", message: `Tab switch detected (${n}). Repeated violations will auto-submit your exam.` });
-        if (n >= MAX_VIOLATIONS) forceSubmit("Too many tab switches");
+        setWarning({ type: "tab_switch", message: t("examPortal.tabSwitchWarning").replace("{n}", String(n)) });
+        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleTabs"));
       }
     };
     const onBlur = () => {
       const n = recordViolation("window_blur");
-      setWarning({ type: "window_blur", message: `Focus lost (${n}). Stay on this tab during the exam.` });
-      if (n >= MAX_VIOLATIONS) forceSubmit("Repeated focus loss");
+      setWarning({ type: "window_blur", message: t("examPortal.focusLost").replace("{n}", String(n)) });
+      if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleMonitored"));
     };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
@@ -162,8 +159,8 @@ export default function ExamPortalPage() {
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
       if (widthThreshold || heightThreshold) {
         const n = recordViolation("devtools");
-        if (n >= MAX_VIOLATIONS) forceSubmit("Repeated DevTools detection");
-        else setWarning({ type: "devtools", message: "DevTools detected — this is recorded." });
+        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleTools"));
+        else setWarning({ type: "devtools", message: t("examPortal.devtoolsDetected") });
       }
     };
     const devInterval = setInterval(detectDevtools, 2000);
@@ -189,8 +186,8 @@ export default function ExamPortalPage() {
       // Only act on a real exit, after the grace period (ignores mount transition)
       if (!document.fullscreenElement && Date.now() - mountedAtRef.current >= GRACE_MS) {
         const n = recordViolation("fullscreen_exit");
-        setWarning({ type: "fullscreen_exit", message: `Fullscreen exited (${n}). Return to fullscreen or the exam may auto-submit.` });
-        if (n >= MAX_VIOLATIONS) forceSubmit("Exited fullscreen repeatedly");
+        setWarning({ type: "fullscreen_exit", message: t("examPortal.fullscreenExited").replace("{n}", String(n)) });
+        if (n >= MAX_VIOLATIONS) forceSubmit(t("examPortal.ruleFullscreen"));
         else enterFullscreen();
       }
     };
@@ -214,15 +211,9 @@ export default function ExamPortalPage() {
     if (!accessCode.trim()) return;
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/exam/access/", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_code: accessCode.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid code");
-      const payload = data.data ?? data;
+      const payload = await api.post("/exam/access/", { access_code: accessCode.trim() });
       if (!payload || !payload.questions || !payload.duration_minutes) {
-        throw new Error("Invalid exam data received");
+        throw new Error(t("examPortal.invalidData"));
       }
       setExam(payload);
       setStep("warn");
@@ -250,18 +241,18 @@ export default function ExamPortalPage() {
   // Auto-submit when the timer expires (00:00)
   useEffect(() => {
     if (step === "exam" && timeLeft <= 0 && !autoSubmitLockRef.current && exam) {
-      setWarning({ type: "expired", message: "Time is up — submitting your exam now." });
-      forceSubmit("Time expired");
+      setWarning({ type: "expired", message: t("examPortal.timeUpSubmitting") });
+      forceSubmit(t("examPortal.timeUp"));
     }
   }, [step, timeLeft, forceSubmit, exam]);
 
   const handleSubmit = async () => {
     if (submitting) return;
-    if (timeLeft <= 0) { setError("Time is up!"); return; }
-    if (!confirm("Submit your exam? You cannot change answers after submission.")) return;
+    if (timeLeft <= 0) { setError(t("examPortal.timeUp")); return; }
+    if (!confirm(t("examPortal.submitConfirm"))) return;
     setSubmitting(true); setError("");
     const { ok, data } = await doSubmit(true);
-    if (!ok) { setError(data?.error || "Submit failed"); setSubmitting(false); return; }
+    if (!ok) { setError(data?.error || t("examPortal.submitFailed")); setSubmitting(false); return; }
     setResult(data);
     setStep("done");
     setSubmitting(false);
@@ -276,20 +267,20 @@ export default function ExamPortalPage() {
     return (
       <div className="min-h-screen bg-navy-900 flex items-center justify-center p-6">
         <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Exam Submitted</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">{t("examPortal.submitted")}</h1>
           {result?.auto_submitted && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
-              <p className="text-red-400 font-bold text-xl">Automatically Submitted</p>
-              <p className="text-sm text-gray-400">The exam was auto-submitted due to repeated rule violations.</p>
+              <p className="text-red-400 font-bold text-xl">{t("examPortal.autoSubmitted")}</p>
+              <p className="text-sm text-gray-400">{t("examPortal.autoSubmittedDesc")}</p>
             </div>
           )}
           {result && !result.auto_submitted && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
               <p className="text-green-400 font-bold text-xl">{result.score}%</p>
-              <p className="text-sm text-gray-400">{result.correct}/{result.total_auto_graded} auto-graded correct</p>
+              <p className="text-sm text-gray-400">{result.correct}/{result.total_auto_graded} {t("examPortal.autoGradedCorrect")}</p>
             </div>
           )}
-          <p className="text-gray-400 text-sm">Your answers have been recorded. You may now close this page.</p>
+          <p className="text-gray-400 text-sm">{t("examPortal.recorded")}</p>
         </div>
       </div>
     );
@@ -301,22 +292,22 @@ export default function ExamPortalPage() {
         <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-lg w-full">
           <div className="text-center mb-6">
             <Image src="/logo.png" alt="MAA" width={90} height={90} className="mx-auto" />
-            <h1 className="text-xl font-bold text-white mt-3">Exam Guidelines</h1>
+            <h1 className="text-xl font-bold text-white mt-3">{t("examPortal.guidelines")}</h1>
             <p className="text-sm text-gray-400 mt-1">{exam.exam_title}</p>
           </div>
           <div className="space-y-3 mb-6">
-            <p className="text-sm text-gray-300">By beginning this exam you agree to the following rules:</p>
+            <p className="text-sm text-gray-300">{t("examPortal.agreeRules")}</p>
             <ul className="space-y-2 text-sm text-gray-300 list-disc pl-5">
-              <li>You are monitored while the exam is open.</li>
-              <li>The exam runs in fullscreen. Leaving fullscreen is logged.</li>
-              <li>Switching tabs or windows is logged and treated as a violation.</li>
-              <li>Copying, pasting or opening developer tools is prohibited.</li>
-              <li>Repeated violations ({MAX_VIOLATIONS}+) will automatically submit your exam.</li>
-              <li>Your access will NOT expire due to inactivity while taking the exam.</li>
+              <li>{t("examPortal.ruleMonitored")}</li>
+              <li>{t("examPortal.ruleFullscreen")}</li>
+              <li>{t("examPortal.ruleTabs")}</li>
+              <li>{t("examPortal.ruleTools")}</li>
+              <li>{t("examPortal.ruleRepeated").replace("{n}", String(MAX_VIOLATIONS))}</li>
+              <li>{t("examPortal.ruleNoExpire")}</li>
             </ul>
           </div>
           <button onClick={beginExam} disabled={loading} className="w-full py-3 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg">
-            I understand — Begin Exam
+            {t("examPortal.beginExam")}
           </button>
         </div>
       </div>
@@ -340,7 +331,7 @@ export default function ExamPortalPage() {
             {formatTime(timeLeft)}
           </div>
           <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg text-sm">
-            {submitting ? "..." : "Submit"}
+            {submitting ? "..." : t("examPortal.submit")}
           </button>
         </div>
 
@@ -369,18 +360,18 @@ export default function ExamPortalPage() {
                       answers[q.id] === v ? "border-gold-500 bg-gold-500/10" : "border-navy-600 hover:border-navy-500"
                     }`}>
                       <input type="radio" name={q.id} value={v} checked={answers[q.id] === v} onChange={e => setAnswers({...answers, [q.id]: e.target.value })} className="text-gold-500" />
-                      <span className="text-sm text-gray-300">{v}</span>
+                      <span className="text-sm text-gray-300">{v === "True" ? t("examPortal.true") : t("examPortal.false")}</span>
                     </label>
                   ))}
                 </div>
               ) : (
-                <textarea value={answers[q.id] || ""} onChange={e => setAnswers({...answers, [q.id]: e.target.value })} rows={4} className="w-full ml-4 px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder="Type your answer..." />
+                <textarea value={answers[q.id] || ""} onChange={e => setAnswers({...answers, [q.id]: e.target.value })} rows={4} className="w-full ml-4 px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" placeholder={t("examPortal.typeAnswer")} />
               )}
             </div>
           ))}
 
           {exam.questions.length === 0 && (
-            <p className="text-center text-gray-500 py-10">No questions loaded.</p>
+            <p className="text-center text-gray-500 py-10">{t("examPortal.noQuestions")}</p>
           )}
         </main>
       </div>
@@ -392,14 +383,14 @@ export default function ExamPortalPage() {
       <div className="bg-navy-800 border border-navy-700 rounded-2xl p-8 max-w-md w-full">
         <div className="text-center mb-8">
           <Image src="/logo.png" alt="MAA" width={100} height={100} className="mx-auto" />
-          <h1 className="text-xl font-bold text-white mt-4">Final Exam Portal</h1>
-          <p className="text-sm text-gray-400 mt-1">Enter the access code provided by the exam supervisor</p>
+          <h1 className="text-xl font-bold text-white mt-4">{t("examPortal.portalTitle")}</h1>
+          <p className="text-sm text-gray-400 mt-1">{t("examPortal.enterCode")}</p>
         </div>
         <form onSubmit={handleAccess} className="space-y-4">
-          <input type="text" value={accessCode} onChange={e => setAccessCode(e.target.value.toUpperCase())} placeholder="Access code" className="w-full px-4 py-3 bg-navy-900 border border-navy-600 rounded-lg text-white text-center text-lg font-mono tracking-widest placeholder-gray-600 focus:border-gold-500 focus:outline-none" autoFocus />
+          <input type="text" value={accessCode} onChange={e => setAccessCode(e.target.value.toUpperCase())} placeholder={t("examPortal.accessCodePlaceholder")} className="w-full px-4 py-3 bg-navy-900 border border-navy-600 rounded-lg text-white text-center text-lg font-mono tracking-widest placeholder-gray-600 focus:border-gold-500 focus:outline-none" autoFocus />
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
           <button type="submit" disabled={loading || !accessCode.trim()} className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-bold rounded-lg">
-            {loading ? "Verifying..." : "Start Exam"}
+            {loading ? t("examPortal.verifying") : t("examPortal.startExam")}
           </button>
         </form>
       </div>

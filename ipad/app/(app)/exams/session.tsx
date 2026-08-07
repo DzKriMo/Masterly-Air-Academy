@@ -8,14 +8,17 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Send, Grid3X3 } from 'lucide-react-native';
 import { ExamsService } from '@/services/exams.service';
 import { Timer } from '@/components/exams/Timer';
 import { QuestionCard } from '@/components/exams/QuestionCard';
 import { AntiCheatOverlay } from '@/components/exams/AntiCheatOverlay';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 import { colors } from '@/constants/colors';
+import { isValidUuid } from '@/utils/validators';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Question } from '@/types/models';
 
 interface ExamStartData {
@@ -30,6 +33,8 @@ interface ExamStartData {
 export default function ExamSessionScreen() {
   const { examId } = useLocalSearchParams<{ examId: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
+  const hasValidId = typeof examId === 'string' && isValidUuid(examId);
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -39,58 +44,67 @@ export default function ExamSessionScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const violationsRef = useRef(0);
 
-  const { data: sessionData, isLoading } = useQuery({
-    queryKey: ['examSession', examId],
-    queryFn: async (): Promise<ExamStartData> => {
-      const res = await ExamsService.start(examId!);
+  const startMutation = useMutation<ExamStartData, unknown, string>({
+    mutationFn: async (id: string): Promise<ExamStartData> => {
+      const res = await ExamsService.start(id);
       return res.data as ExamStartData;
     },
-    enabled: !!examId,
   });
+
+  useEffect(() => {
+    if (hasValidId && !startMutation.isSuccess && !startMutation.isPending) {
+      startMutation.mutate(examId as string);
+    }
+  }, [hasValidId, examId, startMutation]);
+
+  const sessionData = startMutation.data;
+  const attemptId = sessionData?.attempt_id;
 
   const submitMutation = useMutation({
     mutationFn: (answersPayload: Record<string, string>) =>
-      ExamsService.submit(examId!, sessionData!.attempt_id, answersPayload),
+      ExamsService.submit(examId as string, attemptId as string, answersPayload),
   });
 
   const questions = sessionData?.questions ?? [];
   const totalSeconds = (sessionData?.duration ?? 60) * 60;
   const question = questions[currentQuestion];
   const answeredCount = Object.keys(answers).length;
-  const unansweredCount = questions.length - answeredCount;
 
   const handleTimeUp = useCallback(() => {
     handleSubmit(true);
-  }, [answers, questions, examId, sessionData]);
+  }, [answers, questions, examId, sessionData, attemptId]);
 
-  const handleViolation = useCallback((type: string) => {
-    violationsRef.current += 1;
-    setViolations(violationsRef.current);
+  const handleViolation = useCallback(
+    (type: string) => {
+      violationsRef.current += 1;
+      setViolations(violationsRef.current);
 
-    if (violationsRef.current >= 3) {
-      Alert.alert(
-        'Too Many Violations',
-        'You have exceeded the allowed number of violations. Your exam will be submitted now.',
-        [{ text: 'OK', onPress: () => handleSubmit(true) }],
-      );
-    }
-  }, [answers, questions, examId, sessionData]);
+      if (violationsRef.current >= 3) {
+        Alert.alert(
+          t('exams.tooManyViolations'),
+          t('exams.tooManyViolationsMessage'),
+          [{ text: t('common.ok'), onPress: () => handleSubmit(true) }],
+        );
+      }
+    },
+    [answers, questions, examId, sessionData, attemptId, t],
+  );
 
   const handleSubmit = useCallback(
     async (autoSubmit = false) => {
-      if (isSubmitting || !sessionData) return;
+      if (isSubmitting || !sessionData || !attemptId) return;
 
       if (!autoSubmit) {
         const unanswered = questions.length - Object.keys(answers).length;
         const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
-            'Submit Exam',
+            t('exams.submitExam'),
             unanswered > 0
-              ? `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Submit anyway?`
-              : 'Are you sure you want to submit?',
+              ? t('exams.unansweredConfirm', { count: unanswered })
+              : t('exams.confirmSubmit'),
             [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Submit', onPress: () => resolve(true) },
+              { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+              { text: t('exams.submitExam'), onPress: () => resolve(true) },
             ],
           );
         });
@@ -110,11 +124,11 @@ export default function ExamSessionScreen() {
           params: { score: String(score), total: String(total), passed: String(passed) },
         });
       } catch {
-        Alert.alert('Error', 'Failed to submit exam. Please try again.');
+        Alert.alert(t('common.error'), t('exams.submitFailed'));
         setIsSubmitting(false);
       }
     },
-    [answers, questions, examId, isSubmitting, submitMutation, router, sessionData],
+    [answers, questions, examId, isSubmitting, submitMutation, router, sessionData, attemptId, t],
   );
 
   const handleSelectAnswer = useCallback(
@@ -135,10 +149,24 @@ export default function ExamSessionScreen() {
     [questions.length],
   );
 
-  if (isLoading || !question) {
+  if (startMutation.isError || (!hasValidId && !startMutation.isPending)) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading exam...</Text>
+        <ErrorState
+          message={t('exams.startFailed')}
+          onRetry={() => {
+            if (hasValidId) startMutation.mutate(examId as string);
+            else router.back();
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (!sessionData || !question) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>{t('exams.loading')}</Text>
       </View>
     );
   }
@@ -159,7 +187,7 @@ export default function ExamSessionScreen() {
         </Text>
 
         <Button
-          title="Submit"
+          title={t('exams.submitExam')}
           onPress={() => handleSubmit(false)}
           variant="primary"
           size="sm"
@@ -182,7 +210,7 @@ export default function ExamSessionScreen() {
 
       <View style={styles.bottomBar}>
         <Button
-          title="Prev"
+          title={t('exams.previous')}
           onPress={() => goToQuestion(currentQuestion - 1)}
           variant="secondary"
           size="sm"
@@ -201,7 +229,7 @@ export default function ExamSessionScreen() {
         </Pressable>
 
         <Button
-          title="Next"
+          title={t('exams.next')}
           onPress={() => goToQuestion(currentQuestion + 1)}
           variant="secondary"
           size="sm"
@@ -213,7 +241,7 @@ export default function ExamSessionScreen() {
       {showGrid && (
         <View style={styles.gridOverlay}>
           <View style={styles.gridContainer}>
-            <Text style={styles.gridTitle}>Questions</Text>
+            <Text style={styles.gridTitle}>{t('exams.questions')}</Text>
             <View style={styles.grid}>
               {questions.map((q, index) => {
                 const isAnswered = !!answers[q.id];
@@ -245,7 +273,7 @@ export default function ExamSessionScreen() {
               onPress={() => setShowGrid(false)}
               style={styles.gridClose}
             >
-              <Text style={styles.gridCloseText}>Close</Text>
+              <Text style={styles.gridCloseText}>{t('common.close')}</Text>
             </Pressable>
           </View>
         </View>
@@ -254,7 +282,7 @@ export default function ExamSessionScreen() {
       {violations > 0 && violations < 3 && (
         <View style={styles.violationBanner}>
           <Text style={styles.violationText}>
-            Warning: Violation {violations}/3 detected
+            {t('exams.violationWarning', { count: violations })}
           </Text>
         </View>
       )}

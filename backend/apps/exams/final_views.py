@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.utils.html import escape
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -219,12 +220,12 @@ class FinalExamViewSet(viewsets.ModelViewSet):
             cards += f'''
             <div class="card">
                 <div class="card-header">MASTERLY AIR ACADEMY</div>
-                <div class="card-title">{exam.title}</div>
+                <div class="card-title">{escape(exam.title)}</div>
                 <div class="card-fields">
-                    <div class="field"><span class="label">Student</span><span class="value">{s.full_name}</span></div>
-                    <div class="field"><span class="label">Student #</span><span class="value">{s.student_number or '—'}</span></div>
-                    <div class="field"><span class="label">Access Code</span><span class="value code">{a.access_code}</span></div>
-                    <div class="field"><span class="label">Portal</span><span class="value">/exams/{exam.hash}</span></div>
+                    <div class="field"><span class="label">Student</span><span class="value">{escape(s.full_name)}</span></div>
+                    <div class="field"><span class="label">Student #</span><span class="value">{escape(s.student_number or '—')}</span></div>
+                    <div class="field"><span class="label">Access Code</span><span class="value code">{escape(a.access_code)}</span></div>
+                    <div class="field"><span class="label">Portal</span><span class="value">/exams/{escape(exam.hash)}</span></div>
                 </div>
             </div>
             '''
@@ -480,9 +481,10 @@ def exam_access(request):
     code = serializer.validated_data['access_code'].strip().upper()
 
     try:
-        assignment = FinalExamAssignment.objects.select_for_update().select_related('exam', 'student').get(access_code=code)
+        with transaction.atomic():
+            assignment = FinalExamAssignment.objects.select_for_update().select_related('exam', 'student').get(access_code=code)
     except FinalExamAssignment.DoesNotExist:
-        return Response({'error': 'Invalid access code'}, status=404)
+        return Response({'error': 'Invalid access code'}, status=400)
 
     if assignment.status == 'submitted':
         return Response({'error': 'Exam already submitted', 'score': float(assignment.score) if assignment.score else None}, status=400)
@@ -526,9 +528,10 @@ def exam_submit(request):
     code = access_data.validated_data['access_code'].strip().upper()
 
     try:
-        assignment = FinalExamAssignment.objects.select_related('exam').get(access_code=code)
+        with transaction.atomic():
+            assignment = FinalExamAssignment.objects.select_for_update().select_related('exam').get(access_code=code)
     except FinalExamAssignment.DoesNotExist:
-        return Response({'error': 'Invalid access code'}, status=404)
+        return Response({'error': 'Invalid access code'}, status=400)
 
     if assignment.status == 'submitted':
         return Response({'error': 'Already submitted'}, status=400)
@@ -546,6 +549,14 @@ def exam_submit(request):
     answers = submit_serializer.validated_data['answers']
     violations = submit_serializer.validated_data.get('violations') or []
 
+    # Server-side anti-cheat validation: drop forged/out-of-window entries and
+    # compute the serious count independently of the client's own tally.
+    from .services import sanitize_violations
+    submitted_at = timezone.now()
+    violations, serious_count, suspicious = sanitize_violations(
+        violations, assignment.started_at, submitted_at
+    )
+
     # Auto-grade MCQ/SCQ/TrueFalse by points; essays postponed for manual grading.
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
     qmap = {str(q.id): q for q in questions}
@@ -560,24 +571,27 @@ def exam_submit(request):
             if str(answer).strip().lower() == str(q.correct_answer).strip().lower():
                 auto_correct += 1
 
-    max_points, earned_points, _, _, _ = compute_assignment_points(assignment)
-    score = final_score_percent(max_points, earned_points)
-
-    assignment.score = score
+    max_points, earned_points, _, _, essays = compute_assignment_points(assignment)
+    # Essays earn nothing until manually graded — don't present a provisional score as final.
+    if essays:
+        assignment.score = None
+        assignment.essay_graded = False
+    else:
+        assignment.score = final_score_percent(max_points, earned_points)
+        assignment.essay_graded = True
     assignment.status = 'submitted'
-    assignment.submitted_at = timezone.now()
+    assignment.submitted_at = submitted_at
     if violations:
         assignment.violations = violations
-        serious = [v for v in violations if v.get('type') in (
-            'tab_switch', 'window_blur', 'fullscreen_exit', 'copy_paste', 'right_click', 'devtools', 'auto_submit'
-        )]
-        if len(serious) >= 3:
+        if serious_count >= 3 or suspicious:
             assignment.is_flagged = True
+    elif suspicious:
+        assignment.is_flagged = True
     assignment.save()
 
     return Response({
         'status': 'submitted',
-        'score': score,
+        'score': assignment.score,
         'correct': auto_correct,
         'total_auto_graded': total_auto,
     })
@@ -590,7 +604,7 @@ def exam_status(request, access_code):
     try:
         assignment = FinalExamAssignment.objects.select_related('exam').get(access_code=code)
     except FinalExamAssignment.DoesNotExist:
-        return Response({'error': 'Invalid access code'}, status=404)
+        return Response({'error': 'Invalid access code'}, status=400)
 
     return Response({
         'status': assignment.status,

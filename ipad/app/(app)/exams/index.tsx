@@ -10,6 +10,7 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { colors } from '@/constants/colors';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Exam, QuizAttempt } from '@/types/models';
 
 interface ExamListResponse {
@@ -19,6 +20,7 @@ interface ExamListResponse {
 
 export default function ExamsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
@@ -77,8 +79,8 @@ export default function ExamsScreen() {
   );
 
   const sections: { title: string; data: Exam[]; type: 'available' | 'completed' }[] = [];
-  if (availableExams.length > 0) sections.push({ title: 'Available', data: availableExams, type: 'available' });
-  if (completedExams.length > 0) sections.push({ title: 'Completed', data: completedExams, type: 'completed' });
+  if (availableExams.length > 0) sections.push({ title: t('exams.available'), data: availableExams, type: 'available' });
+  if (completedExams.length > 0) sections.push({ title: t('exams.completed'), data: completedExams, type: 'completed' });
 
   const renderItem = ({ item, section }: { item: Exam; section: { type: string } }) => {
     if (section.type === 'completed') {
@@ -88,7 +90,10 @@ export default function ExamsScreen() {
         <View style={styles.cardWrapper}>
           <ExamResultCard attempt={latest} examTitle={item.title} />
           <Text style={styles.attemptsText}>
-            {examAttempts.length} / {item.max_attempts} attempts used
+            {t('exams.attemptsUsed', {
+              used: examAttempts.length,
+              max: item.max_attempts ?? 1,
+            })}
           </Text>
         </View>
       );
@@ -112,21 +117,21 @@ export default function ExamsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Exams</Text>
+        <Text style={styles.screenTitle}>{t('exams.title')}</Text>
       </View>
 
       <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Search exams..."
+        placeholder={t('exams.searchPlaceholder')}
         style={styles.search}
       />
 
       {exams.length === 0 && !isLoading ? (
         <EmptyState
           icon={<ClipboardList size={32} color={colors.text.muted} />}
-          title="No Exams Available"
-          message="There are no exams assigned to you at the moment."
+          title={t('exams.noExams')}
+          message={t('exams.noExamsMessage')}
         />
       ) : (
         <FlatList
@@ -155,8 +160,8 @@ export default function ExamsScreen() {
             search ? (
               <EmptyState
                 icon={<ClipboardList size={32} color={colors.text.muted} />}
-                title="No Results"
-                message="No exams match your search."
+                title={t('exams.noResults')}
+                message={t('exams.noResultsMessage')}
               />
             ) : null
           }

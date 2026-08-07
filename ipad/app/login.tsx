@@ -12,13 +12,18 @@ import { Plane, Mail, Lock, Fingerprint } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { colors } from '@/constants/colors';
-import { loginSchema } from '@/utils/validators';
-import { isBiometricAvailable, authenticateWithBiometrics } from '@/lib/auth';
+import { createLoginSchema } from '@/utils/validators';
+import {
+  isBiometricAvailable,
+  authenticateWithBiometrics,
+  getBiometricCredentials,
+} from '@/lib/auth';
 import { Input, Button } from '@/components/ui';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const loginSchema = React.useMemo(() => createLoginSchema(t), [t]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,14 +71,19 @@ export default function LoginScreen() {
       if (!success) return;
 
       setLoading(true);
-      // Biometric login reuses stored credentials or token
-      // The auth store hydration handles navigation
+      const credentials = await getBiometricCredentials();
+      if (!credentials) {
+        setServerError(t('auth.noBiometricCredentials'));
+        return;
+      }
+
+      await login(credentials.email, credentials.password);
     } catch {
       setServerError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, login]);
 
   return (
     <KeyboardAvoidingView

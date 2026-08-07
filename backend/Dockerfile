@@ -17,8 +17,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Build-time placeholders so `manage.py collectstatic` can import settings.
+# These are only defaults; compose/.env override them at runtime (see docker-compose.yml).
+ENV SECRET_KEY=build-only-placeholder \
+    DB_PASSWORD=build-only-placeholder \
+    MEILI_KEY=build-only-placeholder \
+    MINIO_ACCESS_KEY=build-only-placeholder \
+    MINIO_SECRET_KEY=build-only-placeholder \
+    EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+
 RUN mkdir -p staticfiles media \
-    && python manage.py collectstatic --noinput 2>/dev/null || true \
+    && python manage.py collectstatic --noinput \
     && chmod +x docker/entrypoint.sh
 
 EXPOSE 8000

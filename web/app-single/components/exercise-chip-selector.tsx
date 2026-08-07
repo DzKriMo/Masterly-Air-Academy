@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { api } from "@/lib/api";
+import { api, withFullLimit } from "@/lib/api";
+import { useTranslation } from "@/lib/use-translation";
 
 interface Exercise {
   id: string;
@@ -21,12 +22,12 @@ interface Props {
   placeholder?: string;
 }
 
-const CAT_LABELS: Record<string, string> = {
-  maneuver: "Maneuvers",
-  procedure: "Procedures",
-  emergency: "Emergencies",
-  navigation: "Navigation",
-  other: "Other",
+const CAT_KEYS: Record<string, string> = {
+  maneuver: "exercise.maneuver",
+  procedure: "exercise.procedure",
+  emergency: "exercise.emergency",
+  navigation: "exercise.navigation",
+  other: "exercise.other",
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -38,12 +39,13 @@ const CAT_COLORS: Record<string, string> = {
 };
 
 export function ExerciseChipSelector({ selected, onChange, placeholder }: Props) {
+  const { t } = useTranslation();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [custom, setCustom] = useState("");
   const [showBank, setShowBank] = useState(false);
 
   useEffect(() => {
-    api.get<any>("/flight-exercises/?is_active=true&withFullLimit")
+    api.get<any>(withFullLimit("/flight-exercises/?is_active=true"))
       .then(data => setExercises((data as any).results || []))
       .catch(() => {});
   }, []);
@@ -95,7 +97,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
           );
         })}
         {selected.length === 0 && (
-          <span className="text-sm text-gray-500 py-1">{placeholder || "Select exercises..."}</span>
+          <span className="text-sm text-gray-500 py-1">{placeholder || t("exercise.selectPlaceholder", "Select exercises...")}</span>
         )}
       </div>
 
@@ -105,7 +107,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
           onClick={() => setShowBank(!showBank)}
           className="px-3 py-1.5 text-xs bg-navy-700 border border-navy-600 rounded-lg text-gray-300 hover:text-white hover:border-gold-500/30"
         >
-          {showBank ? "Hide exercise bank" : "Browse exercise bank"}
+          {showBank ? t("exercise.hideBank", "Hide exercise bank") : t("exercise.browseBank", "Browse exercise bank")}
         </button>
         <div className="flex-1 flex gap-1">
           <input
@@ -113,7 +115,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
             value={custom}
             onChange={e => setCustom(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
-            placeholder="Type custom exercise..."
+            placeholder={t("exercise.customPlaceholder", "Type custom exercise...")}
             className="flex-1 px-3 py-1.5 text-sm bg-navy-900 border border-navy-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
           />
           <button
@@ -122,7 +124,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
             disabled={!custom.trim()}
             className="px-3 py-1.5 text-xs bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-navy-900 font-semibold rounded-lg"
           >
-            Add
+            {t("common.add")}
           </button>
         </div>
       </div>
@@ -131,7 +133,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
         <div className="bg-navy-900 border border-navy-700 rounded-lg p-3 max-h-64 overflow-y-auto space-y-3">
           {Object.entries(grouped).map(([cat, exs]) => (
             <div key={cat}>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">{CAT_LABELS[cat] || cat}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">{t(CAT_KEYS[cat] ?? cat)}</p>
               <div className="flex flex-wrap gap-1.5">
                 {exs.map(ex => (
                   <button
@@ -147,7 +149,7 @@ export function ExerciseChipSelector({ selected, onChange, placeholder }: Props)
             </div>
           ))}
           {exercises.length === 0 && (
-            <p className="text-sm text-gray-500 py-4 text-center">No exercises in the bank yet.</p>
+            <p className="text-sm text-gray-500 py-4 text-center">{t("exercise.emptyBank", "No exercises in the bank yet.")}</p>
           )}
         </div>
       )}

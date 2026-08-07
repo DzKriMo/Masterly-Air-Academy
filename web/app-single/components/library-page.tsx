@@ -12,6 +12,7 @@ import { ErrorCard } from "@/components/error-card";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import { fmtLabel } from "@/lib/format-utils";
+import { mediaStreamUrl } from "@/lib/download";
 import { VideoPlayer } from "@/components/video-player";
 import { PdfReader } from "@/components/pdf-reader";
 
@@ -132,7 +133,6 @@ export default function LibraryPage({
   const { t } = useTranslation();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const token = isAuthenticated ? api.getAccessToken() : null;
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -260,11 +260,8 @@ export default function LibraryPage({
     }
   };
 
-  const streamUrl = (item: LibraryItem) => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "";
-    const tok = token || api.getAccessToken();
-    return `${base}/api/documents/${item.id}/stream/?token=${encodeURIComponent(tok || "")}`;
-  };
+  const streamUrl = (item: LibraryItem) =>
+    mediaStreamUrl(item.id, `/api/documents/${item.id}/stream/`);
 
   const filtered = useMemo(() => {
     if (!documents) return [];
@@ -405,7 +402,6 @@ export default function LibraryPage({
       {preview && (
         <PreviewModal
           item={preview}
-          token={token}
           streamUrl={streamUrl}
           onClose={() => setPreview(null)}
           onDownload={() => handleDownload(preview)}
@@ -530,20 +526,25 @@ function LibraryCard({
 
 function PreviewModal({
   item,
-  token,
   streamUrl,
   onClose,
   onDownload,
 }: {
   item: LibraryItem;
-  token: string | null;
-  streamUrl: (i: LibraryItem) => string;
+  streamUrl: (i: LibraryItem) => Promise<string | null>;
   onClose: () => void;
   onDownload: () => void;
 }) {
   const { t } = useTranslation();
   const mime = item.mime_type || "";
-  const url = streamUrl(item);
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setUrl(null);
+    streamUrl(item).then((u) => { if (!cancelled) setUrl(u); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [item, streamUrl]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
@@ -563,7 +564,11 @@ function PreviewModal({
         </div>
 
         <div className="p-5">
-          {mime.startsWith("video/") ? (
+          {!url ? (
+            <div className="p-10 text-center text-gray-400">
+              {t("library.loadingPreview", "Loading preview...")}
+            </div>
+          ) : mime.startsWith("video/") ? (
             <VideoPlayer src={url} />
           ) : mime.startsWith("image/") ? (
             <img src={url} alt={item.name} className="w-full rounded-xl object-contain max-h-[60vh] bg-navy-900" />

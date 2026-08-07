@@ -20,6 +20,7 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import { colors } from '@/constants/colors';
 import { CoursesService } from '@/services';
+import { isValidUuid } from '@/utils/validators';
 import type { Course, Module, AttendanceRecord } from '@/types/models';
 import { Card, Badge, Skeleton, ErrorState } from '@/components/ui';
 import { Header } from '@/components/ui';
@@ -28,10 +29,10 @@ export default function CourseDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const hasValidId = typeof id === 'string' && isValidUuid(id);
+  const courseId = id ?? '';
 
   const [activeTab, setActiveTab] = React.useState<'overview' | 'modules' | 'attendance'>('overview');
-
-  const courseId = id!;
 
   const {
     data: course,
@@ -44,18 +45,18 @@ export default function CourseDetailScreen() {
       const res = await CoursesService.get(courseId);
       return res.data as Course;
     },
-    enabled: !!courseId,
+    enabled: hasValidId,
   });
 
   const { data: modules } = useQuery<Module[]>({
     queryKey: ['course-modules', courseId],
     queryFn: async () => {
       const res = await CoursesService.getMaterials(courseId);
-      const data = res.data;
+      const data = res.data as { course_id?: string; modules?: Module[] };
       if (Array.isArray(data)) return data as Module[];
-      return (data as any)?.results ?? [];
+      return data?.modules ?? [];
     },
-    enabled: !!courseId && activeTab === 'modules',
+    enabled: hasValidId && activeTab === 'modules',
   });
 
   const { data: attendance, isLoading: attendanceLoading } = useQuery<AttendanceRecord[]>({
@@ -66,7 +67,7 @@ export default function CourseDetailScreen() {
       if (Array.isArray(data)) return data as AttendanceRecord[];
       return (data as any)?.results ?? [];
     },
-    enabled: !!courseId && activeTab === 'attendance',
+    enabled: hasValidId && activeTab === 'attendance',
   });
 
   const handleRefresh = useCallback(() => {
@@ -82,6 +83,19 @@ export default function CourseDetailScreen() {
       total: attendance.length,
     };
   }, [attendance]);
+
+  if (!hasValidId) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title={t('courses.title')}
+          showBack
+          onBack={() => router.back()}
+        />
+        <ErrorState onRetry={handleRefresh} />
+      </View>
+    );
+  }
 
   if (isLoading) {
     return <CourseDetailSkeleton onBack={() => router.back()} t={t} />;
@@ -104,7 +118,7 @@ export default function CourseDetailScreen() {
     <View style={styles.container}>
       <Header
         title={course.title}
-        subtitle={course.subject_title ?? course.subject}
+        subtitle={course.subject_code ?? course.subject_title ?? course.subject}
         showBack
         onBack={() => router.back()}
       />
@@ -215,7 +229,7 @@ export default function CourseDetailScreen() {
                     <Text style={[styles.attendanceValue, { color: colors.status.warning }]}>
                       {attendanceStats.late}
                     </Text>
-                    <Text style={styles.attendanceLabel}>{t('courses.upcoming')}</Text>
+                    <Text style={styles.attendanceLabel}>{t('courses.late')}</Text>
                   </Card>
                 </View>
 

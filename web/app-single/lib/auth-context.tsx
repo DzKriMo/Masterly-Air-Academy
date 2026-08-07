@@ -280,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await api.post('/logout/');
+      await api.post('/logout/', { refresh: api.getRefreshToken() });
     } catch {}
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     if (activityTimerRef.current) clearTimeout(activityTimerRef.current);

@@ -216,7 +216,10 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
     setLoadingMore(true);
     try {
       const d = await api.get<any>(`/notifications/?page=${page + 1}`);
-      setExtra((prev) => [...prev, ...(d?.results || [])]);
+      setExtra((prev) => {
+        const known = new Set([...notifications, ...prev].map((n: Notif) => n.id));
+        return [...prev, ...(d?.results || []).filter((x: any) => !known.has(x.id))];
+      });
       setPage((p) => p + 1);
     } catch {}
     finally {
@@ -299,7 +302,7 @@ function StaffNotificationsView({ config }: { config: RoleConfig }) {
                   disabled={loadingMore}
                   className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
                 >
-                  {loadingMore ? t("common.loading", "Loading...") : "Load more"}
+                  {loadingMore ? t("common.loading", "Loading...") : t("common.loadMore", "Load more")}
                 </button>
               </div>
             )}
@@ -466,14 +469,20 @@ function StudentNotificationsView({ config }: { config: RoleConfig }) {
   useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
   useNotificationStream((n: StreamNotification) => {
-    setNotifications(prev => [{ ...n, is_read: false } as Notif, ...prev]);
+    setNotifications(prev => {
+      if (prev.some(x => x.id === n.id)) return prev;
+      return [{ ...n, is_read: n.is_read ?? false } as Notif, ...prev];
+    });
     if (n.title) showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
   }, { enabled: isAuthenticated });
 
   const loadMore = () => {
     api.get<any>(`/notifications/?page=${page + 1}`)
       .then((d: any) => {
-        setNotifications(prev => [...prev, ...(d.results || [])]);
+        setNotifications(prev => {
+          const known = new Set(prev.map(n => n.id));
+          return [...prev, ...(d.results || []).filter((x: any) => !known.has(x.id))];
+        });
         setHasMore(!!d.next);
         setPage(p => p + 1);
       })

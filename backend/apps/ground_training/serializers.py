@@ -43,7 +43,7 @@ class ModuleLessonSerializer(serializers.ModelSerializer):
         view = self.context.get('_lesson_video_views', {}).get((obj.id, student.id))
         if view is not None:
             return view
-        view = obj.video_views.filter(student=student).first()
+        view = next((v for v in obj.video_views.all() if v.student_id == student.id), None)
         if self.context.get('_cache_lesson_views'):
             self.context.setdefault('_lesson_video_views', {})[(obj.id, student.id)] = view
         return view

@@ -1,4 +1,5 @@
 import uuid
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from apps.students.models import TrainingProgram
 
@@ -99,8 +100,10 @@ class FlightLesson(models.Model):
     difficulties = models.TextField(blank=True, null=True)
     observations = models.TextField(blank=True, null=True)
     recommendations = models.TextField(blank=True, null=True)
-    grade = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    grade = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
+                                validators=[MinValueValidator(0), MaxValueValidator(10)])
     result = models.CharField(max_length=20, blank=True, null=True)
+    solo_authorized = models.BooleanField(default=False)
     pedagogical_note = models.TextField(blank=True, null=True)
     departure_time = models.DateTimeField(null=True, blank=True)
     arrival_time = models.DateTimeField(null=True, blank=True)

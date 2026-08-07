@@ -2,6 +2,7 @@
 from io import BytesIO
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
+from django.utils.html import escape
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from apps.accounts.permissions import HasRolePermission
@@ -139,13 +140,13 @@ class FlightsPdfView(APIView):
             rows += (
                 f"<tr>"
                 f"<td>{str(f.scheduled_date) if f.scheduled_date else ''}</td>"
-                f"<td>{f.student.full_name}</td>"
-                f"<td>{f'{f.instructor.first_name} {f.instructor.last_name}'}</td>"
-                f"<td>{f.aircraft.registration}</td>"
+                f"<td>{escape(f.student.full_name)}</td>"
+                f"<td>{escape(f'{f.instructor.first_name} {f.instructor.last_name}')}</td>"
+                f"<td>{escape(f.aircraft.registration)}</td>"
                 f"<td>{float(f.flight_duration) if f.flight_duration else 0}</td>"
-                f"<td style='color:{status_color};font-weight:bold'>{f.status or ''}</td>"
+                f"<td style='color:{status_color};font-weight:bold'>{escape(f.status or '')}</td>"
                 f"<td>{float(f.grade) if f.grade else ''}</td>"
-                f"<td>{f.result or ''}</td>"
+                f"<td>{escape(f.result or '')}</td>"
                 f"</tr>"
             )
 
@@ -278,13 +279,13 @@ class CoursesPdfView(APIView):
             }.get(c.status, '#6b7280')
             rows += (
                 f"<tr>"
-                f"<td>{c.title or ''}</td>"
-                f"<td>{c.subject.code if c.subject else ''}</td>"
-                f"<td>{f'{c.instructor.first_name} {c.instructor.last_name}' if c.instructor else ''}</td>"
+                f"<td>{escape(c.title or '')}</td>"
+                f"<td>{escape(c.subject.code) if c.subject else ''}</td>"
+                f"<td>{escape(f'{c.instructor.first_name} {c.instructor.last_name}') if c.instructor else ''}</td>"
                 f"<td>{str(c.scheduled_date) if c.scheduled_date else ''}</td>"
                 f"<td>{str(c.start_time)[:5] if c.start_time else ''} - {str(c.end_time)[:5] if c.end_time else ''}</td>"
-                f"<td>{c.room.name if c.room else ''}</td>"
-                f"<td style='color:{status_color};font-weight:bold'>{c.status or ''}</td>"
+                f"<td>{escape(c.room.name) if c.room else ''}</td>"
+                f"<td style='color:{status_color};font-weight:bold'>{escape(c.status or '')}</td>"
                 f"</tr>"
             )
 

@@ -25,17 +25,17 @@ export type MoreStackParamList = {
 
 export type CourseStackParamList = {
   'courses-index': undefined;
-  'courses-[id)': { id: string };
+  'courses/[id]': { id: string };
 };
 
 export type FlightStackParamList = {
   'flights-index': undefined;
-  'flights-[id)': { id: string };
+  'flights/[id]': { id: string };
 };
 
 export type ExamStackParamList = {
   'exams-index': undefined;
-  'exams-[id)': { id: string };
+  'exams/[id]': { id: string };
   'exams-session': { examId: string };
   'exams-result': { score: string; total: string; passed: string };
 };

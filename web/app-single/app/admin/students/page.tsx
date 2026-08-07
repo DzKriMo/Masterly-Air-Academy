@@ -97,11 +97,7 @@ export default function AdminStudentsPage() {
 
   const downloadDossier = useCallback(async (student: Student) => {
     try {
-      const token = api.getAccessToken();
-      const res = await fetch(`/api/students/${student.id}/dossier/`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
-      });
-      if (!res.ok) throw new Error('Failed to generate dossier');
+      const res = await api.download(`/students/${student.id}/dossier/`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -126,7 +126,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                     from django.utils.dateparse import parse_datetime
                     since_dt = parse_datetime(since)
                     if since_dt:
-                        qs = Notification.objects.filter(user=user, created_at__gt=since_dt).order_by('created_at')
+                        qs = Notification.objects.filter(user=user, created_at__gte=since_dt).order_by('created_at')
                 for n in qs:
                     payload = {
                         'id': str(n.id),
@@ -134,6 +134,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                         'title': n.title,
                         'message': n.message,
                         'data': n.data,
+                        'is_read': n.is_read,
                         'created_at': n.created_at.isoformat(),
                     }
                     yield f'data: {json.dumps(payload)}\n\n'
@@ -151,12 +152,20 @@ class NotificationViewSet(viewsets.ModelViewSet):
                         except Exception:
                             pass
                     else:
-                        # Poll fallback when Redis is unavailable
+                        # Poll fallback when Redis is unavailable — emit every item newer than `since`
                         from django.utils.dateparse import parse_datetime
-                        newest = Notification.objects.filter(user=user).order_by('-created_at').first()
-                        if newest and (not since or not parse_datetime(since) or newest.created_at > parse_datetime(since)):
-                            since = newest.created_at.isoformat()
-                            yield f'data: {json.dumps({"id": str(newest.id), "type": newest.type, "title": newest.title, "message": newest.message, "data": newest.data, "created_at": newest.created_at.isoformat()})}\n\n'
+                        since_dt = parse_datetime(since) if since else None
+                        seen = getattr(generate, '_poll_seen', None)
+                        if seen is None:
+                            seen = set()
+                            generate._poll_seen = seen
+                        pending = Notification.objects.filter(user=user).exclude(id__in=seen)
+                        if since_dt:
+                            pending = pending.filter(created_at__gte=since_dt)
+                        for n in pending.order_by('created_at'):
+                            seen.add(n.id)
+                            since = n.created_at.isoformat()
+                            yield f'data: {json.dumps({"id": str(n.id), "type": n.type, "title": n.title, "message": n.message, "data": n.data, "is_read": n.is_read, "created_at": n.created_at.isoformat()})}\n\n'
                     yield ': keepalive\n\n'
                     time.sleep(4)
             finally:
@@ -268,11 +277,16 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload(self, request):
+        from apps.core.uploads import validate_upload
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=400)
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=400)
         from django.core.files.storage import default_storage
-        safe_name = file.name.replace('\\', '_').replace('/', '_')
+        import uuid, os
+        safe_name = f'{uuid.uuid4().hex}{os.path.splitext(file.name)[1].lower()}'
         path = default_storage.save(f'messages/{safe_name}', file)
         return Response({
             'name': file.name,
@@ -286,11 +300,20 @@ class MessageViewSet(viewsets.ModelViewSet):
         """GET /api/messages/download/?url=<storage key> — stream an attachment."""
         from django.http import StreamingHttpResponse
         from django.core.files.storage import default_storage
+        from django.db.models import Q
         url = request.query_params.get('url')
         if not url:
             return Response({'error': 'url is required'}, status=400)
         if url.startswith(('http://', 'https://')):
             return Response({'url': url})
+        # Ownership check: the file must belong to a message this user sent or received.
+        user = request.user
+        owned = Message.objects.filter(Q(sender=user) | Q(receiver=user)).values_list('attachments', flat=True)
+        if not any(
+            any(isinstance(a, dict) and a.get('url') == url for a in (atts or []))
+            for atts in owned
+        ):
+            return Response({'error': 'Permission denied'}, status=403)
         try:
             f = default_storage.open(url, 'rb')
             filename = url.rsplit('/', 1)[-1]
@@ -329,7 +352,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                     from django.utils.dateparse import parse_datetime
                     sd = parse_datetime(since)
                     if sd:
-                        qs = Message.objects.filter(receiver=user, created_at__gt=sd).order_by('created_at')
+                        qs = Message.objects.filter(receiver=user, created_at__gte=sd).order_by('created_at')
                 for m in qs:
                     yield f'data: {json.dumps(serialize_message(m))}\n\n'
             except Exception:
@@ -346,11 +369,20 @@ class MessageViewSet(viewsets.ModelViewSet):
                         except Exception:
                             pass
                     else:
+                        # Poll fallback when Redis is unavailable — emit every item newer than `since`
                         from django.utils.dateparse import parse_datetime
-                        newest = Message.objects.filter(receiver=user).order_by('-created_at').first()
-                        if newest and (not since or not parse_datetime(since) or newest.created_at > parse_datetime(since)):
-                            since = newest.created_at.isoformat()
-                            yield f'data: {json.dumps(serialize_message(newest))}\n\n'
+                        since_dt = parse_datetime(since) if since else None
+                        seen = getattr(generate, '_poll_seen', None)
+                        if seen is None:
+                            seen = set()
+                            generate._poll_seen = seen
+                        pending = Message.objects.filter(receiver=user).exclude(id__in=seen)
+                        if since_dt:
+                            pending = pending.filter(created_at__gte=since_dt)
+                        for m in pending.order_by('created_at'):
+                            seen.add(m.id)
+                            since = m.created_at.isoformat()
+                            yield f'data: {json.dumps(serialize_message(m))}\n\n'
                     yield ': keepalive\n\n'
                     time.sleep(4)
             finally:

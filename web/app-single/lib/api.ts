@@ -30,6 +30,10 @@ class ApiClient {
     return this.accessToken;
   }
 
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
   isAuthenticated(): boolean {
     return this.accessToken !== null;
   }
@@ -94,7 +98,7 @@ class ApiClient {
 
     if (!response.ok) {
       throw new ApiError(
-        raw.message || raw.detail || `Request failed (${response.status})`,
+        raw.message || raw.error || raw.detail || `Request failed (${response.status})`,
         response.status,
         raw.errors
       );
@@ -199,13 +203,32 @@ class ApiClient {
 
   /**
    * Authenticated download. Fetches the endpoint with the Bearer token and
-   * returns the response (caller can read blob). Throws on non-OK.
+   * returns the response (caller can read blob). Retries once after a 401
+   * refresh, mirroring `request()`. Throws on non-OK.
    */
   async download(endpoint: string): Promise<Response> {
-    const headers: Record<string, string> = {};
-    const token = this.accessToken || this.getAccessToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api${endpoint}`, { headers });
+    const url = `${API_BASE}/api${endpoint}`;
+    const buildHeaders = (): Record<string, string> => {
+      const headers: Record<string, string> = {};
+      const token = this.accessToken || this.getAccessToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return headers;
+    };
+
+    let res = await fetch(url, { headers: buildHeaders() });
+
+    if (res.status === 401 && this.refreshToken) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        res = await fetch(url, { headers: buildHeaders() });
+      }
+    }
+
+    if (res.status === 401 && !url.endsWith('/login/')) {
+      this.clearAuth();
+      this.onLogoutHandler?.();
+    }
+
     if (!res.ok) {
       throw new ApiError(`Download failed (${res.status})`, res.status);
     }

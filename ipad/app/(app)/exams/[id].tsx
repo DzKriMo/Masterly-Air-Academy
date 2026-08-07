@@ -17,13 +17,24 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { colors } from '@/constants/colors';
+import { isValidUuid } from '@/utils/validators';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Exam } from '@/types/models';
+
+interface ExamAttempt {
+  id: string;
+  exam: string;
+  exam_code: string;
+  attempt: number;
+  score: number | null;
+  is_passed: boolean;
+  started_at: string;
+}
 
 interface ExamDetailResponse {
   exam: Exam;
   attempts_used: number;
   can_attempt: boolean;
-  deny_reason?: string;
 }
 
 function formatDuration(minutes: number): string {
@@ -36,29 +47,40 @@ function formatDuration(minutes: number): string {
 export default function ExamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
+  const hasValidId = typeof id === 'string' && isValidUuid(id);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['exam', id],
     queryFn: async (): Promise<ExamDetailResponse> => {
-      const res = await ExamsService.get(id!);
-      const exam = res.data;
+      const [examRes, attemptsRes] = await Promise.all([
+        ExamsService.get(id as string),
+        ExamsService.myAttempts(),
+      ]);
+      const exam = examRes.data as Exam;
+      const attempts: ExamAttempt[] = Array.isArray(attemptsRes.data)
+        ? (attemptsRes.data as ExamAttempt[])
+        : ((attemptsRes.data as { results?: ExamAttempt[] } | undefined)?.results ?? []);
+      const attemptsUsed = attempts.filter((a) => a.exam === id).length;
+      const maxAttempts = exam.max_attempts ?? 1;
       return {
         exam,
-        attempts_used: 0,
-        can_attempt: true,
+        attempts_used: attemptsUsed,
+        can_attempt: attemptsUsed < maxAttempts,
       };
     },
-    enabled: !!id,
+    enabled: hasValidId,
   });
 
   const handleStart = () => {
+    if (!hasValidId) return;
     Alert.alert(
-      'Start Exam',
-      'Are you ready to begin? The timer will start immediately.',
+      t('exams.startExam'),
+      t('exams.readyMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Start',
+          text: t('exams.startExam'),
           onPress: () =>
             router.push({
               pathname: '/(app)/exams/session',
@@ -69,10 +91,26 @@ export default function ExamDetailScreen() {
     );
   };
 
-  if (isError) {
+  if (isError || !hasValidId) {
     return (
       <View style={styles.container}>
         <ErrorState onRetry={refetch} />
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.topBar}>
+          <Button
+            title={t('common.back')}
+            onPress={() => router.back()}
+            variant="ghost"
+            size="sm"
+            icon={<ArrowLeft size={16} color={colors.gold[400]} />}
+          />
+        </View>
       </View>
     );
   }
@@ -81,7 +119,7 @@ export default function ExamDetailScreen() {
   if (!exam) {
     return (
       <View style={styles.container}>
-        <ErrorState message="Exam not found." />
+        <ErrorState message={t('exams.notFound')} />
       </View>
     );
   }
@@ -90,7 +128,7 @@ export default function ExamDetailScreen() {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <Button
-          title="Back"
+          title={t('common.back')}
           onPress={() => router.back()}
           variant="ghost"
           size="sm"
@@ -115,23 +153,25 @@ export default function ExamDetailScreen() {
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Clock size={20} color={colors.gold[500]} />
-              <Text style={styles.infoLabel}>Duration</Text>
+              <Text style={styles.infoLabel}>{t('exams.duration')}</Text>
               <Text style={styles.infoValue}>{formatDuration(exam.duration)}</Text>
             </View>
             <View style={styles.infoItem}>
               <HelpCircle size={20} color={colors.gold[500]} />
-              <Text style={styles.infoLabel}>Questions</Text>
+              <Text style={styles.infoLabel}>{t('exams.questions')}</Text>
               <Text style={styles.infoValue}>{exam.questions_count ?? '—'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Award size={20} color={colors.gold[500]} />
-              <Text style={styles.infoLabel}>Passing Grade</Text>
+              <Text style={styles.infoLabel}>{t('exams.passingGrade')}</Text>
               <Text style={styles.infoValue}>{exam.passing_grade}%</Text>
             </View>
             <View style={styles.infoItem}>
               <RotateCcw size={20} color={colors.gold[500]} />
-              <Text style={styles.infoLabel}>Max Attempts</Text>
-              <Text style={styles.infoValue}>{exam.max_attempts}</Text>
+              <Text style={styles.infoLabel}>{t('exams.maxAttempts')}</Text>
+              <Text style={styles.infoValue}>
+                {data?.attempts_used ?? 0} / {exam.max_attempts ?? 1}
+              </Text>
             </View>
           </View>
         </Card>
@@ -139,11 +179,10 @@ export default function ExamDetailScreen() {
         {data?.can_attempt ? (
           <View style={styles.startSection}>
             <Text style={styles.readyText}>
-              You are about to start this exam. Make sure you have a stable
-              internet connection and enough time to complete it.
+              {t('exams.readyMessage')}
             </Text>
             <Button
-              title="Start Exam"
+              title={t('exams.startExam')}
               onPress={handleStart}
               variant="primary"
               size="lg"
@@ -153,7 +192,7 @@ export default function ExamDetailScreen() {
         ) : (
           <Card style={styles.deniedCard}>
             <Text style={styles.deniedText}>
-              {data?.deny_reason ?? 'You cannot attempt this exam right now.'}
+              {t('exams.cannotAttempt')}
             </Text>
           </Card>
         )}

@@ -22,7 +22,6 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { CertificatesService } from '@/services/certificates.service';
-import { API_BASE } from '@/constants/config';
 import { formatDate } from '@/utils/formatters';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { Certificate } from '@/types/models';
@@ -57,7 +56,7 @@ export default function CertificatesScreen() {
     queryKey: ['certificates'],
     queryFn: async () => {
       const { data } = await CertificatesService.list();
-      return (data as unknown as Certificate[]) ?? [];
+      return data?.results ?? [];
     },
   });
 
@@ -68,7 +67,7 @@ export default function CertificatesScreen() {
   }, [refetch]);
 
   const handleViewPdf = useCallback((cert: Certificate) => {
-    const url = `${API_BASE}${CertificatesService.getPdfUrl(cert.id)}`;
+    const url = CertificatesService.getPdfUrl(cert.id);
     Alert.alert(
       t('certificates.title'),
       `${t('certificates.number')}: ${cert.certificate_number}`,

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/lib/use-translation";
 import { fmtLabel, PROGRAMS, EXAM_TYPES as TYPES, EXAM_STATUSES as STATUSES } from "@/lib/format-utils";
 
 export interface Subject {
@@ -52,6 +53,7 @@ const TYPE_BADGES: Record<string, string> = {
 };
 
 export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFormFieldsProps) {
+  const { t } = useTranslation();
   const [availableQuestions, setAvailableQuestions] = useState<QuestionItem[]>([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
 
@@ -81,13 +83,13 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Code *</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.code", "Code")} *</label>
           <input type="text" value={form.code} onChange={(e) => set("code", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
-            placeholder="e.g. PPL-THEORY-001" />
+            placeholder={t("examForm.codePlaceholder", "e.g. PPL-THEORY-001")} />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Program</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.program", "Program")}</label>
           <select value={form.program} onChange={(e) => set("program", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
             {PROGRAMS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -95,20 +97,20 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
         </div>
       </div>
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Title</label>
+        <label className="block text-sm text-gray-400 mb-1">{t("examForm.title", "Title")}</label>
         <input type="text" value={form.title} onChange={(e) => set("title", e.target.value)}
           className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm"
-          placeholder="e.g. PPL Theory Exam 1" />
+          placeholder={t("examForm.titlePlaceholder", "e.g. PPL Theory Exam 1")} />
       </div>
       {showTranslations && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Title (Arabic)</label>
+            <label className="block text-sm text-gray-400 mb-1">{t("examForm.titleAr", "Title (Arabic)")}</label>
             <input type="text" value={form.title_ar || ""} onChange={(e) => set("title_ar", e.target.value)}
               className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Title (French)</label>
+            <label className="block text-sm text-gray-400 mb-1">{t("examForm.titleFr", "Title (French)")}</label>
             <input type="text" value={form.title_fr || ""} onChange={(e) => set("title_fr", e.target.value)}
               className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
           </div>
@@ -116,17 +118,17 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
       )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Subject</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.subject", "Subject")}</label>
           <select value={form.subject} onChange={(e) => { set("subject", e.target.value); set("question_ids", []); }}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
-            <option value="">None</option>
+            <option value="">{t("common.none", "None")}</option>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>{s.code} - {s.title_en}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Type</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.type", "Type")}</label>
           <select value={form.type} onChange={(e) => set("type", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm">
             {TYPES.map((t) => <option key={t} value={t}>{fmtLabel(t)}</option>)}
@@ -135,24 +137,24 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Duration (min) *</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.duration", "Duration (min)")} *</label>
           <input type="number" min="1" value={form.duration} onChange={(e) => set("duration", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Question Count</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.questionCount", "Question Count")}</label>
           <input type="number" min="1" value={form.question_count} onChange={(e) => set("question_count", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Passing Grade (%)</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.passingGrade", "Passing Grade (%)")}</label>
           <input type="number" min="0" max="100" value={form.passing_grade} onChange={(e) => set("passing_grade", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Max Attempts</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.maxAttempts", "Max Attempts")}</label>
           <input type="number" min="1" value={form.max_attempts} onChange={(e) => set("max_attempts", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
@@ -166,12 +168,12 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Open Date</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.openDate", "Open Date")}</label>
           <input type="datetime-local" value={form.open_date} onChange={(e) => set("open_date", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Close Date</label>
+          <label className="block text-sm text-gray-400 mb-1">{t("examForm.closeDate", "Close Date")}</label>
           <input type="datetime-local" value={form.close_date} onChange={(e) => set("close_date", e.target.value)}
             className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none text-sm" />
         </div>
@@ -180,13 +182,13 @@ export function ExamFormFields({ form, set, subjects, showTranslations }: ExamFo
       {form.subject && (
         <div>
           <label className="block text-sm text-gray-400 mb-2">
-            Select Questions ({(form.question_ids || []).length} selected)
-            <span className="text-xs text-gray-500 ml-2">— leave empty for random from subject</span>
+            {t("examForm.selectQuestions", "Select Questions")} ({(form.question_ids || []).length} selected)
+            <span className="text-xs text-gray-500 ml-2">{t("examForm.randomFromSubject", "— leave empty for random from subject")}</span>
           </label>
           {questionsLoading ? (
-            <div className="text-sm text-gray-500 py-2">Loading questions...</div>
+            <div className="text-sm text-gray-500 py-2">{t("examForm.loadingQuestions", "Loading questions...")}</div>
           ) : availableQuestions.length === 0 ? (
-            <div className="text-sm text-gray-500 py-2">No questions in this subject's bank.</div>
+            <div className="text-sm text-gray-500 py-2">{t("examForm.noQuestionsInBank", "No questions in this subject's bank.")}</div>
           ) : (
             <div className="max-h-48 overflow-y-auto border border-navy-700 rounded-lg divide-y divide-navy-700">
               {availableQuestions.map((q) => (

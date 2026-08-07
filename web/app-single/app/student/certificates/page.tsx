@@ -47,8 +47,7 @@ export default function StudentCertificatesPage() {
 
   const downloadPDF = async (id: string) => {
     try {
-      const r = await fetch(`/api/certificates/${id}/pdf/`, { headers: { Authorization: `Bearer ${api.getAccessToken()}` } });
-      if (!r.ok) throw new Error("Failed");
+      const r = await api.download(`/certificates/${id}/pdf/`);
       const b = await r.blob();
       const u = window.URL.createObjectURL(b);
       const a = document.createElement("a");

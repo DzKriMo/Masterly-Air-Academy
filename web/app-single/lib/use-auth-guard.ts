@@ -15,7 +15,7 @@ export function useAuthGuard(
       router.push(redirectTo);
       return;
     }
-    if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
+    if (allowedRoles && (!userRole || !allowedRoles.includes(userRole))) {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, router, redirectTo, userRole, allowedRoles]);

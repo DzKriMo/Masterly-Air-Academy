@@ -23,16 +23,16 @@ export default function GlobalError({
           <span className="text-red-500 font-bold">!</span>
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">
-          {t("common.error") || "Something went wrong"}
+          {t("common.error", "Something went wrong")}
         </h1>
         <p className="text-gray-400 mb-6">
-          {error.message || t("common.unexpectedError") || "An unexpected error occurred."}
+          {t("common.unexpectedError", "An unexpected error occurred.")}
         </p>
         <button
           onClick={reset}
           className="px-6 py-3 bg-gold-500 text-navy-900 rounded-lg font-medium hover:bg-gold-400 transition-colors"
         >
-          {t("common.tryAgain") || "Try Again"}
+          {t("common.tryAgain", "Try Again")}
         </button>
       </div>
     </div>

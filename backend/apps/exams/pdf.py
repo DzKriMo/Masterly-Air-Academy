@@ -5,6 +5,7 @@ import io
 import os
 from django.http import HttpResponse
 from django.conf import settings
+from django.utils.html import escape
 
 
 def _logo_base64():
@@ -76,6 +77,10 @@ def _render_certificate(certificate):
 
     program_names = {'PPL': 'Private Pilot License', 'CPL': 'Commercial Pilot License', 'IR': 'Instrument Rating', 'MEP': 'Multi-Engine Piston', 'MCC': 'Multi-Crew Cooperation'}
     program_name = program_names.get(certificate.program, certificate.program or '')
+    cert_name = escape(certificate.student.full_name)
+    cert_number = escape(certificate.certificate_number)
+    cert_program = escape(certificate.program or '')
+    program_name = escape(program_name)
 
     html = f"""<html><head><meta charset="utf-8"><style>
   @page {{ size: A4 landscape; margin: 0.8cm; }}
@@ -107,13 +112,13 @@ def _render_certificate(certificate):
   <div class="title">Certificate of Completion</div>
   <div class="ornament">&#9670; &#9670; &#9670;</div>
   <div class="body">This is to certify that</div>
-  <div class="name">{certificate.student.full_name}</div>
+  <div class="name">{cert_name}</div>
   <div class="body">has successfully completed the</div>
-  <div class="program">{program_name} ({certificate.program})</div>
+  <div class="program">{program_name} ({cert_program})</div>
   <div class="body">in accordance with the approved training programme of Masterly Air Academy.</div>
 
   <div class="row">
-    <div><div class="lbl">Certificate Number</div><div class="val" style="color:#c4943c;">{certificate.certificate_number}</div></div>
+    <div><div class="lbl">Certificate Number</div><div class="val" style="color:#c4943c;">{cert_number}</div></div>
     <div><div class="lbl">Date of Issue</div><div class="val">{certificate.issue_date.strftime('%d %B %Y')}</div></div>
   </div>
   <div class="row">
@@ -121,7 +126,7 @@ def _render_certificate(certificate):
   </div>
 
   <div class="bot">
-    <div><div class="cn">Certificate No: {certificate.certificate_number}</div><div class="ft">Masterly Air Academy — Approved Training Organization — Algeria</div></div>
+    <div><div class="cn">Certificate No: {cert_number}</div><div class="ft">Masterly Air Academy — Approved Training Organization — Algeria</div></div>
     <div class="qr">{qr_img}<div style="font-size:6px;color:#999;">Verify</div></div>
   </div>
 
@@ -149,7 +154,7 @@ def generate_invoice_pdf(invoice):
     balance = float(invoice.amount) - paid
     rows = ""
     for p in invoice.payments.all():
-        rows += f"<tr><td>{p.paid_at.strftime('%d/%m/%Y') if p.paid_at else 'N/A'}</td><td>{p.method or ''}</td><td>{p.reference or ''}</td><td style='text-align:right'>{p.amount:,.2f} {invoice.currency}</td></tr>"
+        rows += f"<tr><td>{p.paid_at.strftime('%d/%m/%Y') if p.paid_at else 'N/A'}</td><td>{escape(p.method or '')}</td><td>{escape(p.reference or '')}</td><td style='text-align:right'>{p.amount:,.2f} {escape(invoice.currency)}</td></tr>"
 
     logo_img = f'<img src="data:image/png;base64,{logo_b64}" width="70" height="70" style="display:block;" />' if logo_b64 else '<div style="font-size:28px;color:#c4943c;font-weight:bold;">MAA</div>'
 
@@ -164,12 +169,12 @@ def generate_invoice_pdf(invoice):
       td {{ padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }}
       .total {{ font-size: 16px; font-weight: bold; margin-top: 20px; text-align: right; }}
     </style></head><body>
-      <div class="header"><div><div class="logo">{logo_img}</div><div>Masterly Air Academy</div></div><div style="text-align:right"><h2>INVOICE</h2><p>#{invoice.invoice_number}<br>Date: {invoice.issued_at.strftime('%d/%m/%Y') if invoice.issued_at else 'N/A'}<br>Due: {invoice.due_at.strftime('%d/%m/%Y') if invoice.due_at else 'N/A'}</p></div></div>
-      <p><strong>Student:</strong> {invoice.student.full_name} ({invoice.student.student_number})</p>
-      <p><strong>Description:</strong> {invoice.description or 'N/A'}</p>
+      <div class="header"><div><div class="logo">{logo_img}</div><div>Masterly Air Academy</div></div><div style="text-align:right"><h2>INVOICE</h2><p>#{escape(invoice.invoice_number)}<br>Date: {invoice.issued_at.strftime('%d/%m/%Y') if invoice.issued_at else 'N/A'}<br>Due: {invoice.due_at.strftime('%d/%m/%Y') if invoice.due_at else 'N/A'}</p></div></div>
+      <p><strong>Student:</strong> {escape(invoice.student.full_name)} ({escape(invoice.student.student_number)})</p>
+      <p><strong>Description:</strong> {escape(invoice.description or 'N/A')}</p>
       <h3>Payment History</h3>
       <table><tr><th>Date</th><th>Method</th><th>Reference</th><th style="text-align:right">Amount</th></tr>{rows}</table>
-      <div class="total">Total: {invoice.amount:,.2f} {invoice.currency} | Paid: {paid:,.2f} {invoice.currency} | Balance: {balance:,.2f} {invoice.currency}</div>
+      <div class="total">Total: {invoice.amount:,.2f} {escape(invoice.currency)} | Paid: {paid:,.2f} {escape(invoice.currency)} | Balance: {balance:,.2f} {escape(invoice.currency)}</div>
     </body></html>"""
 
     try:

@@ -8,8 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from apps.accounts.authentication import QueryTokenAuthentication
-from apps.accounts.permissions import HasRolePermission
+from apps.accounts.authentication import SignedMediaAuthentication
+from apps.accounts.permissions import HasRolePermission, user_has_domain_permission
+from apps.core.uploads import validate_upload
 from .models import (
     Subject, Module, ModuleLesson, ModuleDocument, ModuleExercise, Room,
     Course, CourseEnrollment, AttendanceRecord, GroundEvaluation, TimeEntry,
@@ -101,7 +102,7 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'ground_training.view'
     authentication_classes = [
-        QueryTokenAuthentication,
+        SignedMediaAuthentication,
         JWTAuthentication,
         SessionAuthentication,
     ]
@@ -121,9 +122,18 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def upload_video(self, request):
+        if not user_has_domain_permission(request.user, 'ground_training', 'manage'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        ok, err = validate_upload(file, allowed={
+            'video/mp4': {'.mp4'},
+            'video/webm': {'.webm'},
+            'video/quicktime': {'.mov'},
+        })
+        if not ok:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
         module_id = request.data.get('module')
         video_key = _store_upload('module_videos', file, module_id)
         return Response({'video_url': video_key}, status=status.HTTP_201_CREATED)
@@ -156,6 +166,9 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
         if student is None:
             return Response({'error': 'Student profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        MIN_VIDEO_DURATION = 30  # seconds; shorter values cannot complete a tracked lesson
+        MAX_VIDEO_DURATION = 4 * 60 * 60  # sanity cap (4h)
+
         position = request.data.get('position')
         duration = request.data.get('duration')
         tab_switches = request.data.get('tab_switches')
@@ -170,6 +183,11 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
         duration = _to_int(duration)
         tab_switches = _to_int(tab_switches)
 
+        # Server-side hardening: bound the reported duration to a sane range so
+        # a crafted payload cannot complete a lesson instantly.
+        if duration is not None:
+            duration = min(duration, MAX_VIDEO_DURATION)
+
         view, created = LessonVideoView.objects.get_or_create(
             lesson=lesson,
             student=student,
@@ -182,18 +200,29 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
         )
 
         if position is not None:
+            # Do not let a single heartbeat claim more progress than the whole
+            # video length, and never regress a previous checkpoint.
+            if view.duration:
+                position = min(position, view.duration)
             if position > view.watched_seconds:
-                view.watched_seconds = min(position, view.duration or position)
-            if duration is not None:
-                view.duration = max(view.duration, duration)
+                view.watched_seconds = position
+            if duration is not None and view.duration:
+                view.duration = min(max(view.duration, duration), MAX_VIDEO_DURATION)
+            elif duration is not None and not view.duration:
+                view.duration = duration
+        elif duration is not None and view.duration:
+            view.duration = min(max(view.duration, duration), MAX_VIDEO_DURATION)
         # On a subsequent heartbeat, tab switches are cumulative (the defaults
         # above already seeded the count when the row was first created).
         if tab_switches is not None and not created:
             view.tab_switches += tab_switches
 
-        # Completion: watched at least 90% of the video OR position reached end.
-        if duration:
-            if (view.watched_seconds >= int(duration * 0.9)) or (position is not None and position >= duration):
+        # Completion: only possible for videos of a plausible length, when the
+        # student actually watched at least 90% of it.
+        if view.duration >= MIN_VIDEO_DURATION:
+            if (view.watched_seconds >= int(view.duration * 0.9)) or (
+                position is not None and position >= view.duration and view.watched_seconds >= int(view.duration * 0.9)
+            ):
                 view.status = LessonVideoView.Status.COMPLETED
 
         view.save()
@@ -218,9 +247,14 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def upload_file(self, request):
+        if not user_has_domain_permission(request.user, 'ground_training', 'manage'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
         module_id = request.data.get('module')
         file_key = _store_upload('module_docs', file, module_id)
         return Response({'file_url': file_key}, status=status.HTTP_201_CREATED)
@@ -242,6 +276,8 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def upload(self, request):
+        if not user_has_domain_permission(request.user, 'ground_training', 'manage'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         file = request.FILES.get('file')
         module_id = request.data.get('module')
         name = request.data.get('name', file.name if file else 'Document')
@@ -252,6 +288,10 @@ class ModuleDocumentViewSet(viewsets.ModelViewSet):
                 {'error': 'file and module are required'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 
         file_url = _store_upload('module_docs', file, module_id)
 
@@ -714,6 +754,8 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
+        if user.role == 'student':
+            return qs.none()
         if user.role in ('ground_instructor', 'flight_instructor', 'chief_ground_instructor', 'chief_flight_instructor'):
             return qs.filter(instructor=user)
         return qs

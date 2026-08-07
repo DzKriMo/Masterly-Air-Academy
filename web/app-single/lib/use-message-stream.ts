@@ -30,9 +30,14 @@ export function useMessageStream(
   const handlerRef = useRef(onMessage);
   handlerRef.current = onMessage;
   const sinceRef = useRef<string | null>(options?.since ?? null);
+  const lastSinceRef = useRef<string | null>(options?.since ?? null);
   sinceRef.current = options?.since ?? sinceRef.current;
 
   useEffect(() => {
+    if (options?.since !== lastSinceRef.current) {
+      lastSinceRef.current = options?.since ?? null;
+      sinceRef.current = options?.since ?? null;
+    }
     const authenticated = api.isAuthenticated();
     if (!enabled || !authenticated) return;
     let controller: AbortController | null = null;
@@ -48,7 +53,7 @@ export function useMessageStream(
         const headers: Record<string, string> = { Accept: "text/event-stream" };
         const token = api.getAccessToken();
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch(`/api/messages/stream/${qs}`, {
+        const res = await fetch(`${api.getBaseUrl()}/api/messages/stream/${qs}`, {
           headers,
           signal: controller.signal,
           credentials: "include",
@@ -74,7 +79,7 @@ export function useMessageStream(
                   if (payload?.id) {
                     if (
                       !sinceRef.current ||
-                      new Date(payload.created_at) > new Date(sinceRef.current)
+                      new Date(payload.created_at) >= new Date(sinceRef.current)
                     ) {
                       sinceRef.current = payload.created_at;
                       handlerRef.current(payload);

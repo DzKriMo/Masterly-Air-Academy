@@ -35,29 +35,20 @@ interface AuditLog {
 
 // ── Constants ─────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
-function downloadExport() {
-  const token =
-    (() => { try { const s = JSON.parse(sessionStorage.getItem('maa_session') || '{}'); return s.token; } catch { return null; } })();
-  const url = `${API_BASE}/api/export/audit-logs/`;
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', url, true);
-  xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-  xhr.responseType = 'blob';
-  xhr.onload = function () {
-    if (xhr.status === 200) {
-      const blob = xhr.response;
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'audit_logs.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
-  };
-  xhr.send();
+async function downloadExport() {
+  try {
+    const res = await api.download("/export/audit-logs/");
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'audit_logs.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch {
+    // export failures are surfaced by the caller's toast
+  }
 }
 
 const ACTIONS = [

@@ -1,10 +1,13 @@
 import json
+import logging
 import threading
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+logger = logging.getLogger('masterly.audit')
 
 # Thread-local storage for pre_save snapshots, keyed by (model_name, instance_pk)
 _thread_local = threading.local()
@@ -31,8 +34,8 @@ def _store_pre_save_snapshot(instance):
             if not hasattr(_thread_local, 'snapshots'):
                 _thread_local.snapshots = {}
             _thread_local.snapshots[key] = json.loads(json.dumps(snapshot, default=str))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning('audit pre_save snapshot failed for %s', instance, exc_info=e)
 
 
 def _pop_pre_save_snapshot(instance):
@@ -41,8 +44,8 @@ def _pop_pre_save_snapshot(instance):
         if hasattr(_thread_local, 'snapshots'):
             key = _get_snapshot_key(instance)
             return _thread_local.snapshots.pop(key, None)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning('audit snapshot pop failed for %s', instance, exc_info=e)
     return None
 
 
@@ -154,5 +157,6 @@ def _serialize_instance(instance):
             if hasattr(v, 'pk'):
                 data[k] = str(v)
         return json.loads(json.dumps(data, default=str))
-    except Exception:
+    except Exception as e:
+        logger.warning('audit serialization failed for %s', instance, exc_info=e)
         return {}

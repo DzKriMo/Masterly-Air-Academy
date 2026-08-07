@@ -36,14 +36,15 @@ interface FlightInstructor extends Instructor {}
 
 // ── Constants ─────────────────────────────────────────────
 
+const STATUSES = ["active", "on_leave", "suspended", "pending", "archived"];
+
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-500/10 text-green-400",
-  inactive: "bg-gray-500/10 text-gray-400",
   on_leave: "bg-amber-500/10 text-amber-400",
   suspended: "bg-red-500/10 text-red-400",
+  pending: "bg-blue-500/10 text-blue-400",
+  archived: "bg-gray-500/10 text-gray-400",
 };
-
-const STATUSES = ["active", "suspended", "pending", "archived"];
 
 interface EditForm {
   first_name: string;
@@ -184,7 +185,6 @@ export default function AdminInstructorsPage() {
       first_name: editForm.first_name,
       last_name: editForm.last_name,
       status: editForm.status,
-      phone: editForm.phone || null,
     };
     if (activeTab === "ground") {
       payload.email = editForm.email;
@@ -560,7 +560,7 @@ export default function AdminInstructorsPage() {
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 >
                   {STATUSES.map((s) => (
-                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ")}</option>
                   ))}
                 </select>
               </div>

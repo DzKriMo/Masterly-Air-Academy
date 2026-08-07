@@ -64,7 +64,7 @@ class StudentDashboardView(APIView):
         )
 
         # Exam average
-        exam_attempts = ExamAttempt.objects.filter(student=student, score__isnull=False)
+        exam_attempts = ExamAttempt.objects.filter(student=student, score__isnull=False).select_related('exam')
         exam_average = round(
             sum(float(a.score) for a in exam_attempts) / exam_attempts.count()
         ) if exam_attempts.count() > 0 else 0
@@ -80,7 +80,7 @@ class StudentDashboardView(APIView):
             student=student,
             scheduled_date__gte=timezone.now().date(),
             status='scheduled',
-        ).order_by('scheduled_date')[:3]
+        ).select_related('instructor', 'aircraft').order_by('scheduled_date')[:3]
 
         upcoming_schedule = []
         for c in upcoming_courses:
@@ -209,7 +209,7 @@ def finance_reports(request):
     period = request.query_params.get('period', 'month')
     year = int(request.query_params.get('year', timezone.now().year))
 
-    invoices_qs = Invoice.objects.filter(created_at__year=year)
+    invoices_qs = Invoice.objects.filter(created_at__year=year).select_related('student')
     all_invoices = invoices_qs.filter(status__in=['issued', 'paid', 'partially_paid', 'overdue'])
     invoiced = all_invoices.annotate(paid_total=Sum('payments__amount'))
 
@@ -218,19 +218,21 @@ def finance_reports(request):
 
     # Revenue by month (money actually collected via payments)
     payments_year = Payment.objects.filter(paid_at__year=year)
-    revenue_by_month = []
-    for m in range(1, 13):
-        rev = round(sum(
-            float(p.amount) for p in payments_year.filter(paid_at__month=m)
-        ), 2)
-        revenue_by_month.append({'month': m, 'revenue': rev})
+    monthly_totals = dict(
+        payments_year.values_list('paid_at__month').annotate(total=Sum('amount'))
+    )
+    revenue_by_month = [
+        {'month': m, 'revenue': round(float(monthly_totals.get(m) or 0), 2)}
+        for m in range(1, 13)
+    ]
 
     # Revenue by program (money actually collected via payments)
+    program_totals = dict(
+        payments_year.values_list('student__program').annotate(total=Sum('amount'))
+    )
     revenue_by_program = []
     for prog_code, prog_label in TrainingProgram.choices:
-        rev = round(sum(
-            float(p.amount) for p in payments_year.filter(student__program=prog_code)
-        ), 2)
+        rev = round(float(program_totals.get(prog_code) or 0), 2)
         if rev > 0:
             revenue_by_program.append({'program': prog_code, 'program_name': prog_label, 'revenue': rev})
 
@@ -296,76 +298,106 @@ def finance_reports(request):
     })
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, HasRolePermission])
-def student_report(request):
+class StudentReportView(APIView):
     """GET /api/reports/students/ — aggregated student data"""
-    from django.db.models import Count
-    total = Student.objects.count()
-    by_program = list(Student.objects.values('program').annotate(count=Count('id')))
-    by_status = list(Student.objects.values('status').annotate(count=Count('id')))
-    new_this_month = Student.objects.filter(enrollment_date__month=timezone.now().month, enrollment_date__year=timezone.now().year).count()
-    return Response({
-        'total': total, 'by_program': by_program, 'by_status': by_status,
-        'new_this_month': new_this_month,
-    })
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'students.view'
+
+    def get(self, request):
+        from django.db.models import Count
+        total = Student.objects.count()
+        by_program = list(Student.objects.values('program').annotate(count=Count('id')))
+        by_status = list(Student.objects.values('status').annotate(count=Count('id')))
+        new_this_month = Student.objects.filter(enrollment_date__month=timezone.now().month, enrollment_date__year=timezone.now().year).count()
+        return Response({
+            'total': total, 'by_program': by_program, 'by_status': by_status,
+            'new_this_month': new_this_month,
+        })
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, HasRolePermission])
-def financial_report(request):
+class FinancialReportView(APIView):
     """GET /api/reports/financial/ — revenue, payments, outstanding"""
-    from django.db.models import Count, Sum
-    total_invoiced = Invoice.objects.aggregate(s=Sum('amount'))['s'] or 0
-    total_paid = Payment.objects.aggregate(s=Sum('amount'))['s'] or 0
-    invoiced = Invoice.objects.filter(status__in=['issued', 'partially_paid', 'overdue']).annotate(
-        paid_total=Sum('payments__amount')
-    )
-    overdue = round(sum(
-        max(float(i.amount) - float(i.paid_total or 0), 0) for i in invoiced.filter(status='overdue')
-    ), 2)
-    by_status = list(Invoice.objects.values('status').annotate(count=Count('id'), total=Sum('amount')))
-    return Response({
-        'total_invoiced': round(float(total_invoiced), 2), 'total_paid': round(float(total_paid), 2),
-        'overdue': round(float(overdue), 2), 'by_status': by_status,
-    })
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'finance.view_reports'
+
+    def get(self, request):
+        from django.db.models import Count, Sum
+        total_invoiced = Invoice.objects.aggregate(s=Sum('amount'))['s'] or 0
+        total_paid = Payment.objects.aggregate(s=Sum('amount'))['s'] or 0
+        invoiced = Invoice.objects.filter(status__in=['issued', 'partially_paid', 'overdue']).annotate(
+            paid_total=Sum('payments__amount')
+        )
+        overdue = round(sum(
+            max(float(i.amount) - float(i.paid_total or 0), 0) for i in invoiced.filter(status='overdue')
+        ), 2)
+        by_status = list(Invoice.objects.values('status').annotate(count=Count('id'), total=Sum('amount')))
+        return Response({
+            'total_invoiced': round(float(total_invoiced), 2), 'total_paid': round(float(total_paid), 2),
+            'overdue': round(float(overdue), 2), 'by_status': by_status,
+        })
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, HasRolePermission])
-def exam_reports(request):
+class ExamReportsView(APIView):
     """GET /api/reports/exams/ -- pass rates, results summary"""
-    from apps.exams.models import Exam, ExamAttempt
-    from django.db.models import Count, Avg
-    total_exams = Exam.objects.count()
-    total_attempts = ExamAttempt.objects.count()
-    passed = ExamAttempt.objects.filter(is_passed=True).count()
-    pass_rate = round((passed / total_attempts * 100) if total_attempts > 0 else 0, 1)
-    avg_score = ExamAttempt.objects.filter(score__isnull=False).aggregate(a=Avg('score'))['a'] or 0
-    return Response({
-        'total_exams': total_exams, 'total_attempts': total_attempts,
-        'passed': passed, 'pass_rate': pass_rate, 'avg_score': round(float(avg_score), 1),
-    })
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'exams.view'
+
+    def get(self, request):
+        from apps.exams.models import Exam, ExamAttempt
+        from django.db.models import Count, Avg
+        total_exams = Exam.objects.count()
+        total_attempts = ExamAttempt.objects.count()
+        passed = ExamAttempt.objects.filter(is_passed=True).count()
+        pass_rate = round((passed / total_attempts * 100) if total_attempts > 0 else 0, 1)
+        avg_score = ExamAttempt.objects.filter(score__isnull=False).aggregate(a=Avg('score'))['a'] or 0
+        return Response({
+            'total_exams': total_exams, 'total_attempts': total_attempts,
+            'passed': passed, 'pass_rate': pass_rate, 'avg_score': round(float(avg_score), 1),
+        })
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, HasRolePermission])
-def fleet_report(request):
+class FleetReportView(APIView):
     """GET /api/reports/fleet/ — aircraft usage, instructor utilization"""
-    from apps.students.models import FlightInstructor
-    from django.db.models import Sum, Count
+    permission_classes = [IsAuthenticated, HasRolePermission]
+    required_permission = 'fleet.view'
 
-    aircraft = []
-    for a in Aircraft.objects.all():
-        hours = FlightLesson.objects.filter(aircraft=a, status='completed').aggregate(s=Sum('flight_duration'))['s'] or 0
-        aircraft.append({'registration': a.registration, 'hours': round(float(hours), 1), 'status': a.status, 'lessons': FlightLesson.objects.filter(aircraft=a).count()})
+    def get(self, request):
+        from apps.students.models import FlightInstructor
+        from django.db.models import Sum, Count
 
-    instructors = []
-    for fi in FlightInstructor.objects.filter(status='active'):
-        hours = FlightLesson.objects.filter(instructor=fi, status='completed').aggregate(s=Sum('flight_duration'))['s'] or 0
-        instructors.append({'name': f'{fi.first_name} {fi.last_name}', 'hours': round(float(hours), 1), 'students': fi.flight_lessons.values('student').distinct().count()})
+        flight_agg = dict(
+            FlightLesson.objects.filter(status='completed')
+            .values_list('aircraft_id').annotate(hours=Sum('flight_duration'))
+        )
+        lesson_counts = dict(
+            FlightLesson.objects.values_list('aircraft_id').annotate(c=Count('id'))
+        )
+        aircraft = []
+        for a in Aircraft.objects.all():
+            aircraft.append({
+                'registration': a.registration,
+                'hours': round(float(flight_agg.get(a.id) or 0), 1),
+                'status': a.status,
+                'lessons': lesson_counts.get(a.id, 0),
+            })
 
-    return Response({'aircraft': aircraft, 'instructors': instructors})
+        instructor_hours = dict(
+            FlightLesson.objects.filter(status='completed')
+            .values_list('instructor_id').annotate(hours=Sum('flight_duration'))
+        )
+        instructor_students = dict(
+            FlightLesson.objects.values_list('instructor_id')
+            .annotate(c=Count('student', distinct=True))
+        )
+        instructors = []
+        for fi in FlightInstructor.objects.filter(status='active'):
+            instructors.append({
+                'name': f'{fi.first_name} {fi.last_name}',
+                'hours': round(float(instructor_hours.get(fi.id) or 0), 1),
+                'students': instructor_students.get(fi.id, 0),
+            })
+
+        return Response({'aircraft': aircraft, 'instructors': instructors})
 
 
 @api_view(['GET'])

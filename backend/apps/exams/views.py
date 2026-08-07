@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
-from apps.accounts.permissions import HasRolePermission
+from apps.accounts.permissions import HasRolePermission, user_has_domain_permission
 from apps.students.models import Student
 from .pdf import generate_certificate_pdf as _cert_pdf
 from .models import (
@@ -28,6 +28,13 @@ from .services import AutoGradingService, CertificateService
 from .bulk_import import import_questions, generate_template
 
 
+# Roles that are allowed to see correct answers / manage the question bank
+_ANSWER_PRIVILEGED_ROLES = (
+    'system_admin', 'training_admin',
+    'chief_ground_instructor', 'chief_flight_instructor',
+)
+
+
 class QuestionBankViewSet(viewsets.ModelViewSet):
     queryset = QuestionBank.objects.select_related('subject').all()
     permission_classes = [IsAuthenticated, HasRolePermission]
@@ -35,11 +42,14 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
     filterset_fields = ['subject', 'question_type', 'difficulty']
     search_fields = ['question_text']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'student':
+            return qs.none()
+        return qs
+
     def get_serializer_class(self):
-        if self.request.user.role in (
-            'system_admin', 'training_admin',
-            'chief_ground_instructor', 'chief_flight_instructor',
-        ):
+        if self.request.user.role in _ANSWER_PRIVILEGED_ROLES:
             return QuestionWithAnswerSerializer
         return QuestionSerializer
 
@@ -59,6 +69,8 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='import')
     def import_bank(self, request):
+        if not user_has_domain_permission(request.user, 'exams', 'manage'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
@@ -119,14 +131,31 @@ class ExamViewSet(viewsets.ModelViewSet):
         except Student.DoesNotExist:
             return Response({'error': 'Student profile not found'}, status=400)
 
+        def _attempt_response(attempt):
+            question_ids = attempt.answers.get('question_ids', []) if isinstance(attempt.answers, dict) else []
+            questions = list(QuestionBank.objects.filter(id__in=question_ids))
+            return Response({
+                'attempt_id': str(attempt.id),
+                'exam_id': str(exam.id),
+                'exam_code': exam.code,
+                'title': exam.title,
+                'duration': exam.duration,
+                'attempt_number': attempt.attempt,
+                'questions': QuestionSerializer(questions, many=True).data,
+            })
+
         with transaction.atomic():
-            # Check max attempts
-            existing = len(list(
-                ExamAttempt.objects.select_for_update()
-                .filter(exam=exam, student=student)
-                .order_by('-attempt')
-            ))
-            if existing >= exam.max_attempts:
+            # Resume an interrupted attempt so a page refresh does not burn an attempt
+            dangling = ExamAttempt.objects.select_for_update().filter(
+                exam=exam, student=student, completed_at__isnull=True
+            ).order_by('-started_at').first()
+            if dangling:
+                return _attempt_response(dangling)
+
+            completed_count = ExamAttempt.objects.select_for_update().filter(
+                exam=exam, student=student, completed_at__isnull=False
+            ).count()
+            if completed_count >= exam.max_attempts:
                 return Response({'error': f'Maximum {exam.max_attempts} attempts reached'}, status=400)
 
             # Get questions — fixed list if ExamQuestion entries exist, else random from subject
@@ -142,22 +171,16 @@ class ExamViewSet(viewsets.ModelViewSet):
 
             attempt = ExamAttempt.objects.create(
                 exam=exam, student=student,
-                attempt=existing + 1, started_at=timezone.now(),
+                attempt=completed_count + 1, started_at=timezone.now(),
                 answers={'question_ids': [str(q.id) for q in questions]},
             )
 
-        return Response({
-            'attempt_id': str(attempt.id),
-            'exam_id': str(exam.id),
-            'exam_code': exam.code,
-            'title': exam.title,
-            'duration': exam.duration,
-            'attempt_number': attempt.attempt,
-            'questions': QuestionSerializer(questions, many=True).data,
-        })
+        return _attempt_response(attempt)
 
     @action(detail=True, methods=['get'])
     def preview(self, request, pk=None):
+        if not user_has_domain_permission(request.user, 'exams', 'manage'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         exam = self.get_object()
         fixed_questions = exam.questions.select_related('question').order_by('order')
         if fixed_questions.exists():
@@ -201,7 +224,17 @@ class ExamViewSet(viewsets.ModelViewSet):
 
             attempt.score = result['percentage']
             attempt.is_passed = result['is_passed']
-            attempt.answers = answers
+            attempt.answers = {'question_ids': question_ids or [], 'responses': answers}
+            violations = request.data.get('violations')
+            if isinstance(violations, list) and violations:
+                from .services import sanitize_violations
+                violations, serious_count, suspicious = sanitize_violations(
+                    violations, attempt.started_at, timezone.now()
+                )
+                if violations:
+                    attempt.violations = violations
+                    if serious_count >= 3 or suspicious:
+                        attempt.is_flagged = True
             attempt.completed_at = timezone.now()
             attempt.save()
 
@@ -269,7 +302,7 @@ class ExamViewSet(viewsets.ModelViewSet):
             if grade < 0 or grade > 100:
                 return Response({'error': 'Grade must be between 0 and 100.'}, status=400)
             attempt.score = grade
-            attempt.is_passed = grade >= float(exam.passing_grade) if exam.passing_grade else None
+            attempt.is_passed = grade >= float(exam.passing_grade) if exam.passing_grade is not None else None
         attempt.notes = feedback
         attempt.graded_by = request.user
         attempt.save()
@@ -311,8 +344,24 @@ class QuizViewSet(viewsets.ModelViewSet):
 
         from django.db import transaction
         with transaction.atomic():
-            existing = QuizAttempt.objects.select_for_update().filter(quiz=quiz, student=student).count()
-            if existing >= quiz.max_attempts:
+            dangling = QuizAttempt.objects.select_for_update().filter(
+                quiz=quiz, student=student, completed_at__isnull=True
+            ).order_by('-started_at').first()
+            if dangling:
+                question_ids = dangling.answers.get('question_ids', []) if isinstance(dangling.answers, dict) else []
+                questions = list(QuestionBank.objects.filter(id__in=question_ids))
+                return Response({
+                    'attempt_id': str(dangling.id),
+                    'quiz_id': str(quiz.id),
+                    'title': quiz.title,
+                    'duration': quiz.duration,
+                    'questions': QuestionSerializer(questions, many=True).data,
+                })
+
+            completed = QuizAttempt.objects.select_for_update().filter(
+                quiz=quiz, student=student, completed_at__isnull=False
+            ).count()
+            if completed >= quiz.max_attempts:
                 return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
 
             all_questions = list(QuestionBank.objects.filter(subject__modules=quiz.module))
@@ -340,6 +389,8 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({'error': 'This quiz is not open'}, status=400)
         answers = request.data.get('answers', {})
         attempt_id = request.data.get('attempt_id')
+        if not attempt_id:
+            return Response({'error': 'attempt_id is required'}, status=400)
         from apps.students.models import Student
         try:
             student = Student.objects.get(user=request.user)
@@ -348,25 +399,26 @@ class QuizViewSet(viewsets.ModelViewSet):
 
         from django.db import transaction
         with transaction.atomic():
-            existing = QuizAttempt.objects.select_for_update().filter(quiz=quiz, student=student).count()
-            if existing >= quiz.max_attempts:
-                return Response({'error': f'Maximum {quiz.max_attempts} attempts reached'}, status=400)
+            try:
+                attempt = QuizAttempt.objects.select_for_update().get(id=attempt_id, quiz=quiz, student=student)
+            except QuizAttempt.DoesNotExist:
+                return Response({'error': 'Attempt not found'}, status=404)
 
-            # If attempt_id provided, use the exact questions from that start session
-            question_ids = None
-            if attempt_id:
-                try:
-                    start_attempt = QuizAttempt.objects.filter(id=attempt_id, quiz=quiz, student=student).first()
-                    if start_attempt and isinstance(start_attempt.answers, dict):
-                        question_ids = start_attempt.answers.get('question_ids')
-                except Exception:
-                    pass
+            if attempt.completed_at:
+                return Response({'error': 'This attempt is already completed'}, status=400)
 
+            if attempt.started_at and quiz.duration:
+                from datetime import timedelta
+                if timezone.now() - attempt.started_at > timedelta(minutes=quiz.duration):
+                    return Response({'error': 'Quiz duration has elapsed; this attempt can no longer be submitted.'}, status=400)
+
+            question_ids = attempt.answers.get('question_ids') if isinstance(attempt.answers, dict) else None
             result = AutoGradingService.grade_quiz(quiz, answers, question_ids=question_ids)
-            QuizAttempt.objects.create(
-                quiz=quiz, student=student,
-                score=result['percentage'], completed_at=timezone.now(),
-            )
+
+            attempt.score = result['percentage']
+            attempt.answers = {'question_ids': question_ids or [], 'responses': answers}
+            attempt.completed_at = timezone.now()
+            attempt.save()
         return Response(result)
 
 

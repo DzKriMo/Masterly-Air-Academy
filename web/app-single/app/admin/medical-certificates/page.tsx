@@ -86,11 +86,7 @@ export default function AdminMedicalCertificatesPage() {
     if (!mc.file_url) { showToast("error", "No file attached"); return; }
     if (mc.file_url.startsWith("http")) { window.open(mc.file_url, "_blank", "noopener,noreferrer"); return; }
     try {
-      const token = api.getAccessToken();
-      const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/medical-certificates/${mc.id}/download/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok) { showToast("error", "Download failed"); return; }
+      const r = await api.download(`/medical-certificates/${mc.id}/download/`);
       const b = await r.blob();
       const u = window.URL.createObjectURL(b);
       const a = document.createElement("a");
@@ -112,15 +108,7 @@ export default function AdminMedicalCertificatesPage() {
     if (certId) formData.append("certificate_id", certId);
     setUploading(true);
     try {
-      const token = api.getAccessToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/medical-certificates/upload/`, {
-        method: "POST",
-        headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
+      const data = await api.upload("/medical-certificates/upload/", formData);
       const body = data && typeof data === "object" && data.success === true && "data" in data ? data.data : data;
       if (body?.file_url) {
         apply(body.file_url);

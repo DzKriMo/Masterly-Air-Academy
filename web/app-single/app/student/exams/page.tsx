@@ -55,7 +55,9 @@ export default function StudentExamsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const getAttemptCount = (examId: string) => attempts.filter(a => a.exam_code === exams.find(e => e.id === examId)?.code).length;
+  const getAttemptCount = (examId: string) => attempts.filter(a =>
+    a.completed_at && a.exam_code === exams.find(e => e.id === examId)?.code
+  ).length;
 
   const availableExams = exams.filter(e => e.status === 'active');
   const openQuizzes = quizzes.filter(q => q.is_open);
@@ -202,13 +204,31 @@ function QuizTaker({ quiz, onClose, onDone, t }: { quiz: Quiz; onClose: () => vo
   const submittedRef = useRef(false);
   const answersRef = useRef(answers);
   const quizIdRef = useRef(quiz.id);
+  const storageKey = `quiz_${quiz.id}_answers`;
 
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { quizIdRef.current = quiz.id; }, [quiz.id]);
 
   useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) setAnswers(JSON.parse(saved));
+    } catch {}
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(answers));
+    } catch {}
+  }, [storageKey, answers]);
+
+  const startQuiz = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
+    setError(null);
+    setSubmitted(false);
+    setResult(null);
+    setAnswers({});
     api.post(`/quizzes/${quiz.id}/start/`)
       .then((d: any) => {
         if (d.error) { showToast("error", d.error); onClose(); return; }
@@ -217,8 +237,9 @@ function QuizTaker({ quiz, onClose, onDone, t }: { quiz: Quiz; onClose: () => vo
         setLoading(false);
       })
       .catch(err => { console.error("Failed to start quiz:", err); setError(t("exam.failedToStart")); setLoading(false); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, quiz.id]);
+  }, [isAuthenticated, quiz.id, quiz.duration, onClose, showToast, t]);
+
+  useEffect(() => { startQuiz(); }, [startQuiz]);
 
   useEffect(() => {
     if (timeLeft <= 0 || submitted) return;
@@ -231,6 +252,7 @@ function QuizTaker({ quiz, onClose, onDone, t }: { quiz: Quiz; onClose: () => vo
     submittedRef.current = true;
     try {
       const res = await api.post(`/quizzes/${quizIdRef.current}/submit/`, { answers: answersRef.current });
+      try { sessionStorage.removeItem(`quiz_${quizIdRef.current}_answers`); } catch {}
       setResult(res as unknown as QuizResult);
       setSubmitted(true);
       onDone();
@@ -255,7 +277,7 @@ function QuizTaker({ quiz, onClose, onDone, t }: { quiz: Quiz; onClose: () => vo
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-navy-800 border border-navy-700 rounded-2xl w-full max-w-2xl my-8">
         {error ? (
-          <div className="p-6"><ErrorCard message={error} onRetry={() => { setError(null); onClose(); }} /></div>
+          <div className="p-6"><ErrorCard message={error} onRetry={startQuiz} /></div>
         ) : submitted && result ? (
           <div className="p-8">
             <div className="flex items-center justify-between mb-4">

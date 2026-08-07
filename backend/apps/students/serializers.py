@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Student, MedicalCertificate, FlightInstructor, AdminProfile, Promotion
+from .models import Student, MedicalCertificate, FlightInstructor, GroundInstructor, AdminProfile, Promotion
 
 
 class PromotionSerializer(serializers.ModelSerializer):
@@ -20,7 +20,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     email = serializers.CharField(source='user.email', read_only=True)
     instructor_name = serializers.SerializerMethodField()
     medical_certificate = serializers.SerializerMethodField()
-    medical_expiry = serializers.DateField(read_only=True)
+    medical_expiry = serializers.SerializerMethodField()
     emergency_contact = serializers.SerializerMethodField()
     emergency_phone = serializers.SerializerMethodField()
     notes = serializers.SerializerMethodField()
@@ -51,6 +51,10 @@ class StudentListSerializer(serializers.ModelSerializer):
         cert = obj.medical_certificates.order_by('-expiry_date').first()
         return cert.issuer if cert else ''
 
+    def get_medical_expiry(self, obj):
+        cert = obj.medical_certificates.order_by('-expiry_date').first()
+        return str(cert.expiry_date) if cert else None
+
     def get_emergency_contact(self, obj):
         return ''
 
@@ -70,13 +74,12 @@ class MedicalCertificateSerializer(serializers.ModelSerializer):
 class FlightInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     email = serializers.CharField(source='user.email', read_only=True)
-    phone = serializers.CharField(source='user.phone', required=False, allow_blank=True, allow_null=True)
     student_count = serializers.SerializerMethodField()
 
     class Meta:
         model = FlightInstructor
         fields = [
-            'id', 'name', 'email', 'phone', 'first_name', 'last_name',
+            'id', 'name', 'email', 'first_name', 'last_name',
             'license_number', 'qualifications', 'status',
             'total_flight_hours', 'instruction_hours', 'student_count',
         ]
@@ -88,26 +91,54 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
     def get_student_count(self, obj):
         return obj.assigned_students.count()
 
+
+class GroundInstructorSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    email = serializers.EmailField(source='user.email', required=False, allow_null=True)
+    phone = serializers.SerializerMethodField()
+    license_number = serializers.SerializerMethodField()
+    total_flight_hours = serializers.SerializerMethodField()
+    instruction_hours = serializers.SerializerMethodField()
+    student_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GroundInstructor
+        fields = [
+            'id', 'name', 'email', 'phone', 'first_name', 'last_name',
+            'license_number', 'qualifications', 'status',
+            'total_flight_hours', 'instruction_hours', 'student_count',
+            'medical_expiry', 'hire_date', 'authorized_subjects',
+        ]
+        read_only_fields = [
+            'id', 'name', 'phone', 'license_number',
+            'total_flight_hours', 'instruction_hours', 'student_count',
+        ]
+
+    def get_name(self, obj):
+        return f'{obj.first_name} {obj.last_name}'.strip() or (obj.user.email if obj.user_id else '')
+
+    def get_phone(self, obj):
+        return ''
+
+    def get_license_number(self, obj):
+        return ''
+
+    def get_total_flight_hours(self, obj):
+        return 0
+
+    def get_instruction_hours(self, obj):
+        return 0
+
+    def get_student_count(self, obj):
+        return 0
+
     def update(self, instance, validated_data):
-        phone = validated_data.pop('phone', None)
+        email = validated_data.pop('email', None)
         instance = super().update(instance, validated_data)
-        if phone is not None and instance.user:
-            instance.user.phone = phone
-            instance.user.save(update_fields=['phone'])
+        if email is not None and instance.user_id:
+            instance.user.email = email
+            instance.user.save(update_fields=['email'])
         return instance
-
-
-class GroundInstructorSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    name = serializers.CharField()
-    email = serializers.CharField()
-    phone = serializers.CharField(allow_null=True, default='')
-    license_number = serializers.CharField(allow_null=True, default='')
-    qualifications = serializers.ListField(default=list)
-    status = serializers.CharField()
-    total_flight_hours = serializers.FloatField(default=0)
-    instruction_hours = serializers.FloatField(default=0)
-    student_count = serializers.IntegerField(default=0)
 
 
 class AdminProfileSerializer(serializers.ModelSerializer):

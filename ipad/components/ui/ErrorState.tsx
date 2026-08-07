@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { Button } from './Button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface ErrorStateProps {
   message?: string;
@@ -10,19 +11,21 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  message = 'Something went wrong. Please try again.',
+  message,
   onRetry,
 }: ErrorStateProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
         <AlertCircle size={40} color={colors.status.error} />
       </View>
-      <Text style={styles.title}>Oops!</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.title}>{t('errors.oops')}</Text>
+      <Text style={styles.message}>{message ?? t('errors.somethingWentWrong')}</Text>
       {onRetry && (
         <Button
-          title="Retry"
+          title={t('common.retry')}
           onPress={onRetry}
           variant="secondary"
           size="md"

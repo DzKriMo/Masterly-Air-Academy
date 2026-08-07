@@ -162,8 +162,9 @@ export default function AdminRolesPage() {
   const permissionsByType = useMemo(() => {
     const grouped: Record<string, Permission[]> = {};
     for (const perm of permissionsList) {
-      // Group by domain (part before the dot in codename, e.g. "flight_training" from "flight_training.view")
-      const domain = perm.codename.includes('.') ? perm.codename.split('.')[0] : perm.codename;
+      // Group by model name (content_type_name, e.g. "student" from "view_student"),
+      // falling back to the codename's app prefix when the field is absent.
+      const domain = perm.content_type_name || (perm.codename.includes('.') ? perm.codename.split('.')[0] : perm.codename);
       if (!grouped[domain]) grouped[domain] = [];
       grouped[domain].push(perm);
     }

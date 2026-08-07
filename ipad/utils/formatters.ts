@@ -1,24 +1,33 @@
-const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+import i18n from '@/lib/i18n';
 
-function padZero(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
+function currentLocale(): string {
+  return i18n.language || 'en';
 }
 
 export function formatDate(date: string): string {
   const d = new Date(date);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return d.toLocaleDateString(currentLocale(), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export function formatDateTime(date: string): string {
   const d = new Date(date);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
+  return d.toLocaleString(currentLocale(), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function formatCurrency(amount: number, currency: string = 'DZD'): string {
-  const formatted = amount.toLocaleString('en-US');
+  const formatted = amount.toLocaleString(currentLocale(), {
+    maximumFractionDigits: 2,
+  });
   return `${formatted} ${currency}`;
 }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { colors } from '@/constants/colors';
 import { Badge } from '@/components/ui/Badge';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Question } from '@/types/models';
 
 interface QuestionCardProps {
@@ -10,11 +11,11 @@ interface QuestionCardProps {
   onSelectAnswer: (answer: string) => void;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  MCQ: 'Multiple Choice',
-  TRUE_FALSE: 'True / False',
-  SHORT_ANSWER: 'Short Answer',
-  FILL_BLANK: 'Fill in the Blank',
+const TYPE_KEYS: Record<string, string> = {
+  MCQ: 'exams.typeMcq',
+  TRUE_FALSE: 'exams.typeTrueFalse',
+  SHORT_ANSWER: 'exams.typeShortAnswer',
+  FILL_BLANK: 'exams.typeFillBlank',
 };
 
 export function QuestionCard({
@@ -22,7 +23,11 @@ export function QuestionCard({
   selectedAnswer,
   onSelectAnswer,
 }: QuestionCardProps) {
+  const { t } = useTranslation();
   const typeKey = question.question_type.toUpperCase();
+  const typeLabel = t(TYPE_KEYS[typeKey] ?? 'exams.typeMcq');
+  const trueLabel = t('exams.true');
+  const falseLabel = t('exams.false');
 
   return (
     <View style={styles.container}>
@@ -33,7 +38,7 @@ export function QuestionCard({
           size="sm"
         />
         <Badge
-          label={TYPE_LABELS[typeKey] ?? typeKey}
+          label={typeLabel}
           variant="info"
           size="sm"
         />
@@ -71,7 +76,7 @@ export function QuestionCard({
 
       {typeKey === 'TRUE_FALSE' && (
         <View style={styles.tfRow}>
-          {['True', 'False'].map((option) => {
+          {[trueLabel, falseLabel].map((option) => {
             const isSelected = selectedAnswer === option;
             return (
               <Pressable
@@ -99,7 +104,7 @@ export function QuestionCard({
             style={styles.textInput}
             value={selectedAnswer ?? ''}
             onChangeText={onSelectAnswer}
-            placeholder="Type your answer..."
+            placeholder={t('exams.typeAnswer')}
             placeholderTextColor={colors.text.muted}
             multiline
             textAlignVertical="top"
@@ -113,7 +118,7 @@ export function QuestionCard({
             style={styles.textInput}
             value={selectedAnswer ?? ''}
             onChangeText={onSelectAnswer}
-            placeholder="Fill in the blank..."
+            placeholder={t('exams.fillBlank')}
             placeholderTextColor={colors.text.muted}
             autoCapitalize="none"
           />

@@ -17,10 +17,10 @@ export default function NotFound() {
           {t("common.pageNotFoundDesc") || "The page you are looking for does not exist or has been moved."}
         </p>
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-block px-6 py-3 bg-gold-500 text-navy-900 rounded-lg font-medium hover:bg-gold-400 transition-colors"
         >
-          {t("common.backToDashboard") || "Back to Dashboard"}
+          {t("common.home", "Back to Home")}
         </Link>
       </div>
     </div>

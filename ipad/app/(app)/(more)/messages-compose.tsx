@@ -19,18 +19,19 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { Card } from '@/components/ui/Card';
 import { MessagesService } from '@/services/messages.service';
 import { SearchService } from '@/services/search.service';
-import { messageSchema, type MessageFormData } from '@/utils/validators';
+import { createMessageSchema, type MessageFormData } from '@/utils/validators';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface SearchUser {
   id: string;
   name: string;
-  email: string;
+  subtitle: string;
 }
 
 export default function MessagesComposeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const messageSchema = React.useMemo(() => createMessageSchema(t), [t]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
   const [subject, setSubject] = useState('');
@@ -40,9 +41,14 @@ export default function MessagesComposeScreen() {
   const { data: searchResults, isLoading: searching } = useQuery({
     queryKey: ['search', 'users', searchQuery],
     queryFn: async () => {
-      const { data } = await SearchService.search(searchQuery);
-      const results = data as unknown as SearchUser[];
-      return results ?? [];
+      const hits = await SearchService.search(searchQuery);
+      return hits
+        .filter((hit) => hit.type === 'student')
+        .map((hit) => ({
+          id: String(hit.id),
+          name: hit.title || 'Unknown',
+          subtitle: hit.subtitle ?? '',
+        }));
     },
     enabled: searchQuery.length >= 2,
   });
@@ -61,7 +67,7 @@ export default function MessagesComposeScreen() {
       ]);
     },
     onError: () => {
-      Alert.alert(t('common.error'), 'Failed to send message.');
+      Alert.alert(t('common.error'), t('messages.sendFailed'));
     },
   });
 
@@ -110,7 +116,9 @@ export default function MessagesComposeScreen() {
               <View style={styles.selectedUserRow}>
                 <View>
                   <Text style={styles.selectedUserName}>{selectedUser.name}</Text>
-                  <Text style={styles.selectedUserEmail}>{selectedUser.email}</Text>
+                  {selectedUser.subtitle ? (
+                    <Text style={styles.selectedUserEmail}>{selectedUser.subtitle}</Text>
+                  ) : null}
                 </View>
                 <Button
                   title={t('common.cancel')}
@@ -134,7 +142,7 @@ export default function MessagesComposeScreen() {
               {searchQuery.length >= 2 && !searching && searchResults && (
                 <View style={styles.searchResults}>
                   {searchResults.length === 0 ? (
-                    <Text style={styles.noResults}>No users found</Text>
+                    <Text style={styles.noResults}>{t('messages.noUsersFound')}</Text>
                   ) : (
                     searchResults.slice(0, 5).map((user) => (
                       <Card
@@ -146,7 +154,9 @@ export default function MessagesComposeScreen() {
                         }}
                       >
                         <Text style={styles.searchResultName}>{user.name}</Text>
-                        <Text style={styles.searchResultEmail}>{user.email}</Text>
+                        {user.subtitle ? (
+                          <Text style={styles.searchResultEmail}>{user.subtitle}</Text>
+                        ) : null}
                       </Card>
                     ))
                   )}

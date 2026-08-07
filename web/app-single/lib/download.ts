@@ -39,8 +39,28 @@ export function moduleDocDownloadUrl(id: string): string {
   return `/module-documents/${id}/download/`;
 }
 
-/** Build the module-document stream URL for inline reading with auth token. */
-export function moduleDocStreamUrl(id: string, token?: string | null): string {
-  const tok = token || api.getAccessToken();
-  return `/api/module-documents/${id}/download/?token=${encodeURIComponent(tok || "")}`;
+/**
+ * Build the module-document stream URL for inline reading with a short-lived
+ * signed media token (<iframe> cannot attach auth headers).
+ */
+export async function moduleDocStreamUrl(id: string): Promise<string | null> {
+  return mediaStreamUrl(id, `/api/module-documents/${id}/download/`);
+}
+
+/**
+ * Mint a short-lived signed media URL for inline playback that cannot attach
+ * auth headers (<video>, <iframe>). The signed token expires server-side, so
+ * a long-lived JWT is never placed in the URL.
+ */
+export async function mediaStreamUrl(resourceId: string, base: string): Promise<string | null> {
+  try {
+    const res = await api.post<any>("/media-token/", { resource: resourceId });
+    const tok = res?.media_token;
+    if (!tok) return null;
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}media=${encodeURIComponent(tok)}`;
+  } catch (e) {
+    console.error("Failed to mint media token:", e);
+    return null;
+  }
 }

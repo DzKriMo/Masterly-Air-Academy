@@ -22,6 +22,14 @@ def _perm_held(all_perms, perm):
     return perm in all_perms or any(p.endswith(f'.{perm}') for p in all_perms)
 
 
+def user_has_domain_permission(user, domain, action):
+    """True if the user holds <domain>.<action> or <domain>.manage, or is a system admin."""
+    if user.role == 'system_admin' or user.is_superuser:
+        return True
+    all_perms = user.get_all_permissions()
+    return _perm_held(all_perms, f'{domain}.{action}') or _perm_held(all_perms, f'{domain}.manage')
+
+
 class HasRolePermission(BasePermission):
     """
     Checks if the user has a specific Django permission.
@@ -35,7 +43,9 @@ class HasRolePermission(BasePermission):
 
         required = getattr(view, 'required_permission', None)
         if not required:
-            return True
+            # Fail closed: a view that forgot to declare its required_permission
+            # must not silently grant access to every authenticated user.
+            return False
 
         # System admin and superusers bypass all checks
         if request.user.role == 'system_admin' or request.user.is_superuser:

@@ -31,5 +31,6 @@ docker compose exec -T api python manage.py migrate --noinput
 echo ""
 echo "=== DEPLOY COMPLETE ==="
 docker compose ps
-curl -sf http://localhost/health/ > /dev/null && echo "API: OK" || echo "API: FAILED"
-curl -sf http://localhost/ > /dev/null && echo "Frontend: OK" || echo "Frontend: FAILED"
+DEPLOY_PORT="${DEPLOY_PORT:-7788}"
+curl -sf "http://localhost:${DEPLOY_PORT}/health/" > /dev/null && echo "API: OK" || echo "API: FAILED"
+curl -sf "http://localhost:${DEPLOY_PORT}/" > /dev/null && echo "Frontend: OK" || echo "Frontend: FAILED"

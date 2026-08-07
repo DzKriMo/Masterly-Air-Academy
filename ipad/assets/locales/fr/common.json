@@ -37,6 +37,7 @@
     "attendance": "Assiduité",
     "present": "Présent",
     "absent": "Absent",
+    "late": "En retard",
     "upcoming": "À venir"
   },
   "flights": {
@@ -77,7 +78,41 @@
     "attempts": "Tentatives",
     "maxAttempts": "Tentatives max",
     "confirmSubmit": "Êtes-vous sûr de vouloir soumettre l'examen ?",
-    "timeWarning": "Moins de 5 minutes restantes !"
+    "timeWarning": "Moins de 5 minutes restantes !",
+    "questions": "Questions",
+    "duration": "Durée",
+    "passingGrade": "Note de passage",
+    "notFound": "Examen introuvable.",
+    "readyMessage": "Vous êtes sur le point de commencer cet examen. Assurez-vous d'avoir une connexion internet stable et suffisamment de temps pour le terminer.",
+    "cannotAttempt": "Vous ne pouvez pas passer cet examen pour le moment.",
+    "loading": "Chargement de l'examen...",
+    "tooManyViolations": "Trop de violations",
+    "tooManyViolationsMessage": "Vous avez dépassé le nombre autorisé de violations. Votre examen sera soumis maintenant.",
+    "violationWarning": "Avertissement : Violation {{count}}/3 détectée",
+    "unansweredConfirm": "Vous avez {{count}} questions sans réponse. Soumettre quand même ?",
+    "submitFailed": "Échec de la soumission de l'examen. Veuillez réessayer.",
+    "startFailed": "Impossible de démarrer l'examen. Veuillez réessayer.",
+    "typeMcq": "Choix multiples",
+    "typeTrueFalse": "Vrai / Faux",
+    "typeShortAnswer": "Réponse courte",
+    "typeFillBlank": "Remplir le vide",
+    "true": "Vrai",
+    "false": "Faux",
+    "typeAnswer": "Tapez votre réponse...",
+    "fillBlank": "Remplissez le vide...",
+    "searchPlaceholder": "Rechercher des examens...",
+    "noExamsMessage": "Aucun examen ne vous a été attribué pour le moment.",
+    "noResults": "Aucun résultat",
+    "noResultsMessage": "Aucun examen ne correspond à votre recherche.",
+    "attemptsUsed": "{{used}} / {{max}} tentatives utilisées",
+    "tabSwitchDetected": "Changement d'onglet détecté",
+    "sessionMonitored": "Votre session d'examen est surveillée",
+    "congratulations": "Félicitations !",
+    "keepTrying": "Réessayez !",
+    "passedMessage": "Vous avez réussi l'examen.",
+    "failedMessage": "Vous n'avez pas réussi cette fois. Révisez et réessayez.",
+    "scoreDetail": "{{score}} / {{total}} correctes",
+    "backToExams": "Retour aux examens"
   },
   "certificates": {
     "title": "Certificats",
@@ -120,7 +155,12 @@
     "body": "Message",
     "send": "Envoyer",
     "noMessages": "Aucun message",
-    "reply": "Répondre"
+    "reply": "Répondre",
+    "from": "De",
+    "date": "Date",
+    "deleted": "Ce message a peut-être été supprimé.",
+    "sendFailed": "Échec de l'envoi du message.",
+    "noUsersFound": "Aucun utilisateur trouvé"
   },
   "notifications": {
     "title": "Notifications",
@@ -146,7 +186,13 @@
     "medicalExpiring": "Expire bientôt",
     "medicalExpired": "Expiré",
     "noMedical": "Aucun dossier médical",
-    "editProfile": "Modifier le profil"
+    "editProfile": "Modifier le profil",
+    "personalInfo": "Informations personnelles",
+    "address": "Adresse",
+    "phone": "Téléphone",
+    "nationality": "Nationalité",
+    "saveSuccess": "Profil mis à jour.",
+    "saveError": "Échec de la mise à jour du profil."
   },
   "settings": {
     "title": "Paramètres",
@@ -160,7 +206,11 @@
     "french": "Français",
     "arabic": "Arabe",
     "enableBiometric": "Activer la connexion biométrique",
-    "disableBiometric": "Désactiver la connexion biométrique"
+    "disableBiometric": "Désactiver la connexion biométrique",
+    "notificationsEnabled": "Activées",
+    "notificationsDisabled": "Désactivées",
+    "updateFailed": "Échec de la mise à jour des paramètres de notification.",
+    "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?"
   },
   "offline": {
     "cached": "Données en cache",
@@ -182,7 +232,19 @@
     "networkError": "Erreur réseau. Veuillez vérifier votre connexion.",
     "signingIn": "Connexion en cours...",
     "studentOnly": "Comptes étudiants uniquement",
+    "noBiometricCredentials": "Aucune connexion enregistrée. Veuillez vous connecter avec votre mot de passe.",
     "welcome": "Bienvenue à Masterly Air Academy"
+  },
+  "errors": {
+    "oops": "Oups !",
+    "somethingWentWrong": "Quelque chose s'est mal passé. Veuillez réessayer."
+  },
+  "validators": {
+    "invalidEmail": "Veuillez saisir une adresse e-mail valide",
+    "passwordMin": "Le mot de passe doit contenir au moins 6 caractères",
+    "invalidRecipient": "Veuillez sélectionner un destinataire valide",
+    "subjectRequired": "L'objet est requis",
+    "bodyRequired": "Le message est requis"
   },
   "common": {
     "loading": "Chargement...",
@@ -199,6 +261,7 @@
     "confirm": "Confirmer",
     "success": "Succès",
     "na": "N/D",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "ok": "OK"
   }
 }

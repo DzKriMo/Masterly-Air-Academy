@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '@/constants/config';
-import { getAccessToken, getRefreshToken, clearTokens, storeTokens } from '@/lib/storage';
+import { getAccessToken, getRefreshToken, clearTokens, storeTokens, removeUser } from '@/lib/storage';
+import { useAuthStore } from '@/store/auth-store';
 import type { ApiResponse } from '@/types/api';
 
 const api = axios.create({
@@ -49,8 +50,12 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url ?? '';
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthEndpoint =
+      requestUrl.includes('/login/') || requestUrl.includes('/token/refresh/');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -90,6 +95,8 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         await clearTokens();
+        await removeUser();
+        useAuthStore.getState().setUser(null);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

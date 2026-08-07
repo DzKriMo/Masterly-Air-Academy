@@ -1,4 +1,10 @@
 node_modules
 .next
 .git
+*.tar
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.env*
 *.md

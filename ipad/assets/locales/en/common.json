@@ -37,6 +37,7 @@
     "attendance": "Attendance",
     "present": "Present",
     "absent": "Absent",
+    "late": "Late",
     "upcoming": "Upcoming"
   },
   "flights": {
@@ -77,7 +78,41 @@
     "attempts": "Attempts",
     "maxAttempts": "Max Attempts",
     "confirmSubmit": "Are you sure you want to submit the exam?",
-    "timeWarning": "Less than 5 minutes remaining!"
+    "timeWarning": "Less than 5 minutes remaining!",
+    "questions": "Questions",
+    "duration": "Duration",
+    "passingGrade": "Passing Grade",
+    "notFound": "Exam not found.",
+    "readyMessage": "You are about to start this exam. Make sure you have a stable internet connection and enough time to complete it.",
+    "cannotAttempt": "You cannot attempt this exam right now.",
+    "loading": "Loading exam...",
+    "tooManyViolations": "Too Many Violations",
+    "tooManyViolationsMessage": "You have exceeded the allowed number of violations. Your exam will be submitted now.",
+    "violationWarning": "Warning: Violation {{count}}/3 detected",
+    "unansweredConfirm": "You have {{count}} unanswered questions. Submit anyway?",
+    "submitFailed": "Failed to submit exam. Please try again.",
+    "startFailed": "Failed to start the exam. Please try again.",
+    "typeMcq": "Multiple Choice",
+    "typeTrueFalse": "True / False",
+    "typeShortAnswer": "Short Answer",
+    "typeFillBlank": "Fill in the Blank",
+    "true": "True",
+    "false": "False",
+    "typeAnswer": "Type your answer...",
+    "fillBlank": "Fill in the blank...",
+    "searchPlaceholder": "Search exams...",
+    "noExamsMessage": "There are no exams assigned to you at the moment.",
+    "noResults": "No Results",
+    "noResultsMessage": "No exams match your search.",
+    "attemptsUsed": "{{used}} / {{max}} attempts used",
+    "tabSwitchDetected": "Tab switch detected",
+    "sessionMonitored": "Your exam session is being monitored",
+    "congratulations": "Congratulations!",
+    "keepTrying": "Keep Trying!",
+    "passedMessage": "You have successfully passed the exam.",
+    "failedMessage": "You did not pass this time. Review and try again.",
+    "scoreDetail": "{{score}} / {{total}} correct",
+    "backToExams": "Back to Exams"
   },
   "certificates": {
     "title": "Certificates",
@@ -120,7 +155,12 @@
     "body": "Message",
     "send": "Send",
     "noMessages": "No messages",
-    "reply": "Reply"
+    "reply": "Reply",
+    "from": "From",
+    "date": "Date",
+    "deleted": "This message may have been deleted.",
+    "sendFailed": "Failed to send message.",
+    "noUsersFound": "No users found"
   },
   "notifications": {
     "title": "Notifications",
@@ -146,7 +186,13 @@
     "medicalExpiring": "Expiring Soon",
     "medicalExpired": "Expired",
     "noMedical": "No Medical on File",
-    "editProfile": "Edit Profile"
+    "editProfile": "Edit Profile",
+    "personalInfo": "Personal Information",
+    "address": "Address",
+    "phone": "Phone",
+    "nationality": "Nationality",
+    "saveSuccess": "Profile updated.",
+    "saveError": "Failed to update profile."
   },
   "settings": {
     "title": "Settings",
@@ -160,7 +206,11 @@
     "french": "French",
     "arabic": "Arabic",
     "enableBiometric": "Enable Biometric Login",
-    "disableBiometric": "Disable Biometric Login"
+    "disableBiometric": "Disable Biometric Login",
+    "notificationsEnabled": "Enabled",
+    "notificationsDisabled": "Disabled",
+    "updateFailed": "Failed to update notification settings.",
+    "logoutConfirm": "Are you sure you want to sign out?"
   },
   "offline": {
     "cached": "Cached Data",
@@ -182,7 +232,19 @@
     "networkError": "Network error. Please check your connection.",
     "signingIn": "Signing in...",
     "studentOnly": "Student accounts only",
+    "noBiometricCredentials": "No saved login found. Please log in with your password.",
     "welcome": "Welcome to Masterly Air Academy"
+  },
+  "errors": {
+    "oops": "Oops!",
+    "somethingWentWrong": "Something went wrong. Please try again."
+  },
+  "validators": {
+    "invalidEmail": "Please enter a valid email address",
+    "passwordMin": "Password must be at least 6 characters",
+    "invalidRecipient": "Please select a valid recipient",
+    "subjectRequired": "Subject is required",
+    "bodyRequired": "Message body is required"
   },
   "common": {
     "loading": "Loading...",
@@ -199,6 +261,7 @@
     "confirm": "Confirm",
     "success": "Success",
     "na": "N/A",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "ok": "OK"
   }
 }

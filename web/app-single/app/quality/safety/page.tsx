@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { safetySchema } from "@/lib/validators";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { DataTable } from "@/components/data-table";
@@ -19,6 +21,8 @@ import SecureImage from "@/components/SecureImage";
 const ACCEPTED = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt";
 
 export default function SafetyPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  useAuthGuard(isAuthenticated, isLoading);
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [show, setShow] = useState(false);
@@ -36,7 +40,7 @@ export default function SafetyPage() {
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['quality-safety'],
     queryFn: () => api.get("/safety-events/"),
   });
@@ -279,7 +283,7 @@ export default function SafetyPage() {
         loading={transitionEvent.isPending}
       />
 
-      {isLoading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0&&events.length===0?<EmptyState message={t('quality.noEvents', 'No events reported.')}/>:<>
+      {eventsLoading?<LoadingSkeleton type="table" rows={5}/>:filtered.length===0&&events.length===0?<EmptyState message={t('quality.noEvents', 'No events reported.')}/>:<>
         <FilterBar filters={filterOptions} values={filters} onChange={(k,v)=>setFilters(p=>({...p,[k]:v}))} onClear={()=>{setFilters({});setSearch("")}} searchValue={search} onSearchChange={setSearch} searchPlaceholder={t('quality.searchEvents', 'Search events...')}/>
         <DataTable columns={columns} data={filtered} keyField="id" onRowClick={(e) => setSelectedEvent(e as any)}/>
       </>}

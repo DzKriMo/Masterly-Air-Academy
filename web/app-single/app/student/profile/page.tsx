@@ -89,14 +89,9 @@ export default function StudentProfilePage() {
     try {
       const fd = new FormData();
       fd.append('photo', photoFile);
-      const res = await fetch(`/api/profile/`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${api.getAccessToken()}` },
-        body: fd,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.photo) setPhotoPreview(data.photo);
+      const res = await api.upload("/profile/", fd);
+      if (res) {
+        if (res.photo) setPhotoPreview(res.photo);
         setPhotoFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         showToast("success", t('profile.photoUploaded', 'Photo uploaded successfully.'));

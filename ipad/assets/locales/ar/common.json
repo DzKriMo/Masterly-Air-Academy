@@ -37,6 +37,7 @@
     "attendance": "الحضور",
     "present": "حاضر",
     "absent": "غائب",
+    "late": "متأخر",
     "upcoming": "قادم"
   },
   "flights": {
@@ -77,7 +78,41 @@
     "attempts": "المحاولات",
     "maxAttempts": "عدد المحاولات الأقصى",
     "confirmSubmit": "هل أنت متأكد أنك تريد تقديم الامتحان؟",
-    "timeWarning": "أقل من 5 دقائق متبقية!"
+    "timeWarning": "أقل من 5 دقائق متبقية!",
+    "questions": "الأسئلة",
+    "duration": "المدة",
+    "passingGrade": "درجة النجاح",
+    "notFound": "الامتحان غير موجود.",
+    "readyMessage": "أنت على وشك بدء هذا الامتحان. تأكد من اتصال إنترنت مستقر ووقت كافٍ لإكماله.",
+    "cannotAttempt": "لا يمكنك أداء هذا الامتحان في الوقت الحالي.",
+    "loading": "جاري تحميل الامتحان...",
+    "tooManyViolations": "عدد كبير جداً من المخالفات",
+    "tooManyViolationsMessage": "لقد تجاوزت العدد المسموح به من المخالفات. سيتم تقديم امتحانك الآن.",
+    "violationWarning": "تحذير: تم اكتشاف مخالفة {{count}}/3",
+    "unansweredConfirm": "لديك {{count}} سؤال بدون إجابة. هل تريد التقديم على أي حال؟",
+    "submitFailed": "فشل تقديم الامتحان. يرجى المحاولة مرة أخرى.",
+    "startFailed": "تعذر بدء الامتحان. يرجى المحاولة مرة أخرى.",
+    "typeMcq": "اختيار من متعدد",
+    "typeTrueFalse": "صح / خطأ",
+    "typeShortAnswer": "إجابة قصيرة",
+    "typeFillBlank": "املأ الفراغ",
+    "true": "صح",
+    "false": "خطأ",
+    "typeAnswer": "اكتب إجابتك...",
+    "fillBlank": "املأ الفراغ...",
+    "searchPlaceholder": "ابحث عن الامتحانات...",
+    "noExamsMessage": "لا توجد امتحانات مخصصة لك في الوقت الحالي.",
+    "noResults": "لا توجد نتائج",
+    "noResultsMessage": "لا توجد امتحانات تطابق بحثك.",
+    "attemptsUsed": "تم استخدام {{used}} / {{max}} محاولة",
+    "tabSwitchDetected": "تم اكتشاف تبديل التطبيق",
+    "sessionMonitored": "يتم مراقبة جلسة الامتحان الخاصة بك",
+    "congratulations": "مبروك!",
+    "keepTrying": "حاول مرة أخرى!",
+    "passedMessage": "لقد نجحت في الامتحان.",
+    "failedMessage": "لم تنجح هذه المرة. راجع وحاول مرة أخرى.",
+    "scoreDetail": "{{score}} / {{total}} إجابات صحيحة",
+    "backToExams": "العودة إلى الامتحانات"
   },
   "certificates": {
     "title": "الشهادات",
@@ -120,7 +155,12 @@
     "body": "الرسالة",
     "send": "إرسال",
     "noMessages": "لا توجد رسائل",
-    "reply": "رد"
+    "reply": "رد",
+    "from": "من",
+    "date": "التاريخ",
+    "deleted": "ربما تم حذف هذه الرسالة.",
+    "sendFailed": "فشل إرسال الرسالة.",
+    "noUsersFound": "لم يتم العثور على مستخدمين"
   },
   "notifications": {
     "title": "الإشعارات",
@@ -146,7 +186,13 @@
     "medicalExpiring": "تنتهي قريباً",
     "medicalExpired": "منتهية الصلاحية",
     "noMedical": "لا توجد سجلات طبية",
-    "editProfile": "تعديل الملف الشخصي"
+    "editProfile": "تعديل الملف الشخصي",
+    "personalInfo": "المعلومات الشخصية",
+    "address": "العنوان",
+    "phone": "الهاتف",
+    "nationality": "الجنسية",
+    "saveSuccess": "تم تحديث الملف الشخصي.",
+    "saveError": "فشل تحديث الملف الشخصي."
   },
   "settings": {
     "title": "الإعدادات",
@@ -160,7 +206,11 @@
     "french": "الفرنسية",
     "arabic": "العربية",
     "enableBiometric": "تفعيل تسجيل الدخول بالبصمة",
-    "disableBiometric": "تعطيل تسجيل الدخول بالبصمة"
+    "disableBiometric": "تعطيل تسجيل الدخول بالبصمة",
+    "notificationsEnabled": "مفعّلة",
+    "notificationsDisabled": "معطّلة",
+    "updateFailed": "فشل تحديث إعدادات الإشعارات.",
+    "logoutConfirm": "هل أنت متأكد أنك تريد تسجيل الخروج؟"
   },
   "offline": {
     "cached": "البيانات المخزنة مؤقتاً",
@@ -182,7 +232,19 @@
     "networkError": "خطأ في الشبكة. يرجى التحقق من اتصالك.",
     "signingIn": "جاري تسجيل الدخول...",
     "studentOnly": "حسابات الطلاب فقط",
+    "noBiometricCredentials": "لا توجد بيانات تسجيل دخول محفوظة. يرجى تسجيل الدخول بكلمة المرور.",
     "welcome": "مرحباً بك في أكاديمية ماسترلي للطيران"
+  },
+  "errors": {
+    "oops": "عذراً!",
+    "somethingWentWrong": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+  },
+  "validators": {
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
+    "passwordMin": "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل",
+    "invalidRecipient": "يرجى تحديد مستلم صالح",
+    "subjectRequired": "الموضوع مطلوب",
+    "bodyRequired": "نص الرسالة مطلوب"
   },
   "common": {
     "loading": "جاري التحميل...",
@@ -199,6 +261,7 @@
     "confirm": "تأكيد",
     "success": "نجاح",
     "na": "غير متاح",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "ok": "موافق"
   }
 }

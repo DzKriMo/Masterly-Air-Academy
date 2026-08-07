@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterly-air-academy.dz";
 const locales = ["en", "fr", "ar"] as const;
 
 const routes: { path: string; priority: number; changeFreq: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
@@ -9,6 +9,8 @@ const routes: { path: string; priority: number; changeFreq: MetadataRoute.Sitema
   { path: "/verify-certificate", priority: 0.5, changeFreq: "monthly" },
 ];
 
+const LAST_MODIFIED = new Date("2026-01-01T00:00:00Z");
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = [];
 
@@ -16,7 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const route of routes) {
       entries.push({
         url: `${BASE_URL}/${locale}${route.path}`,
-        lastModified: new Date(),
+        lastModified: LAST_MODIFIED,
         changeFrequency: route.changeFreq,
         priority: route.priority,
       });

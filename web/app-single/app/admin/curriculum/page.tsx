@@ -1,7 +1,9 @@
 "use client";
 import { BookOpen, FileText, ClipboardList, ListTree, FolderOpen } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { HubLayout, HubTab } from "@/components/hub-layout";
 import { HubCrud } from "@/components/hub-crud";
+import { api } from "@/lib/api";
 import { PROGRAMS, SUBJECT_STATUSES, STATUS_COLORS, TYPE_COLORS } from "@/lib/format-utils";
 import { fmtLabel } from "@/lib/format-utils";
 import { formatDate } from "@/lib/format-utils";
@@ -89,7 +91,7 @@ function SubjectsTab() {
         { key: "title_en", header: "Title", render: (s) => (<div><p className="text-sm text-white">{s.title_en}</p>{s.title_fr && <p className="text-xs text-gray-500">{s.title_fr}</p>}</div>) },
         { key: "program", header: "Program", render: (s) => <span className="text-xs px-2 py-0.5 rounded bg-navy-700 text-gray-300">{s.program}</span> },
         { key: "total_hours", header: "Hours", render: (s) => <span className="text-sm text-white font-mono">{s.total_hours}</span> },
-        { key: "modules_count", header: "Modules", render: (s) => <span className="text-sm text-white font-mono">{s.modules_count ?? s.modules?.length ?? 0}</span> },
+        { key: "module_count", header: "Modules", render: (s) => <span className="text-sm text-white font-mono">{s.module_count ?? s.modules?.length ?? 0}</span> },
         { key: "status", header: "Status", render: (s) => <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[s.status] || "bg-gray-500/10 text-gray-400"}`}>{fmtLabel(s.status)}</span> },
       ]}
       detailTitle="Subject Details"
@@ -101,27 +103,7 @@ function SubjectsTab() {
         { label: "Total Hours", value: String(s.total_hours ?? "—") },
         { label: "Status", value: fmtLabel(s.status) },
       ]}
-      detailExtra={(s) =>
-        s.modules && s.modules.length > 0 ? (
-          <div>
-            <h3 className="text-sm font-semibold text-gold-500 mt-4 mb-2 uppercase tracking-wider">Modules</h3>
-            <div className="overflow-hidden rounded-lg border border-navy-700">
-              <table className="w-full text-sm">
-                <thead><tr className="bg-navy-800"><th className="text-left px-4 py-2 text-gray-400 font-medium">Code</th><th className="text-left px-4 py-2 text-gray-400 font-medium">Title</th><th className="text-left px-4 py-2 text-gray-400 font-medium">Hours</th></tr></thead>
-                <tbody>
-                  {s.modules.map((m) => (
-                    <tr key={m.id} className="border-t border-navy-700 hover:bg-navy-800/50">
-                      <td className="px-4 py-2 text-gold-500 font-mono text-xs">{m.code}</td>
-                      <td className="px-4 py-2 text-white">{m.title}</td>
-                      <td className="px-4 py-2 text-white font-mono">{m.hours}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : null
-      }
+      detailExtra={(s) => <SubjectModules subjectId={s.id} />}
     />
   );
 }
@@ -135,8 +117,46 @@ interface Subject {
   program: string;
   total_hours: number;
   status: string;
-  modules_count?: number;
-  modules?: { id: string; code: string; title: string; hours: number }[];
+  module_count?: number;
+  modules?: { id: string; title: string; duration: number | null; order: number | null }[];
+}
+
+function SubjectModules({ subjectId }: { subjectId: string }) {
+  const { data } = useQuery<Subject>({
+    queryKey: ["admin-subject-detail", subjectId],
+    queryFn: async () => {
+      const d: any = await api.get(`/subjects/${subjectId}/`);
+      return d as Subject;
+    },
+    enabled: !!subjectId,
+  });
+  const modules = data?.modules ?? [];
+  if (modules.length === 0) {
+    return (
+      <p className="text-sm text-gray-500 mt-4">
+        No modules have been added to this subject yet.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gold-500 mt-4 mb-2 uppercase tracking-wider">Modules</h3>
+      <div className="overflow-hidden rounded-lg border border-navy-700">
+        <table className="w-full text-sm">
+          <thead><tr className="bg-navy-800"><th className="text-left px-4 py-2 text-gray-400 font-medium">Title</th><th className="text-left px-4 py-2 text-gray-400 font-medium">Duration</th><th className="text-left px-4 py-2 text-gray-400 font-medium">Order</th></tr></thead>
+          <tbody>
+            {modules.map((m) => (
+              <tr key={m.id} className="border-t border-navy-700 hover:bg-navy-800/50">
+                <td className="px-4 py-2 text-white">{m.title}</td>
+                <td className="px-4 py-2 text-white font-mono">{m.duration ?? "—"}</td>
+                <td className="px-4 py-2 text-white font-mono">{m.order ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 // ── Modules ───────────────────────────────────────────────

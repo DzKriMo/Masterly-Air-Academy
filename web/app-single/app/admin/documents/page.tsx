@@ -121,28 +121,7 @@ export default function AdminDocumentsPage() {
       formData.append("category", payload.category);
       formData.append("file", file);
 
-      const url = `${process.env.NEXT_PUBLIC_API_URL || ""}/api/documents/upload/`;
-      const headers: Record<string, string> = {
-        Accept: "application/json",
-      };
-      const token = api.getAccessToken();
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(
-          errData.message || errData.detail || `Upload failed (${res.status})`
-        );
-      }
-
-      return res.json();
+      await api.upload("/documents/upload/", formData);
     },
     onSuccess: () => {
       showToast("success", "Document uploaded successfully");

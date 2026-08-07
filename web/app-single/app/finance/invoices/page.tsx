@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api } from "@/lib/api";
+import { api, withFullLimit } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fmtCurrency, fmtDate } from "@/lib/format-utils";
 import { invoiceSchema } from "@/lib/validators";
@@ -41,6 +41,9 @@ export default function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [payTarget, setPayTarget] = useState<Invoice | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("bank_transfer");
 
   const loadInvoices = useCallback(async (p: number, append: boolean) => {
     try {
@@ -48,8 +51,9 @@ export default function InvoicesPage() {
       const results = d?.results || (Array.isArray(d) ? d : []);
       setInvoices((prev) => (append ? [...prev, ...results] : results));
       setHasMore(!!d?.next);
+      setPage(p);
     } catch (err: any) {
-      setError(err?.message || "Failed to load invoices");
+      setError(err?.message || t("finance.loadError", "Failed to load invoices"));
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -65,13 +69,12 @@ export default function InvoicesPage() {
   const loadMore = () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    setPage((p) => p + 1);
     loadInvoices(page + 1, true);
   };
 
   const { data: studentsData } = useQuery({
     queryKey: ["students"],
-    queryFn: () => api.get<any>("/students/"),
+    queryFn: () => api.get<any>(withFullLimit("/students/")),
     enabled: isAuthenticated,
   });
   const students = studentsData?.results || [];
@@ -93,11 +96,13 @@ export default function InvoicesPage() {
   });
 
   const recordPayment = useMutation({
-    mutationFn: async ({ inv, amount }: { inv: Invoice; amount: number }) => {
-      await api.post("/invoices/"+inv.id+"/payments/", { amount, currency: inv.currency, method: "bank_transfer" });
+    mutationFn: async ({ inv, amount, method }: { inv: Invoice; amount: number; method: string }) => {
+      await api.post("/invoices/"+inv.id+"/payments/", { amount, currency: inv.currency, method });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
+      setPayTarget(null);
+      setPayAmount("");
       setPage(1);
       setLoading(true);
       loadInvoices(1, false);
@@ -114,9 +119,23 @@ export default function InvoicesPage() {
   };
 
   const handleRecordPayment = (inv: Invoice) => {
-    const amt = prompt(`${t('finance.enterPaymentAmount', 'Enter payment amount for')} ${inv.invoice_number} (${t('finance.balance', 'Balance')}: ${fmtCurrency(inv.balance, inv.currency)}):`, inv.balance);
-    if (!amt) return;
-    recordPayment.mutate({ inv, amount: parseFloat(amt) });
+    setPayTarget(inv);
+    setPayAmount(String(inv.balance));
+    setPayMethod("bank_transfer");
+  };
+
+  const confirmPayment = () => {
+    if (!payTarget) return;
+    const amt = parseFloat(payAmount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast("error", t('finance.invalidAmount', 'Enter a valid amount greater than zero.'));
+      return;
+    }
+    if (amt > parseFloat(payTarget.balance)) {
+      showToast("error", t('finance.amountExceedsBalance', 'Amount cannot exceed the invoice balance.'));
+      return;
+    }
+    recordPayment.mutate({ inv: payTarget, amount: amt, method: payMethod });
   };
 
   const filterOptions: FilterOption[] = [
@@ -153,7 +172,7 @@ export default function InvoicesPage() {
       sortable: false,
       render: (inv) => (
         <div className="flex items-center gap-2">
-          <button onClick={async(e)=>{e.stopPropagation(); try{const token=api.getAccessToken();const r=await fetch(`/api/invoices/${inv.id}/pdf/`,{headers:{Authorization:`Bearer ${token}`}});if(r.ok){const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`${inv.invoice_number}.pdf`;a.click();URL.revokeObjectURL(u);}}catch{}}} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
+          <button onClick={async(e)=>{e.stopPropagation(); try{const r=await api.download(`/invoices/${inv.id}/pdf/`);const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`${inv.invoice_number}.pdf`;a.click();URL.revokeObjectURL(u);}catch{}}} className="px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900 transition-colors">{t('common.download', 'PDF')}</button>
           {inv.status !== 'paid' && inv.status !== 'cancelled' && (
             <button onClick={(e)=>{e.stopPropagation(); handleRecordPayment(inv);}} disabled={recordPayment.isPending} className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded text-xs hover:bg-green-500 hover:text-white transition-colors">{t('finance.pay', 'Pay')}</button>
           )}
@@ -177,7 +196,7 @@ export default function InvoicesPage() {
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {error && <ErrorCard message={error} onRetry={() => setError(null)}/>}
+        {error && <ErrorCard message={error} onRetry={() => { setError(null); setLoading(true); loadInvoices(1, false); }}/>}
 
         <ModalForm open={showForm} onClose={() => setShowForm(false)} title={t('finance.createInvoice', 'Create Invoice')} wide footer={modalFooter}>
           <form id="invoice-form" onSubmit={handleCreate} className="space-y-4">
@@ -201,24 +220,50 @@ export default function InvoicesPage() {
                 disabled={loadingMore}
                 className="px-5 py-2 text-sm bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors disabled:opacity-50"
               >
-                {loadingMore ? t('common.loading', 'Loading...') : 'Load more'}
+                {loadingMore ? t('common.loading', 'Loading...') : t('common.loadMore', 'Load more')}
               </button>
             </div>
           )}
         </>}
 
-      <ModalForm open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} title={editing ? `Edit: ${selected?.invoice_number}` : selected?.invoice_number || ''} footer={editing ? (<><button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Cancel</button><button onClick={async () => { try { await api.patch(`/invoices/${selected!.id}/`, editForm); showToast("success", "Updated"); setEditing(false); setSelected(null); setPage(1); setLoading(true); loadInvoices(1, false); } catch(e:any) { showToast("error", e.message); }}} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Save</button></>) : (<><button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">Close</button><button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">Edit</button></>)}>
+      <ModalForm open={!!payTarget} onClose={() => { if (!recordPayment.isPending) { setPayTarget(null); setPayAmount(""); } }} title={t('finance.recordPayment', 'Record Payment')} footer={(
+        <>
+          <button onClick={() => setPayTarget(null)} disabled={recordPayment.isPending} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.cancel', 'Cancel')}</button>
+          <button onClick={confirmPayment} disabled={recordPayment.isPending} className="px-4 py-2 text-sm bg-green-500 text-navy-900 font-semibold rounded-lg hover:bg-green-400 disabled:opacity-50">{recordPayment.isPending ? t('common.loading', 'Saving...') : t('finance.confirmPayment', 'Confirm Payment')}</button>
+        </>
+      )}>
+        {payTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-400">{payTarget.invoice_number} · {payTarget.student_name} · {t('finance.balance', 'Balance')}: <strong className="text-white">{fmtCurrency(payTarget.balance, payTarget.currency)}</strong></p>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">{t('finance.amount', 'Amount')}</label>
+              <input type="number" min="0.01" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">{t('finance.method', 'Method')}</label>
+              <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm">
+                <option value="bank_transfer">{t('finance.bankTransfer', 'Bank Transfer')}</option>
+                <option value="cash">{t('finance.cash', 'Cash')}</option>
+                <option value="card">{t('finance.card', 'Card')}</option>
+                <option value="check">{t('finance.check', 'Check')}</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </ModalForm>
+
+      <ModalForm open={!!selected} onClose={() => { setSelected(null); setEditing(false); }} title={editing ? `${t('common.edit', 'Edit')}: ${selected?.invoice_number}` : selected?.invoice_number || ''} footer={editing ? (<><button onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.cancel', 'Cancel')}</button><button onClick={async () => { try { await api.patch(`/invoices/${selected!.id}/`, editForm); showToast("success", t('finance.updated', 'Updated')); setEditing(false); setSelected(null); setPage(1); setLoading(true); loadInvoices(1, false); } catch(e:any) { showToast("error", e.message); }}} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">{t('common.save', 'Save')}</button></>) : (<><button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white">{t('common.close', 'Close')}</button><button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400">{t('common.edit', 'Edit')}</button></>)}>
         {selected && (<div className="space-y-6"><div className="grid grid-cols-2 gap-4">
-          <div><p className="text-xs text-gray-500 mb-0.5">Invoice #</p><p className="text-sm text-white">{selected.invoice_number}</p></div>
-          <div><p className="text-xs text-gray-500 mb-0.5">Student</p><p className="text-sm text-white">{selected.student_name}</p></div>
-          <div><p className="text-xs text-gray-500 mb-0.5">Amount</p><p className="text-sm text-white">{fmtCurrency(selected.amount, selected.currency)}</p></div>
-          <div><p className="text-xs text-gray-500 mb-0.5">Balance</p><p className="text-sm text-white">{fmtCurrency(selected.balance, selected.currency)}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">{t('finance.invoiceNumber', 'Invoice #')}</p><p className="text-sm text-white">{selected.invoice_number}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">{t('finance.student', 'Student')}</p><p className="text-sm text-white">{selected.student_name}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">{t('finance.amount', 'Amount')}</p><p className="text-sm text-white">{fmtCurrency(selected.amount, selected.currency)}</p></div>
+          <div><p className="text-xs text-gray-500 mb-0.5">{t('finance.balance', 'Balance')}</p><p className="text-sm text-white">{fmtCurrency(selected.balance, selected.currency)}</p></div>
           {editing ? (
-            <div><p className="text-xs text-gray-500 mb-0.5">Status</p><select value={editForm.status} onChange={e => setEditForm(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm"><option value="draft">Draft</option><option value="issued">Issued</option><option value="paid">Paid</option><option value="partially_paid">Partially Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option></select></div>
-          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Status</p><p className="text-sm text-white">{selected.status}</p></div>)}
+            <div><p className="text-xs text-gray-500 mb-0.5">{t('common.status', 'Status')}</p><select value={editForm.status} onChange={e => setEditForm(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm"><option value="draft">{t('finance.draft', 'Draft')}</option><option value="issued">{t('finance.issued', 'Issued')}</option><option value="paid">{t('finance.paid', 'Paid')}</option><option value="partially_paid">{t('finance.partiallyPaid', 'Partially Paid')}</option><option value="overdue">{t('finance.overdue', 'Overdue')}</option><option value="cancelled">{t('finance.cancelled', 'Cancelled')}</option></select></div>
+          ) : (<div><p className="text-xs text-gray-500 mb-0.5">{t('common.status', 'Status')}</p><p className="text-sm text-white">{selected.status}</p></div>)}
           {editing ? (
-            <div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><input type="date" value={editForm.due_at} onChange={e => setEditForm(p => ({...p, due_at: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm" /></div>
-          ) : (<div><p className="text-xs text-gray-500 mb-0.5">Due Date</p><p className="text-sm text-white">{fmtDate(selected.due_at)}</p></div>)}
+            <div><p className="text-xs text-gray-500 mb-0.5">{t('finance.dueDate', 'Due Date')}</p><input type="date" value={editForm.due_at} onChange={e => setEditForm(p => ({...p, due_at: e.target.value}))} className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white text-sm" /></div>
+          ) : (<div><p className="text-xs text-gray-500 mb-0.5">{t('finance.dueDate', 'Due Date')}</p><p className="text-sm text-white">{fmtDate(selected.due_at)}</p></div>)}
         </div></div>)}
       </ModalForm>
       </main>

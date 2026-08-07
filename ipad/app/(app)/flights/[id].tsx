@@ -20,6 +20,7 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import { colors } from '@/constants/colors';
 import { FlightsService } from '@/services';
+import { isValidUuid } from '@/utils/validators';
 import type { FlightLesson } from '@/types/models';
 import { Card, Badge, Skeleton, ErrorState } from '@/components/ui';
 import { Header } from '@/components/ui';
@@ -28,7 +29,8 @@ export default function FlightDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const flightId = id!;
+  const hasValidId = typeof id === 'string' && isValidUuid(id);
+  const flightId = id ?? '';
 
   const {
     data: flight,
@@ -41,12 +43,21 @@ export default function FlightDetailScreen() {
       const res = await FlightsService.get(flightId);
       return res.data as FlightLesson;
     },
-    enabled: !!flightId,
+    enabled: hasValidId,
   });
 
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  if (!hasValidId) {
+    return (
+      <View style={styles.container}>
+        <Header title={t('flights.title')} showBack onBack={() => router.back()} />
+        <ErrorState onRetry={handleRefresh} />
+      </View>
+    );
+  }
 
   if (isLoading) {
     return <FlightDetailSkeleton onBack={() => router.back()} t={t} />;

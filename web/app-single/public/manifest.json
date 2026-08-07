@@ -3,12 +3,13 @@
   "short_name": "MAA",
   "description": "ATO Management Platform — Training, Administration & Compliance",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1628",
-  "theme_color": "#1e40af",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
   "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

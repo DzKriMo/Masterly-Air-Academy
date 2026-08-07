@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useTranslation } from "@/lib/use-translation";
+import { api } from "@/lib/api";
 
 interface TvEvent {
   id: string;
@@ -103,7 +104,7 @@ export default function TVSchedulePage() {
     const r = buildRange(view);
     setRange(r);
     setLoading(true);
-    fetch(`/api/schedule/tv/?from=${r.from}&to=${r.to}`, { cache: "no-store" })
+    fetch(`${api.getBaseUrl()}/api/schedule/tv/?from=${r.from}&to=${r.to}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((payload: any) => {
         const data = payload?.data ?? payload;

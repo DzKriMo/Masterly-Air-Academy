@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import type { PaginatedResponse } from '@/types/api';
 
 interface Notification {
   id: string;
@@ -18,8 +19,8 @@ export function useNotifications() {
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const { data } = await api.get<Notification[]>('/notifications/');
-      return data as unknown as Notification[];
+      const { data } = await api.get<PaginatedResponse<Notification>>('/notifications/');
+      return data?.results ?? [];
     },
     refetchInterval: 30000,
   });
@@ -29,7 +30,7 @@ export function useNotifications() {
 
   const markAsRead = useMutation({
     mutationFn: async (id: string) => {
-      await api.put(`/notifications/${id}/mark_read/`);
+      await api.post(`/notifications/${id}/mark_read/`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -38,7 +39,7 @@ export function useNotifications() {
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      await api.put('/notifications/mark_all_read/');
+      await api.post('/notifications/mark_all_read/');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

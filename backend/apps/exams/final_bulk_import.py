@@ -20,22 +20,24 @@ def _parse_options(raw):
 
 
 def _parse_type(raw):
+    """Return the FinalQuestionType value, or None if the label is unrecognized."""
     val = str(raw).strip().lower()
     if val in TYPE_MAP:
         return TYPE_MAP[val]
     choices_lower = {v.value: v.value for v in FinalQuestionType}
     if val in choices_lower:
         return val
-    return FinalQuestionType.MCQ
+    return None
 
 
 def _parse_diff(raw):
+    """Return the QuestionDifficulty value, or None if the label is unrecognized."""
     val = str(raw).strip().lower()
     if val in DIFF_MAP:
         return DIFF_MAP[val]
     if val in dict(QuestionDifficulty.choices):
         return val
-    return QuestionDifficulty.MEDIUM
+    return None
 
 
 def import_questions(file):
@@ -89,14 +91,28 @@ def import_questions(file):
                 try:
                     module = Module.objects.get(title=module_title)
                 except Module.DoesNotExist:
-                    pass
+                    errors.append({'row': i + 1, 'message': f'Module not found: {module_title}'})
+                    skipped += 1
+                    continue
+
+            question_type = _parse_type(row.get('question_type', ''))
+            if question_type is None:
+                errors.append({'row': i + 1, 'message': f'Unknown question_type: {row.get("question_type", "")}'})
+                skipped += 1
+                continue
+
+            difficulty = _parse_diff(row.get('difficulty', ''))
+            if difficulty is None:
+                errors.append({'row': i + 1, 'message': f'Unknown difficulty: {row.get("difficulty", "")}'})
+                skipped += 1
+                continue
 
             FinalExamQuestion.objects.create(
                 subject=subject,
                 module=module,
                 question_text=question_text,
-                question_type=_parse_type(row.get('question_type', '')),
-                difficulty=_parse_diff(row.get('difficulty', '')),
+                question_type=question_type,
+                difficulty=difficulty,
                 options=_parse_options(row.get('options', '')),
                 correct_answer=(row.get('correct_answer') or '').strip(),
                 explanation=(row.get('explanation') or '').strip(),

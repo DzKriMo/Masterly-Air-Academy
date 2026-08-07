@@ -40,7 +40,7 @@ class ApiResponseRenderer(JSONRenderer):
         if response is not None and 200 <= response.status_code < 400:
             request = renderer_context.get('request') if renderer_context else None
 
-            # If data already has its own meta (from StandardPagination), use it
+            # If data already carries its own envelope ({meta, data}), keep it
             if isinstance(data, dict) and 'meta' in data and 'data' in data:
                 wrapped_meta = data['meta']
                 if request and hasattr(request, 'id'):

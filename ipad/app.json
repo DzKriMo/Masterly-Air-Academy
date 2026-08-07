@@ -14,7 +14,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Camera is needed to scan documents",
         "NSFaceIDUsageDescription": "Face ID is used for quick sign-in",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        }
       }
     },
     "plugins": [

@@ -38,7 +38,7 @@ export default function CoursesScreen() {
       (c) =>
         c.title.toLowerCase().includes(q) ||
         (c.instructor_name ?? c.instructor).toLowerCase().includes(q) ||
-        c.subject_title?.toLowerCase().includes(q),
+        (c.subject_code ?? c.subject_title)?.toLowerCase().includes(q),
     );
   }, [courses, search]);
 

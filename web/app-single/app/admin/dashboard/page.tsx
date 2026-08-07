@@ -71,7 +71,7 @@ export default function AdminDashboard() {
 
   // ── Compute KPIs ──────────────────────────────────────────────────
   const totalUsers = uList.length;
-  const activeStudents = uList.filter((u: any) => u.role === "student" && u.is_active !== false).length;
+  const activeStudents = uList.filter((u: any) => u.role === "student" && u.status === "active").length;
   const isTrainingAdmin = user?.role === "training_admin";
   const revenue = (kpis as Record<string, number>)?.revenue ?? 0;
   const outstanding = (kpis as Record<string, number>)?.outstanding ?? 0;

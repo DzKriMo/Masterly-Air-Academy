@@ -234,7 +234,7 @@ ROLE_DEFINITIONS = {
             'schedule': ['manage'],
             'academic_years': ['view'], 'promotions': ['view'],
             'users': ['view'],
-            'invoices': ['view'],
+            'invoicing': ['view'],
         },
     },
     'scheduler': {

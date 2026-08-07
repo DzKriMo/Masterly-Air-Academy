@@ -16,6 +16,7 @@ export interface Course {
   title: string;
   subject: string;
   subject_title?: string;
+  subject_code?: string;
   instructor: string;
   instructor_name?: string;
   room: string;
@@ -33,6 +34,8 @@ export interface Module {
   subject: string;
   order: number;
   progress?: number;
+  lessons?: unknown[];
+  documents?: unknown[];
 }
 
 export interface FlightLesson {

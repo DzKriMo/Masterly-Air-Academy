@@ -9,5 +9,5 @@ export const CertificatesService = {
   getPdfUrl: (id: string) => `${API_URL}/certificates/${id}/pdf/`,
 
   verify: (number: string) =>
-    api.get(`/student/certificates/verify/?number=${number}`),
+    api.get(`/certificates/verify/?number=${number}`),
 };

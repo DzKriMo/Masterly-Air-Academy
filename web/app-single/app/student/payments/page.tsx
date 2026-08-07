@@ -118,8 +118,7 @@ export default function StudentPaymentsPage() {
 
   const downloadInvoicePdf = async (id: string) => {
     try {
-      const r = await fetch(`/api/invoices/${id}/pdf/`, { headers: { Authorization: `Bearer ${api.getAccessToken()}` } });
-      if (!r.ok) throw new Error("Failed");
+      const r = await api.download(`/invoices/${id}/pdf/`);
       const b = await r.blob();
       const u = window.URL.createObjectURL(b);
       const a = document.createElement("a");

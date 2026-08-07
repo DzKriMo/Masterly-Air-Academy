@@ -107,27 +107,23 @@ class UpdateProfileView(views.APIView):
         if file.content_type not in ALLOWED_MIME:
             return Response({'error': 'Invalid image type'}, status=400)
 
-        # Save to local storage (MinIO bucket may not exist)
+        # Persist through the default (MinIO/S3) storage backend so uploads
+        # survive container recreates and are reachable over MEDIA_URL.
         import os, uuid
-        from django.conf import settings
+        from django.core.files.storage import default_storage
         ext = os.path.splitext(file.name)[1].lower() or '.jpg'
         if ext not in ALLOWED_EXTENSIONS:
             return Response({'error': 'Invalid image type'}, status=400)
         local_name = f'photo_{uuid.uuid4().hex}{ext}'
-        local_dir = os.path.join(settings.MEDIA_ROOT, 'students', 'photos')
-        os.makedirs(local_dir, exist_ok=True)
-        local_path = os.path.join(local_dir, local_name)
-        with open(local_path, 'wb+') as dest:
-            for chunk in file.chunks():
-                dest.write(chunk)
-        student.photo = f'students/photos/{local_name}'
+        key = default_storage.save(f'students/photos/{local_name}', file)
+        student.photo = key
         try:
             student.save()
         except Exception as e:
             return Response({'error': f'Failed to save photo: {str(e)}'}, status=500)
 
         return Response({
-            'photo': f'/media/students/photos/{local_name}',
+            'photo': f'/media/{key}',
         })
 
 
@@ -144,6 +140,18 @@ class LogoutView(views.APIView):
             ip_address=request.META.get('REMOTE_ADDR', ''),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
+
+        # Revoke the refresh token so a leaked session cannot be reused.
+        refresh_token = request.data.get('refresh') or ''
+        if refresh_token:
+            try:
+                from rest_framework_simplejwt.tokens import RefreshToken
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception:
+                # Invalid/expired tokens are already unusable; nothing to revoke.
+                pass
+
         return Response({
             'success': True,
             'message': 'Logged out',

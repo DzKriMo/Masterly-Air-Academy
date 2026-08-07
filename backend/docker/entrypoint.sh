@@ -14,7 +14,7 @@ for i in range(30):
             port=os.environ.get('DB_PORT','5432'),
             dbname=os.environ.get('DB_NAME','masterly'),
             user=os.environ.get('DB_USER','masterly'),
-            password=os.environ.get('DB_PASSWORD','secret')
+            password=os.environ.get('DB_PASSWORD','')
         )
         conn.close()
         print('Database is ready.')
@@ -42,12 +42,17 @@ python manage.py seed_roles_permissions
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-echo "=== Starting Gunicorn ==="
-exec gunicorn config.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --threads 8 \
-    --timeout 300 \
-    --keep-alive 5 \
-    --access-logfile - \
-    --error-logfile -
+# Default to gunicorn when no command is supplied (e.g. bare `docker run`)
+if [ $# -eq 0 ]; then
+    set -- gunicorn config.wsgi:application \
+        --bind 0.0.0.0:8000 \
+        --workers 4 \
+        --threads 8 \
+        --timeout 300 \
+        --keep-alive 5 \
+        --access-logfile - \
+        --error-logfile -
+fi
+
+echo "=== Starting: $* ==="
+exec "$@"

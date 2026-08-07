@@ -37,6 +37,7 @@ export default function TakeExamPage() {
   const answersRef = useRef(answers);
   const attemptIdRef = useRef(attemptId);
   const examIdRef = useRef(examId);
+  const deadlineRef = useRef(0);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
 
@@ -51,6 +52,7 @@ export default function TakeExamPage() {
         setAttemptId(d.attempt_id);
         setDuration(d.duration || 30);
         setTimeLeft((d.duration || 30) * 60);
+        deadlineRef.current = Date.now() + (d.duration || 30) * 60 * 1000;
         setLoading(false);
         setError(null);
       })
@@ -64,7 +66,17 @@ export default function TakeExamPage() {
 
   useEffect(() => {
     if (timeLeft <= 0 || submitted) return;
-    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    const timer = setInterval(() => {
+      // Drift-check against the absolute deadline instead of trusting interval ticks
+      const remaining = deadlineRef.current ? Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000)) : 0;
+      if (deadlineRef.current && remaining <= 0) {
+        setTimeLeft(0);
+      } else if (deadlineRef.current) {
+        setTimeLeft(remaining);
+      } else {
+        setTimeLeft(t => t - 1);
+      }
+    }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
 
@@ -87,13 +99,14 @@ export default function TakeExamPage() {
     } catch (e) { /* ignore */ }
   }, [isAuthenticated, examId]);
 
-  const doSubmit = async () => {
+  const doSubmit = async (extra?: Record<string, unknown>) => {
     if (submittedRef.current) return;
     submittedRef.current = true;
     try {
       const res = await api.post(`/exams/${examIdRef.current}/submit/`, {
         attempt_id: attemptIdRef.current,
         answers: answersRef.current,
+        ...extra,
       });
       try { sessionStorage.removeItem(`exam-${examIdRef.current}-answers`); } catch (e) { /* ignore */ }
       setResult(res as unknown as Result);
@@ -110,22 +123,29 @@ export default function TakeExamPage() {
 
   const handleSubmit = () => { doSubmit(); };
 
-  // Tab-switch detection: 1 visible warning, then force-submit on 2nd switch
+  // Tab-switch detection: 1 visible warning, then force-submit on 2nd switch.
+  // Violations are recorded server-side for an audit trail (same as the final-exam portal).
   useEffect(() => {
     let violations = 0;
     let cooldown = false;
+    const record = (type: string) => {
+      try {
+        window.dispatchEvent(new CustomEvent("maa:exam-violation", { detail: { type, at: new Date().toISOString() } }));
+      } catch {}
+    };
     const onHide = () => {
       if (submittedRef.current || cooldown) return;
       cooldown = true;
       setTimeout(() => { cooldown = false; }, 5000);
       violations++;
+      record("tab_switch");
       if (violations === 1) {
         setCheatWarnings(1);
         showToast("warning", t("exam.tabSwitchWarning"));
       } else {
         setAutoSubmitted(true);
         showToast("error", t("exam.autoSubmitted"));
-        doSubmit();
+        doSubmit({ violations: [{ type: "auto_submit", at: new Date().toISOString() }, { type: "tab_switch", at: new Date().toISOString() }] });
       }
     };
     const handler = () => { if (document.hidden) onHide(); };
@@ -139,7 +159,7 @@ export default function TakeExamPage() {
     if (timeLeft <= 0 && !submitted && questions.length > 0) {
       setAutoSubmitted(true);
       showToast("warning", t("exam.autoSubmitted"));
-      doSubmit();
+      doSubmit({ violations: [{ type: "auto_submit", at: new Date().toISOString() }] });
     }
   }, [timeLeft]);
 
@@ -245,11 +265,11 @@ export default function TakeExamPage() {
               <div className="space-y-2">
                 {q.question_type === "short_answer" ? (
                   <input type="text" value={answers[q.id] || ""} onChange={(e) => setAnswers({...answers, [q.id]: e.target.value})}
-                    placeholder="Type your answer..."
+                    placeholder={t("exam.typeAnswer")}
                     className="w-full px-4 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none" />
                 ) : q.question_type === "essay" ? (
                   <textarea value={answers[q.id] || ""} onChange={(e) => setAnswers({...answers, [q.id]: e.target.value})}
-                    placeholder="Write your answer..."
+                    placeholder={t("exam.writeAnswer")}
                     rows={4}
                     className="w-full px-4 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm focus:border-gold-500 focus:outline-none resize-y" />
                 ) : (

@@ -85,7 +85,7 @@ export function truncate(text: string | null | undefined, n: number): string {
   return text.length > n ? text.substring(0, n) + "…" : text;
 }
 
-export const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC", "ATPL"];
+export const PROGRAMS = ["PPL", "CPL", "IR", "MEP", "MCC"];
 
 export const EXAM_TYPES = ["quiz", "progress_test", "module_exam", "mock_exam", "final_exam"];
 

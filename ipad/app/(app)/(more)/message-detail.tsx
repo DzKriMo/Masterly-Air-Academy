@@ -9,25 +9,35 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { MessagesService } from '@/services/messages.service';
 import { timeAgo } from '@/utils/formatters';
+import { isValidUuid } from '@/utils/validators';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { Message } from '@/types/models';
 
 export default function MessageDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
+  const hasValidId = typeof id === 'string' && isValidUuid(id);
 
   const { data: message, isLoading, error } = useQuery({
     queryKey: ['message', id],
     queryFn: async () => {
-      const { data } = await MessagesService.get(id!);
+      const { data } = await MessagesService.get(id as string);
       return data as unknown as Message;
     },
-    enabled: !!id,
+    enabled: hasValidId,
   });
 
-  if (isLoading) {
+  React.useEffect(() => {
+    if (message && hasValidId && !message.is_read) {
+      MessagesService.markRead(id as string).catch(() => {});
+    }
+  }, [message, hasValidId, id]);
+
+  if (isLoading || (!error && !message && hasValidId)) {
     return (
       <View style={styles.container}>
-        <Header title="Message" showBack onBack={() => router.back()} />
+        <Header title={t('messages.title')} showBack onBack={() => router.back()} />
         <View style={styles.content}>
           <Card style={styles.card}>
             <Skeleton width="40%" height={14} borderRadius={4} />
@@ -40,13 +50,13 @@ export default function MessageDetailScreen() {
     );
   }
 
-  if (error || !message) {
+  if (error || !message || !hasValidId) {
     return (
       <View style={styles.container}>
-        <Header title="Message" showBack onBack={() => router.back()} />
+        <Header title={t('messages.title')} showBack onBack={() => router.back()} />
         <View style={styles.content}>
           <ErrorState
-            message="This message may have been deleted."
+            message={t('messages.deleted')}
             onRetry={() => router.back()}
           />
         </View>
@@ -56,7 +66,7 @@ export default function MessageDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Message" showBack onBack={() => router.back()} />
+      <Header title={t('messages.title')} showBack onBack={() => router.back()} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -64,28 +74,28 @@ export default function MessageDetailScreen() {
       >
         <Card style={styles.card}>
           <View style={styles.field}>
-            <Text style={styles.label}>From</Text>
-            <Text style={styles.value}>{message.sender_name ?? 'Unknown'}</Text>
+            <Text style={styles.label}>{t('messages.from')}</Text>
+            <Text style={styles.value}>{message.sender_name ?? t('common.na')}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.field}>
-            <Text style={styles.label}>Subject</Text>
+            <Text style={styles.label}>{t('messages.subject')}</Text>
             <Text style={[styles.value, styles.subject]}>{message.subject}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.field}>
-            <Text style={styles.label}>Date</Text>
+            <Text style={styles.label}>{t('messages.date')}</Text>
             <Text style={styles.value}>{timeAgo(message.created_at)}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.field}>
-            <Text style={styles.label}>Message</Text>
+            <Text style={styles.label}>{t('messages.body')}</Text>
             <Text style={styles.body}>{message.body}</Text>
           </View>
         </Card>

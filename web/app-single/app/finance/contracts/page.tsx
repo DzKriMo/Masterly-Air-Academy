@@ -91,7 +91,7 @@ export default function ContractsPage() {
     {
       key: "actions", header: "", sortable: false,
       render: (c) => (<div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
-        <button onClick={async()=>{try{const t=api.getAccessToken();await fetch(`/api/contracts/${c.id}/generate_pdf/`,{method:'POST',headers:{Authorization:`Bearer ${t}`}});setPage(1);setLoading(true);loadContracts(1,false);const u=c.file_url;if(u)window.open(u,'_blank');showToast("success","PDF generated");}catch(e:any){showToast("error",e.message)}}} className="px-2 py-1 text-xs bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded hover:bg-gold-500/20">Generate PDF</button>
+        <button onClick={async()=>{try{const data=await api.post(`/contracts/${c.id}/generate_pdf/`);if(!data?.file_url){throw new Error(data?.error||"Failed to generate PDF");}const blobRes=await fetch(data.file_url,{credentials:"include"});if(!blobRes.ok)throw new Error("Failed to download PDF");const b=await blobRes.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`${c.contract_number}.pdf`;a.click();URL.revokeObjectURL(u);setPage(1);setLoading(true);loadContracts(1,false);showToast("success","PDF generated");}catch(e:any){showToast("error",e.message)}}} className="px-2 py-1 text-xs bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded hover:bg-gold-500/20">Generate PDF</button>
         {c.file_url && <a href={c.file_url} target="_blank" className="px-2 py-1 text-xs bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded hover:bg-blue-500/20">View</a>}
       </div>),
     },

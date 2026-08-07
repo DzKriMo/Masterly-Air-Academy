@@ -1,11 +1,11 @@
 #!/bin/bash
 cd /opt/masterly-air-academy
 
-# Read credentials from environment or prompt
-DIRECTOR_PASS="${DIRECTOR_PASS:-director123}"
-FINANCE_PASS="${FINANCE_PASS:-finance123}"
-QUALITY_PASS="${QUALITY_PASS:-quality123}"
-SCHEDULER_PASS="${SCHEDULER_PASS:-scheduler123}"
+# Read credentials from environment — fail fast if not provided (never hardcode)
+: "${DIRECTOR_PASS:?DIRECTOR_PASS is required — set it in the environment before running deploy-vps.sh}"
+: "${FINANCE_PASS:?FINANCE_PASS is required — set it in the environment before running deploy-vps.sh}"
+: "${QUALITY_PASS:?QUALITY_PASS is required — set it in the environment before running deploy-vps.sh}"
+: "${SCHEDULER_PASS:?SCHEDULER_PASS is required — set it in the environment before running deploy-vps.sh}"
 
 echo "=== Seeding database ==="
 docker-compose exec -T api python manage.py seed_demo_data

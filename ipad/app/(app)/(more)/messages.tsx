@@ -19,7 +19,6 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { MessagesService } from '@/services/messages.service';
 import { timeAgo } from '@/utils/formatters';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { Message } from '@/types/models';
 
 type Tab = 'inbox' | 'sent';
 
@@ -37,7 +36,7 @@ export default function MessagesScreen() {
     queryKey: ['messages', 'inbox'],
     queryFn: async () => {
       const { data } = await MessagesService.list();
-      return (data as unknown as Message[]) ?? [];
+      return data?.results ?? [];
     },
   });
 
@@ -49,7 +48,7 @@ export default function MessagesScreen() {
     queryKey: ['messages', 'sent'],
     queryFn: async () => {
       const { data } = await MessagesService.getSent();
-      return (data as unknown as Message[]) ?? [];
+      return data?.results ?? [];
     },
   });
 

@@ -8,6 +8,7 @@ import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
 import { getDefaultPortal } from "@/lib/portal-access";
+import { api } from "@/lib/api";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
 const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "prog_cpl_title", IR: "prog_ir_title", MEP: "prog_mep_title", MCC: "prog_mcc_title" };
@@ -505,7 +506,7 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
     if (!name || !email || !message) { setError("Name, email, and message are required."); return; }
     setSubmitting(true); setError(""); setSuccess("");
     try {
-      const res = await fetch("/api/contact/submit/", {
+      const res = await fetch(`${api.getBaseUrl()}/api/contact/submit/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, phone, subject, message, type: "contact" }),
       });
@@ -527,7 +528,7 @@ function ContactForm({ t }: { t: (key: string, fallback?: string) => string }) {
     }
     setSubmitting(true); setError(""); setSuccess("");
     try {
-      const res = await fetch("/api/contact/submit/", {
+      const res = await fetch(`${api.getBaseUrl()}/api/contact/submit/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "application", first_name: firstName, last_name: lastName,

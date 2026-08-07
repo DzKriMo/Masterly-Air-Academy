@@ -1,5 +1,6 @@
 """PDF generation for attendance reports."""
 from django.http import HttpResponse
+from django.utils.html import escape
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from apps.accounts.permissions import HasRolePermission
@@ -21,7 +22,7 @@ class AttendancePdfView(APIView):
         rows = ""
         for r in records:
             status_color = {"present": "#22c55e", "absent": "#ef4444", "late": "#f59e0b", "excused_absence": "#3b82f6"}.get(r.status, "#6b7280")
-            rows += f"<tr><td>{r.student.full_name}</td><td>{r.student.student_number}</td><td style='color:{status_color};font-weight:bold'>{r.status.replace('_',' ').title()}</td><td>{r.notes or ''}</td></tr>"
+            rows += f"<tr><td>{escape(r.student.full_name)}</td><td>{escape(r.student.student_number)}</td><td style='color:{status_color};font-weight:bold'>{r.status.replace('_',' ').title()}</td><td>{escape(r.notes or '')}</td></tr>"
 
         present = records.filter(status='present').count()
         total = records.count()
@@ -38,8 +39,8 @@ class AttendancePdfView(APIView):
     .stat {{ background: #f8f8f8; padding: 10px 20px; border-radius: 8px; }}
     </style></head><body>
     <div class="header"><div class="logo">MAA</div><div>Masterly Air Academy</div><h2>Attendance Report</h2></div>
-    <p><strong>Course:</strong> {course.title} ({course.subject.code})</p>
-    <p><strong>Date:</strong> {course.scheduled_date} | <strong>Room:</strong> {course.room.name if course.room else 'N/A'}</p>
+    <p><strong>Course:</strong> {escape(course.title)} ({escape(course.subject.code)})</p>
+    <p><strong>Date:</strong> {course.scheduled_date} | <strong>Room:</strong> {escape(course.room.name) if course.room else 'N/A'}</p>
     <div class="stats"><div class="stat">Present: {present}/{total}</div><div class="stat">Rate: {rate}%</div></div>
     <table><tr><th>Student</th><th>Number</th><th>Status</th><th>Notes</th></tr>{rows}</table>
     </body></html>"""

@@ -1,10 +1,13 @@
 from rest_framework import serializers
 from apps.students.models import Promotion, Student
-from .models import Application, Invoice, Payment, Contract, Document, LibraryCategory
+from .models import Application, ApplicationStatus, Invoice, Payment, Contract, Document, LibraryCategory
+
+APPLICATION_STATUSES = [c[0] for c in ApplicationStatus.choices]
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    status = serializers.ChoiceField(choices=APPLICATION_STATUSES)
 
     class Meta:
         model = Application
@@ -48,6 +51,11 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     def get_student_name(self, obj):
         return obj.student.full_name
+
+    def validate_amount(self, value):
+        if value is None or float(value) <= 0:
+            raise serializers.ValidationError('Payment amount must be greater than zero.')
+        return value
 
 
 class LibraryCategorySerializer(serializers.ModelSerializer):

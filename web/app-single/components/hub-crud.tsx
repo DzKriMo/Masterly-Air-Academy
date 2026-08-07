@@ -356,8 +356,8 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
         <LoadingSkeleton type="table" rows={8} />
       ) : crud.filtered.length === 0 ? (
         <EmptyState
-          title={(crud.records?.length ?? 0) === 0 ? config.emptyTitle : "No matches"}
-          message={(crud.records?.length ?? 0) === 0 ? config.emptyMessage : "No matches."}
+          title={(crud.records?.length ?? 0) === 0 ? config.emptyTitle : t("common.noMatches", "No matches")}
+          message={(crud.records?.length ?? 0) === 0 ? config.emptyMessage : t("common.noMatches", "No matches.")}
           action={
             (crud.records?.length ?? 0) === 0 && config.emptyActionLabel
               ? { label: config.emptyActionLabel, onClick: crud.openCreate }
@@ -378,7 +378,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
         <ModalForm
           open={!!crud.selected}
           onClose={() => crud.setSelected(null)}
-          title={config.detailTitle ?? "Details"}
+          title={config.detailTitle ?? t("common.details", "Details")}
           footer={
             <button
               onClick={() => crud.setSelected(null)}
@@ -404,7 +404,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
         <ModalForm
           open={crud.createOpen}
           onClose={crud.closeCreate}
-          title={config.createTitle ?? "New"}
+          title={config.createTitle ?? t("common.new", "New")}
           footer={
             <>
               <button
@@ -419,7 +419,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
                 disabled={crud.createMutation.isPending || !canSubmit(createFields, crud.createForm)}
                 className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
               >
-                {crud.createMutation.isPending ? "Creating..." : "Create"}
+                {crud.createMutation.isPending ? t("common.creating") : t("common.create")}
               </button>
             </>
           }
@@ -439,7 +439,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
         <ModalForm
           open={!!crud.editItem}
           onClose={crud.closeEdit}
-          title={config.editTitle ?? "Edit"}
+          title={config.editTitle ?? t("common.edit", "Edit")}
           footer={
             <>
               <button
@@ -456,7 +456,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
                 disabled={crud.updateMutation.isPending || !canSubmit(editFields, crud.editForm)}
                 className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 disabled:opacity-50"
               >
-                {crud.updateMutation.isPending ? "Saving..." : "Save"}
+                {crud.updateMutation.isPending ? t("common.saving") : t("common.save")}
               </button>
             </>
           }
@@ -479,8 +479,8 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
             className="bg-navy-800 border border-navy-700 rounded-xl p-6 max-w-md w-full space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-white">{config.deleteTitle ?? "Delete"}</h3>
-            <p className="text-sm text-gray-400">{config.deleteMessage ?? "Delete this item?"}</p>
+            <h3 className="text-lg font-semibold text-white">{config.deleteTitle ?? t("common.delete")}</h3>
+            <p className="text-sm text-gray-400">{config.deleteMessage ?? t("common.deleteConfirm")}</p>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={crud.cancelDelete}
@@ -494,7 +494,7 @@ export function HubCrud<T extends { id: string }>(config: CrudPageConfig<T>) {
                 disabled={crud.deleteMutation.isPending}
                 className="px-4 py-2 text-sm bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-50"
               >
-                {crud.deleteMutation.isPending ? "Deleting..." : "Delete"}
+                {crud.deleteMutation.isPending ? t("common.deleting") : t("common.delete")}
               </button>
             </div>
           </div>

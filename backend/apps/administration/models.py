@@ -12,11 +12,21 @@ class InvoiceStatus(models.TextChoices):
     CANCELLED = 'cancelled', 'Cancelled'
 
 
+class ApplicationStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    UNDER_REVIEW = 'under_review', 'Under Review'
+    REVIEWED = 'reviewed', 'Reviewed'
+    ACCEPTED = 'accepted', 'Accepted'
+    REJECTED = 'rejected', 'Rejected'
+    SUBMITTED = 'submitted', 'Submitted'
+    WITHDRAWN = 'withdrawn', 'Withdrawn'
+
+
 class Application(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     application_number = models.CharField(max_length=50, unique=True)
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='applications')
-    status = models.CharField(max_length=30, default='pending')
+    status = models.CharField(max_length=30, choices=ApplicationStatus.choices, default=ApplicationStatus.PENDING)
     submitted_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)

@@ -22,6 +22,16 @@ export function middleware(request: NextRequest) {
     return res;
   }
 
+  // Unprefixed visit — ensure a locale cookie always exists (sniffed from
+  // Accept-Language only when the user has no explicit choice yet).
+  if (!request.cookies.has("locale")) {
+    const accept = (request.headers.get("accept-language") || "").toLowerCase();
+    const detected = accept.includes("fr") ? "fr" : accept.includes("ar") ? "ar" : "en";
+    const res = NextResponse.next();
+    res.cookies.set("locale", detected, { path: "/", maxAge: 60 * 60 * 24 * 365 });
+    return res;
+  }
+
   return NextResponse.next();
 }
 

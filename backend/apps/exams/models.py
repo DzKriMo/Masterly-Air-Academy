@@ -143,6 +143,8 @@ class ExamAttempt(models.Model):
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     answers = models.JSONField(default=dict, blank=True)
     is_passed = models.BooleanField(null=True, blank=True)
+    violations = models.JSONField(default=list, blank=True)
+    is_flagged = models.BooleanField(default=False)
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     graded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)

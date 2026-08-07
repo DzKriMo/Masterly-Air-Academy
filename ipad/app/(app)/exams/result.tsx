@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, Animated, Easing } from 'react-nati
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Trophy, ArrowLeft } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { useTranslation } from '@/hooks/useTranslation';
 import { colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -90,6 +91,7 @@ export default function ExamResultScreen() {
     passed: string;
   }>();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const scoreNum = Number(score) || 0;
   const totalNum = Number(total) || 1;
@@ -144,13 +146,11 @@ export default function ExamResultScreen() {
         </View>
 
         <Text style={styles.title}>
-          {passedBool ? 'Congratulations!' : 'Keep Trying!'}
+          {passedBool ? t('exams.congratulations') : t('exams.keepTrying')}
         </Text>
 
         <Text style={styles.subtitle}>
-          {passedBool
-            ? 'You have successfully passed the exam.'
-            : 'You did not pass this time. Review and try again.'}
+          {passedBool ? t('exams.passedMessage') : t('exams.failedMessage')}
         </Text>
 
         <Animated.View style={[styles.scoreCard, { transform: [{ scale: scoreScale }] }]}>
@@ -158,12 +158,12 @@ export default function ExamResultScreen() {
             {percentage}%
           </Text>
           <Text style={styles.scoreDetail}>
-            {scoreNum} / {totalNum} correct
+            {t('exams.scoreDetail', { score: scoreNum, total: totalNum })}
           </Text>
         </Animated.View>
 
         <Button
-          title="Back to Exams"
+          title={t('exams.backToExams')}
           onPress={() => router.replace('/(app)/exams')}
           variant={passedBool ? 'primary' : 'secondary'}
           size="lg"

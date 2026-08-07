@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Mail, Hash, BookOpen, Activity, Edit3, Save, X, Heart } from 'lucide-react-native';
+import { User, Mail, Edit3, Save, X, Heart } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
@@ -20,21 +20,23 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ProfileService } from '@/services/profile.service';
-import { profileUpdateSchema, type ProfileUpdateData } from '@/utils/validators';
+import { createProfileUpdateSchema, type ProfileUpdateData } from '@/utils/validators';
 import { formatDate } from '@/utils/formatters';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { MedicalCertificate } from '@/types/models';
 
 interface ProfileData {
   id: string;
-  first_name: string;
-  last_name: string;
+  name: string;
   email: string;
   role: string;
-  student_number?: string;
-  program?: string;
   status?: string;
-  enrollment_date?: string;
+  is_active?: boolean;
+  last_login_at?: string;
+  created_at?: string;
+  address?: string;
+  phone?: string;
+  nationality?: string;
   medical_certificates?: MedicalCertificate[];
 }
 
@@ -57,9 +59,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const profileUpdateSchema = React.useMemo(() => createProfileUpdateSchema(t), [t]);
   const [editing, setEditing] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [nationality, setNationality] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
 
@@ -83,17 +87,18 @@ export default function ProfileScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       setEditing(false);
-      Alert.alert(t('common.success'), 'Profile updated.');
+      Alert.alert(t('common.success'), t('profiles.saveSuccess'));
     },
     onError: () => {
-      Alert.alert(t('common.error'), 'Failed to update profile.');
+      Alert.alert(t('common.error'), t('profiles.saveError'));
     },
   });
 
   const startEditing = useCallback(() => {
     if (profile) {
-      setFirstName(profile.first_name ?? '');
-      setLastName(profile.last_name ?? '');
+      setAddress(profile.address ?? '');
+      setPhone(profile.phone ?? '');
+      setNationality(profile.nationality ?? '');
       setFieldErrors({});
       setEditing(true);
     }
@@ -101,8 +106,9 @@ export default function ProfileScreen() {
 
   const handleSave = useCallback(() => {
     const validation = profileUpdateSchema.safeParse({
-      first_name: firstName,
-      last_name: lastName,
+      address,
+      phone,
+      nationality,
     });
 
     if (!validation.success) {
@@ -117,7 +123,7 @@ export default function ProfileScreen() {
 
     setFieldErrors({});
     updateMutation.mutate(validation.data);
-  }, [firstName, lastName, updateMutation]);
+  }, [address, phone, nationality, profileUpdateSchema, updateMutation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -149,10 +155,6 @@ export default function ProfileScreen() {
       </View>
     );
   }
-
-  const fullName = profile
-    ? `${profile.first_name} ${profile.last_name}`
-    : '';
 
   return (
     <View style={styles.container}>
@@ -207,30 +209,9 @@ export default function ProfileScreen() {
         ) : profile ? (
           <>
             <View style={styles.avatarSection}>
-              <Avatar name={fullName} size={80} />
-              {editing ? (
-                <View style={styles.editNameFields}>
-                  <Input
-                    value={firstName}
-                    onChangeText={setFirstName}
-                    placeholder={t('auth.email').split(' ')[0]}
-                    error={fieldErrors.first_name}
-                    style={{ flex: 1 }}
-                  />
-                  <Input
-                    value={lastName}
-                    onChangeText={setLastName}
-                    placeholder="Last"
-                    error={fieldErrors.last_name}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <Text style={styles.name}>{fullName}</Text>
-                  <Text style={styles.email}>{profile.email}</Text>
-                </>
-              )}
+              <Avatar name={profile.name} size={80} />
+              <Text style={styles.name}>{profile.name}</Text>
+              <Text style={styles.email}>{profile.email}</Text>
               {profile.role && (
                 <Badge
                   label={profile.role}
@@ -241,61 +222,73 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Personal Information</Text>
-              <View style={styles.infoGrid}>
-                <InfoRow icon={<Mail size={16} color={colors.text.muted} />} label="Email" value={profile.email} />
-                <InfoRow icon={<User size={16} color={colors.text.muted} />} label="Role" value={profile.role} />
-              </View>
-            </Card>
-
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Student Information</Text>
-              <View style={styles.infoGrid}>
-                <InfoRow icon={<Hash size={16} color={colors.text.muted} />} label={t('profiles.studentNumber')} value={profile.student_number ?? 'N/A'} />
-                <InfoRow icon={<BookOpen size={16} color={colors.text.muted} />} label={t('profiles.program')} value={profile.program ?? 'N/A'} />
-                <InfoRow
-                  icon={<Activity size={16} color={colors.text.muted} />}
-                  label={t('profiles.status')}
-                  value={profile.status ?? 'N/A'}
-                  valueColor={
-                    profile.status?.toLowerCase() === 'active'
-                      ? colors.status.success
-                      : colors.text.secondary
-                  }
-                />
-                {profile.enrollment_date && (
-                  <InfoRow
-                    icon={<User size={16} color={colors.text.muted} />}
-                    label="Enrolled"
-                    value={formatDate(profile.enrollment_date)}
-                  />
-                )}
-              </View>
-            </Card>
-
-            {(profile.medical_certificates ?? []).length > 0 && (
+            {editing ? (
               <Card style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Heart size={18} color={colors.gold[500]} />
-                  <Text style={styles.sectionTitle}>{t('profiles.medicalStatus')}</Text>
-                </View>
-                {profile.medical_certificates!.map((mc) => (
-                  <View key={mc.id} style={styles.medicalItem}>
-                    <View style={styles.medicalInfo}>
-                      <Text style={styles.medicalIssuer}>{mc.issuer}</Text>
-                      <Text style={styles.medicalDates}>
-                        {formatDate(mc.issue_date)} – {formatDate(mc.expiry_date)}
-                      </Text>
-                    </View>
-                    <Badge
-                      label={mc.status}
-                      variant={getMedicalStatusVariant(mc.status)}
-                      size="sm"
-                    />
-                  </View>
-                ))}
+                <Text style={styles.sectionTitle}>{t('profiles.personalInfo')}</Text>
+                <Input
+                  label={t('profiles.address')}
+                  value={address}
+                  onChangeText={setAddress}
+                  error={fieldErrors.address}
+                />
+                <Input
+                  label={t('profiles.phone')}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  error={fieldErrors.phone}
+                />
+                <Input
+                  label={t('profiles.nationality')}
+                  value={nationality}
+                  onChangeText={setNationality}
+                  error={fieldErrors.nationality}
+                />
               </Card>
+            ) : (
+              <>
+                <Card style={styles.section}>
+                  <Text style={styles.sectionTitle}>{t('profiles.personalInfo')}</Text>
+                  <View style={styles.infoGrid}>
+                    <InfoRow icon={<Mail size={16} color={colors.text.muted} />} label="Email" value={profile.email} />
+                    <InfoRow icon={<User size={16} color={colors.text.muted} />} label="Role" value={profile.role} />
+                    <InfoRow icon={<User size={16} color={colors.text.muted} />} label={t('profiles.status')} value={profile.status ?? t('common.na')} />
+                    {profile.address ? (
+                      <InfoRow icon={<User size={16} color={colors.text.muted} />} label={t('profiles.address')} value={profile.address} />
+                    ) : null}
+                    {profile.phone ? (
+                      <InfoRow icon={<User size={16} color={colors.text.muted} />} label={t('profiles.phone')} value={profile.phone} />
+                    ) : null}
+                    {profile.nationality ? (
+                      <InfoRow icon={<User size={16} color={colors.text.muted} />} label={t('profiles.nationality')} value={profile.nationality} />
+                    ) : null}
+                  </View>
+                </Card>
+
+                {(profile.medical_certificates ?? []).length > 0 && (
+                  <Card style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Heart size={18} color={colors.gold[500]} />
+                      <Text style={styles.sectionTitle}>{t('profiles.medicalStatus')}</Text>
+                    </View>
+                    {(profile.medical_certificates ?? []).map((mc) => (
+                      <View key={mc.id} style={styles.medicalItem}>
+                        <View style={styles.medicalInfo}>
+                          <Text style={styles.medicalIssuer}>{mc.issuer}</Text>
+                          <Text style={styles.medicalDates}>
+                            {formatDate(mc.issue_date)} – {formatDate(mc.expiry_date)}
+                          </Text>
+                        </View>
+                        <Badge
+                          label={mc.status}
+                          variant={getMedicalStatusVariant(mc.status)}
+                          size="sm"
+                        />
+                      </View>
+                    ))}
+                  </Card>
+                )}
+              </>
             )}
           </>
         ) : null}
@@ -365,12 +358,6 @@ const styles = StyleSheet.create({
   avatarSection: {
     alignItems: 'center',
     paddingVertical: 16,
-  },
-  editNameFields: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-    width: '100%',
   },
   name: {
     fontSize: 22,

@@ -22,11 +22,7 @@ export function ExportButton({ label = 'Export', exports }: ExportButtonProps) {
   const handleExport = async (url: string, filename: string) => {
     setLoading(filename);
     try {
-      const token = api.getAccessToken();
-      const res = await fetch(`/api${url}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
-      });
-      if (!res.ok) throw new Error('Export failed');
+      const res = await api.download(url);
       const blob = await res.blob();
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');

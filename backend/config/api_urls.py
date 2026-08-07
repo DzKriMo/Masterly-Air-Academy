@@ -44,10 +44,10 @@ from apps.students.views import (
     FlightInstructorViewSet, GroundInstructorViewSet, PromotionViewSet,
 )
 from apps.notifications.views import NotificationViewSet, MessageViewSet, NotificationBroadcastViewSet
-from apps.core.views import SystemSettingViewSet, AuditLogViewSet, search_view, trigger_backup
+from apps.core.views import SystemSettingViewSet, AuditLogViewSet, search_view, TriggerBackupView, create_media_token
 from apps.core.report_views import (
     DashboardKPIView, StudentDashboardView, verify_certificate, finance_reports,
-    student_report, financial_report, exam_reports, fleet_report, student_history,
+    StudentReportView, FinancialReportView, ExamReportsView, FleetReportView, student_history,
 )
 from apps.administration.exports import (
     ExportStudentsView, ExportUsersView, ExportPaymentsView, ExportInvoicesView,
@@ -145,7 +145,8 @@ urlpatterns = [
     path('invoices/<uuid:inv_id>/pdf/', InvoicePdfView.as_view(), name='invoice-pdf'),
     path('contact/submit/', submit_contact, name='submit-contact'),
     path('search/', search_view, name='search'),
-    path('system/backup/', trigger_backup, name='trigger-backup'),
+    path('system/backup/', TriggerBackupView.as_view(), name='trigger-backup'),
+    path('media-token/', create_media_token, name='media-token'),
     path('notifications/broadcast/', NotificationBroadcastViewSet.as_view({'post': 'create'}), name='notification-broadcast'),
     path('export/audit-logs/', ExportAuditLogsView.as_view(), name='export-audit-logs'),
     path('export/courses/', ExportCoursesView.as_view(), name='export-courses'),
@@ -160,16 +161,16 @@ urlpatterns = [
     path('export/capas/', ExportCAPAsView.as_view(), name='export-capas'),
     path('export/safety-events/', ExportSafetyEventsView.as_view(), name='export-safety-events'),
     path('export/risk-assessments/', ExportRiskAssessmentsView.as_view(), name='export-risk-assessments'),
-    path('reports/students/', student_report, name='report-students'),
-    path('reports/financial/', financial_report, name='report-financial'),
+    path('reports/students/', StudentReportView.as_view(), name='report-students'),
+    path('reports/financial/', FinancialReportView.as_view(), name='report-financial'),
 
     # Public final exam endpoints (no auth)
     path('exam/access/', exam_access, name='exam-access'),
     path('exam/submit/', exam_submit, name='exam-submit'),
     path('exam/status/<str:access_code>/', exam_status, name='exam-status'),
 
-    path('reports/exams/', exam_reports, name='report-exams'),
-    path('reports/fleet/', fleet_report, name='report-fleet'),
+    path('reports/exams/', ExamReportsView.as_view(), name='report-exams'),
+    path('reports/fleet/', FleetReportView.as_view(), name='report-fleet'),
     path('students/me/history/', student_history, name='student-history'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),

@@ -2,37 +2,40 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { AlertTriangle } from 'lucide-react-native';
+import { useTranslation } from '@/hooks/useTranslation';
 import { colors } from '@/constants/colors';
 
 interface AntiCheatOverlayProps {
   onViolation: (type: string) => void;
 }
 
+const GRACE_PERIOD_MS = 5000;
+
 export function AntiCheatOverlay({ onViolation }: AntiCheatOverlayProps) {
+  const { t } = useTranslation();
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningText, setWarningText] = useState('');
   const appState = useRef(AppState.currentState);
-  const [permission, requestPermission] = useCameraPermissions();
-
-  useEffect(() => {
-    if (!permission || permission.status === 'undetermined') {
-      requestPermission();
-    }
-  }, [permission, requestPermission]);
+  const mountedAtRef = useRef(Date.now());
+  const [permission] = useCameraPermissions();
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (appState.current.match(/active/) && next.match(/background|inactive/)) {
-        setWarningText('Tab switch detected');
+      const prev = appState.current;
+      appState.current = next;
+
+      if (Date.now() - mountedAtRef.current < GRACE_PERIOD_MS) return;
+
+      if (prev === 'active' && next === 'background') {
+        setWarningText(t('exams.tabSwitchDetected'));
         setWarningVisible(true);
         onViolation('tab_switch');
         setTimeout(() => setWarningVisible(false), 3000);
       }
-      appState.current = next;
     });
 
     return () => subscription.remove();
-  }, [onViolation]);
+  }, [onViolation, t]);
 
   return (
     <>
@@ -48,7 +51,7 @@ export function AntiCheatOverlay({ onViolation }: AntiCheatOverlayProps) {
             <AlertTriangle size={28} color={colors.status.warning} />
             <Text style={styles.warningText}>{warningText}</Text>
             <Text style={styles.warningSubtext}>
-              Your exam session is being monitored
+              {t('exams.sessionMonitored')}
             </Text>
           </View>
         </View>

@@ -20,7 +20,6 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { InvoicesService } from '@/services/invoices.service';
-import { API_BASE } from '@/constants/config';
 import { formatDate, formatCurrency } from '@/utils/formatters';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { Invoice } from '@/types/models';
@@ -66,9 +65,9 @@ export default function InvoicesScreen() {
     refetch,
   } = useQuery({
     queryKey: ['invoices'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Invoice[]> => {
       const { data } = await InvoicesService.list();
-      return (data as unknown as Invoice[]) ?? [];
+      return data?.results ?? [];
     },
   });
 
@@ -96,7 +95,7 @@ export default function InvoicesScreen() {
 
   const handleViewPdf = useCallback(
     (invoice: Invoice) => {
-      const url = `${API_BASE}${InvoicesService.getPdfUrl(invoice.id)}`;
+      const url = InvoicesService.getPdfUrl(invoice.id);
       Alert.alert(
         `${t('invoices.title')} ${invoice.invoice_number}`,
         formatCurrency(invoice.amount, invoice.currency),

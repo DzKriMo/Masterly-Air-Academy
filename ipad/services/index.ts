@@ -5,8 +5,6 @@ export { FlightsService } from './flights.service';
 export { ExamsService } from './exams.service';
 export { CertificatesService } from './certificates.service';
 export { InvoicesService } from './invoices.service';
-export { AttendanceService } from './attendance.service';
-export { NotificationsService } from './notifications.service';
 export { MessagesService } from './messages.service';
 export { ProfileService } from './profile.service';
 export { SearchService } from './search.service';

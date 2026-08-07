@@ -7,8 +7,7 @@ import { LocaleProvider } from "@/components/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/notification-bell";
 import { ErrorBoundary } from "@/components/error-boundary";
-
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://localhost";
+import { SITE_URL as BASE_URL } from "@/lib/site-url";
 
 const seoByLang: Record<string, { title: string; description: string; keywords: string }> = {
   en: {
@@ -44,7 +43,6 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: { index: true, follow: true },
     metadataBase: new URL(BASE_URL),
     alternates: {
-      canonical: `${BASE_URL}/${locale}`,
       languages: {
         en: `${BASE_URL}/en`,
         fr: `${BASE_URL}/fr`,
@@ -73,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: "cover", themeColor: "#1e40af",
+  width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#1e40af",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -81,7 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const serverLocale = cookieStore.get("locale")?.value || "en";
 
   return (
-    <html lang="en" className="dark">
+    <html lang={serverLocale} className="dark">
       <body className="bg-navy-900 text-white min-h-screen antialiased">
         <LocaleProvider initialLocale={serverLocale}>
           <Providers>
@@ -106,7 +104,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               logo: `${BASE_URL}/logo.png`,
               image: `${BASE_URL}/og-image.png`,
               description: "Algeria's premier ATO-approved flight training academy offering PPL, CPL, IR, MEP, MCC programs with modern fleet and expert instructors.",
-              telephone: "+213-xxx-xx-xx-xx",
               email: "contact@masterly-air-academy.dz",
               address: {
                 "@type": "PostalAddress",
@@ -138,6 +135,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {
               "@context": "https://schema.org",
               "@type": "FAQPage",
+              inLanguage: "en",
               mainEntity: [
                 {
                   "@type": "Question",
@@ -159,11 +157,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   name: "What are the requirements to enroll in pilot training?",
                   acceptedAnswer: { "@type": "Answer", text: "Requirements include a minimum age of 17 for PPL and 18 for CPL, a valid Class 1 or Class 2 medical certificate, proficiency in English (ICAO Level 4 minimum), and a high school diploma or equivalent." }
                 },
+              ]
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              inLanguage: "fr",
+              mainEntity: [
                 {
                   "@type": "Question",
                   name: "Comment devenir pilote en Algerie?",
                   acceptedAnswer: { "@type": "Answer", text: "Pour devenir pilote en Algerie, inscrivez-vous dans une ecole de pilotage agreee ATO comme Masterly Air Academy. Les programmes commencent par la licence PPL (Private Pilot License) suivie du CPL (Commercial Pilot License), IR (Instrument Rating), et MEP (Multi-Engine Piston)." }
                 },
+              ]
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              inLanguage: "ar",
+              mainEntity: [
                 {
                   "@type": "Question",
                   name: "كيف تصبح طيارا في الجزائر؟",

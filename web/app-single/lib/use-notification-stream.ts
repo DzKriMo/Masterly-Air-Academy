@@ -7,6 +7,7 @@ export interface StreamNotification {
   title: string;
   message: string;
   data?: any;
+  is_read?: boolean;
   created_at: string;
 }
 
@@ -24,9 +25,14 @@ export function useNotificationStream(
   const handlerRef = useRef(onNotification);
   handlerRef.current = onNotification;
   const sinceRef = useRef(options?.since ?? null);
+  const lastSinceRef = useRef(options?.since ?? null);
   sinceRef.current = options?.since ?? sinceRef.current;
 
   useEffect(() => {
+    if (options?.since !== lastSinceRef.current) {
+      lastSinceRef.current = options?.since ?? null;
+      sinceRef.current = options?.since ?? null;
+    }
     const authenticated = api.isAuthenticated();
     if (!enabled || !authenticated) return;
     let controller: AbortController | null = null;
@@ -42,7 +48,7 @@ export function useNotificationStream(
         const headers: Record<string, string> = { Accept: "text/event-stream" };
         const token = api.getAccessToken();
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch(`/api/notifications/stream/${qs}`, {
+        const res = await fetch(`${api.getBaseUrl()}/api/notifications/stream/${qs}`, {
           headers,
           signal: controller.signal,
           credentials: "include",
@@ -67,7 +73,7 @@ export function useNotificationStream(
                 try {
                   const payload = JSON.parse(line.slice(6)) as StreamNotification;
                   if (payload?.id) {
-                    if (!sinceRef.current || new Date(payload.created_at) > new Date(sinceRef.current)) {
+                    if (!sinceRef.current || new Date(payload.created_at) >= new Date(sinceRef.current)) {
                       sinceRef.current = payload.created_at;
                       handlerRef.current(payload);
                     }

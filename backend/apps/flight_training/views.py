@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.http import HttpResponse
+from django.utils.html import escape
 from apps.accounts.permissions import HasRolePermission
 
 from .models import (
@@ -202,8 +203,14 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         if not lesson.competencies_acquired or len(lesson.competencies_acquired) == 0:
             return Response({'error': 'No competencies acquired recorded for this lesson'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update pedagogical note
-        lesson.pedagogical_note = (lesson.pedagogical_note or '') + ' | SOLO AUTHORIZED'
+        # Enforce the solo-flight grading threshold (grade >= 7 and a logged flight duration)
+        if lesson.grade is None or float(lesson.grade) < 7:
+            return Response({'error': 'A grade of at least 7/10 is required to authorize a solo flight'}, status=status.HTTP_400_BAD_REQUEST)
+        if lesson.flight_duration is None or float(lesson.flight_duration) <= 0:
+            return Response({'error': 'A logged flight duration is required to authorize a solo flight'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Record the authorization without mutating the instructor's pedagogical note
+        lesson.solo_authorized = True
         lesson.save()
 
         # Create notifications
@@ -267,7 +274,7 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
             if not items:
                 return '<span style="color:#9ca3af">—</span>'
             return ' '.join(
-                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{item}</span>'
+                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{escape(item)}</span>'
                 for item in items
             )
 
@@ -275,7 +282,7 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         if lesson.signed_by_instructor:
             signature_block = f'''
             <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb">
-                <p style="font-size:12px;color:#374151"><strong>Digitally signed by:</strong> {instructor.first_name} {instructor.last_name}</p>
+                <p style="font-size:12px;color:#374151"><strong>Digitally signed by:</strong> {escape(instructor.first_name)} {escape(instructor.last_name)}</p>
                 <p style="font-size:10px;color:#9ca3af">Signed electronically on {now_str}</p>
             </div>'''
 
@@ -319,11 +326,11 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
 
         <div class="section-title">Flight Details</div>
         <div class="grid">
-          <div class="field"><div class="field-label">Student</div><div class="field-value">{student.full_name}</div></div>
-          <div class="field"><div class="field-label">Student #</div><div class="field-value">{student.student_number or '—'}</div></div>
-          <div class="field"><div class="field-label">Program</div><div class="field-value">{student.program or '—'}</div></div>
-          <div class="field"><div class="field-label">Instructor</div><div class="field-value">{instructor.first_name} {instructor.last_name}</div></div>
-          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{aircraft.registration} ({aircraft.manufacturer} {aircraft.model or ''})</div></div>
+          <div class="field"><div class="field-label">Student</div><div class="field-value">{escape(student.full_name)}</div></div>
+          <div class="field"><div class="field-label">Student #</div><div class="field-value">{escape(student.student_number or '—')}</div></div>
+          <div class="field"><div class="field-label">Program</div><div class="field-value">{escape(student.program or '—')}</div></div>
+          <div class="field"><div class="field-label">Instructor</div><div class="field-value">{escape(instructor.first_name)} {escape(instructor.last_name)}</div></div>
+          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{escape(aircraft.registration)} ({escape(aircraft.manufacturer)} {escape(aircraft.model or '')})</div></div>
         </div>
 
         <div class="section-title">Time & Duration</div>
@@ -347,16 +354,16 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
         </div>
 
         <div class="section-title">Difficulties Encountered</div>
-        <div class="text-block">{lesson.difficulties or 'None reported'}</div>
+        <div class="text-block">{escape(lesson.difficulties or 'None reported')}</div>
 
         <div class="section-title">Observations</div>
-        <div class="text-block">{lesson.observations or 'None recorded'}</div>
+        <div class="text-block">{escape(lesson.observations or 'None recorded')}</div>
 
         <div class="section-title">Recommendations</div>
-        <div class="text-block">{lesson.recommendations or 'None'}</div>
+        <div class="text-block">{escape(lesson.recommendations or 'None')}</div>
 
         <div class="section-title">Pedagogical Note</div>
-        <div class="text-block">{lesson.pedagogical_note or '—'}</div>
+        <div class="text-block">{escape(lesson.pedagogical_note or '—')}</div>
 
         <div class="section-title">Logbook Summary</div>
         <table>
@@ -364,10 +371,10 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
           <tr>
             <td>{sched}</td><td>{dep}</td><td>{arr}</td>
             <td>{float(lesson.flight_duration) if lesson.flight_duration else '—'} h</td>
-            <td>{aircraft.registration}</td>
-            <td>{instructor.first_name} {instructor.last_name}</td>
+            <td>{escape(aircraft.registration)}</td>
+            <td>{escape(instructor.first_name)} {escape(instructor.last_name)}</td>
             <td>{f'{grade_val}/10' if grade_val is not None else '—'}</td>
-            <td style="color:{result_color};font-weight:700">{result_label}</td>
+            <td style="color:{result_color};font-weight:700">{escape(result_label)}</td>
           </tr>
         </table>
 
@@ -529,7 +536,7 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
             if not items:
                 return '<span style="color:#9ca3af">—</span>'
             return ' '.join(
-                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{item}</span>'
+                f'<span style="display:inline-block;background:{color}15;color:{color};border:1px solid {color}40;padding:2px 8px;border-radius:12px;font-size:10px;margin:1px 2px">{escape(item)}</span>'
                 for item in items
             )
 
@@ -563,23 +570,23 @@ class FlightLogEntryViewSet(viewsets.ModelViewSet):
         <h2 class="title">Flight Log Entry</h2>
         <div class="section-title">Flight Details</div>
         <div class="grid">
-          <div class="field"><div class="field-label">Student</div><div class="field-value">{student.full_name}</div></div>
-          <div class="field"><div class="field-label">Student #</div><div class="field-value">{student.student_number or '—'}</div></div>
-          <div class="field"><div class="field-label">Program</div><div class="field-value">{student.program or '—'}</div></div>
+          <div class="field"><div class="field-label">Student</div><div class="field-value">{escape(student.full_name)}</div></div>
+          <div class="field"><div class="field-label">Student #</div><div class="field-value">{escape(student.student_number or '—')}</div></div>
+          <div class="field"><div class="field-label">Program</div><div class="field-value">{escape(student.program or '—')}</div></div>
           <div class="field"><div class="field-label">Date</div><div class="field-value">{entry.date.strftime('%d/%m/%Y')}</div></div>
-          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{aircraft_label}</div></div>
+          <div class="field"><div class="field-label">Aircraft</div><div class="field-value">{escape(aircraft_label)}</div></div>
           <div class="field"><div class="field-label">Duration</div><div class="field-value">{float(entry.flight_duration)} h</div></div>
         </div>
         <div class="section-title">Exercises</div>
         <div class="chips">{badges(entry.exercises)}</div>
         <div class="section-title">Evaluation</div>
         <div class="grid">
-          <div class="field"><div class="field-label">Status</div><span class="result-badge" style="background:{result_color}15;color:{result_color}">{result_label}</span></div>
+          <div class="field"><div class="field-label">Status</div><span class="result-badge" style="background:{result_color}15;color:{result_color}">{escape(result_label)}</span></div>
           <div class="field"><div class="field-label">Grade</div><div class="field-value">{f'{grade_val}/10' if grade_val is not None else '—'}</div></div>
-          <div class="field"><div class="field-label">Validated by</div><div class="field-value">{f'{entry.validated_by.first_name} {entry.validated_by.last_name}' if entry.validated_by else '—'}</div></div>
+          <div class="field"><div class="field-label">Validated by</div><div class="field-value">{f'{escape(entry.validated_by.first_name)} {escape(entry.validated_by.last_name)}' if entry.validated_by else '—'}</div></div>
         </div>
-        {f'<div class="section-title">Instructor Notes</div><div class="text-block">{entry.instructor_notes}</div>' if entry.instructor_notes else ''}
-        {f'<div class="section-title">Student Notes</div><div class="text-block">{entry.notes}</div>' if entry.notes else ''}
+        {f'<div class="section-title">Instructor Notes</div><div class="text-block">{escape(entry.instructor_notes)}</div>' if entry.instructor_notes else ''}
+        {f'<div class="section-title">Student Notes</div><div class="text-block">{escape(entry.notes)}</div>' if entry.notes else ''}
         <div class="footer">Masterly Air Academy — Self-Logged Flight Report — Generated on {now_str}</div>
         </body></html>'''
 

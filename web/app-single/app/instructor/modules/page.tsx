@@ -14,6 +14,7 @@ import { ModalForm } from "@/components/modal-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useToast } from "@/components/toast";
 import { VideoPlayer } from "@/components/video-player";
+import { mediaStreamUrl } from "@/lib/download";
 
 interface Module {
   id: string;
@@ -67,6 +68,22 @@ export default function ModulesPage() {
 
   // View lesson
   const [viewLesson, setViewLesson] = useState<Lesson | null>(null);
+  const [viewVideoUrl, setViewVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!viewLesson || !viewLesson.video_url) {
+      setViewVideoUrl(null);
+      return;
+    }
+    const raw = viewLesson.video_url;
+    if (raw.startsWith("http") || raw.startsWith("/media/")) {
+      setViewVideoUrl(raw);
+    } else {
+      mediaStreamUrl(String(viewLesson.id), `/api/module-lessons/${viewLesson.id}/video/`)
+        .then((url) => { if (url) setViewVideoUrl(url); })
+        .catch(() => { setViewVideoUrl(null); });
+    }
+  }, [viewLesson]);
 
   // Edit lesson
   const [editLesson, setEditLesson] = useState<Lesson | null>(null);
@@ -544,11 +561,7 @@ export default function ModulesPage() {
                           fd.append('file', file);
                           fd.append('name', nameInput?.value || file.name);
                           fd.append('type', file.type.split('/')[1] || 'pdf');
-                          await fetch(`/api/modules/${m.id}/upload_document/`, {
-                            method: 'POST',
-                            headers: { Authorization: `Bearer ${api.getAccessToken()}` },
-                            body: fd,
-                          });
+                          await api.upload(`/modules/${m.id}/upload_document/`, fd);
                           fetchModules(selectedSubject);
                           formEl.reset();
                         }}
@@ -603,9 +616,7 @@ export default function ModulesPage() {
                   />
                 ) : (
                   <VideoPlayer 
-                    src={viewLesson.video_url.startsWith("/media/") || viewLesson.video_url.startsWith("http")
-                      ? viewLesson.video_url
-                      : `/api/module-lessons/${viewLesson.id}/video/`}
+                    src={viewVideoUrl || ""}
                   />
                 )}
               </div>

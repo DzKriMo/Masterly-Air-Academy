@@ -8,8 +8,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count, Q
-from apps.accounts.authentication import QueryTokenAuthentication
-from apps.accounts.permissions import HasRolePermission
+from apps.accounts.authentication import SignedMediaAuthentication
+from apps.accounts.permissions import HasRolePermission, user_has_domain_permission
 from apps.students.models import Student, Promotion
 from apps.exams.pdf import generate_invoice_pdf as _inv_pdf
 from .models import Application, Invoice, Payment, Contract, Document, LibraryCategory
@@ -53,8 +53,14 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def review(self, request, pk=None):
+        if not user_has_domain_permission(request.user, 'applications', 'approve'):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        from .serializers import APPLICATION_STATUSES
+        status_val = request.data.get('status')
+        if status_val is not None and status_val not in APPLICATION_STATUSES:
+            return Response({'error': f'Invalid status: {status_val}'}, status=status.HTTP_400_BAD_REQUEST)
         app = self.get_object()
-        app.status = request.data.get('status', 'reviewed')
+        app.status = status_val or 'reviewed'
         app.reviewed_at = timezone.now()
         app.reviewed_by = request.user
         app.notes = request.data.get('notes', app.notes)
@@ -119,7 +125,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'invoices.view'
+    required_permission = 'invoicing.view'
     filterset_fields = ['status', 'student', 'currency']
     search_fields = ['invoice_number', 'student__first_name', 'student__last_name']
 
@@ -235,6 +241,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
         invoice_id = self.request.data.get('invoice')
         if not student_id or not invoice_id:
             raise ValidationError({'detail': 'student and invoice are required'})
+        try:
+            invoice = Invoice.objects.get(pk=invoice_id)
+        except Invoice.DoesNotExist:
+            raise ValidationError({'detail': 'Invoice not found'})
+        amount = float(serializer.validated_data.get('amount'))
+        balance = float(invoice.amount) - sum(float(p.amount) for p in invoice.payments.all())
+        if amount > balance:
+            raise ValidationError({'detail': 'Payment amount cannot exceed the invoice balance.'})
         payment = serializer.save(student_id=student_id, invoice_id=invoice_id)
         # Notify the student that a payment was recorded
         try:
@@ -259,7 +273,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 # If was overdue and now paid, notify finance
                 if was_overdue:
                     NotificationService.notify_roles(
-                        ['finance_manager', 'system_admin'],
+                        ['finance_responsible', 'accounting_agent', 'system_admin'],
                         'payment_received',
                         'Overdue Invoice Paid',
                         f'Invoice #{invoice.invoice_number} ({invoice.student.full_name}) was overdue and is now fully paid.',
@@ -291,7 +305,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasRolePermission]
     required_permission = 'documents.view'
     authentication_classes = [
-        QueryTokenAuthentication,
+        SignedMediaAuthentication,
         SessionAuthentication,
         JWTAuthentication,
     ]
@@ -426,6 +440,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No file provided'}, status=400)
 
         from apps.ground_training.views import _store_upload
+        from apps.core.uploads import validate_upload
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=400)
         path = _store_upload('library', file)
 
         history = list(doc.version_history or [])
@@ -469,6 +487,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         from apps.ground_training.views import _store_upload
+        from apps.core.uploads import validate_upload
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=400)
         path = _store_upload('library', file)
 
         category = None
@@ -514,7 +536,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             file_size=file.size,
             uploaded_by=request.user,
             student_id=student_id or None,
-            is_public=request.data.get('is_public', 'true') not in ('false', 'False', '0'),
+            is_public=request.data.get('is_public') not in (None, '', 'false', 'False', '0', 'off'),
             visible_to_roles=role_values,
             expiry_date=expiry,
         )

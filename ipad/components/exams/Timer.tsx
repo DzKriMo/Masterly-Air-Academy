@@ -22,7 +22,7 @@ function formatTime(seconds: number): string {
 
 export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
   const [remaining, setRemaining] = useState(totalSeconds);
-  const remainingRef = useRef(totalSeconds);
+  const endTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onTimeUpRef = useRef(onTimeUp);
   const pulse = useRef(new Animated.Value(1)).current;
@@ -30,7 +30,7 @@ export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
   onTimeUpRef.current = onTimeUp;
 
   useEffect(() => {
-    remainingRef.current = totalSeconds;
+    endTimeRef.current = Date.now() + totalSeconds * 1000;
     setRemaining(totalSeconds);
   }, [totalSeconds]);
 
@@ -41,17 +41,24 @@ export function Timer({ totalSeconds, onTimeUp, isPaused }: TimerProps) {
       return;
     }
 
-    intervalRef.current = setInterval(() => {
-      remainingRef.current -= 1;
-      setRemaining(remainingRef.current);
+    if (endTimeRef.current === null) {
+      endTimeRef.current = Date.now() + totalSeconds * 1000;
+    }
 
-      if (remainingRef.current <= 0) {
+    const tick = () => {
+      if (endTimeRef.current === null) return;
+      const remainingMs = endTimeRef.current - Date.now();
+      if (remainingMs <= 0) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        remainingRef.current = 0;
         setRemaining(0);
         onTimeUpRef.current();
+        return;
       }
-    }, 1000);
+      setRemaining(Math.ceil(remainingMs / 1000));
+    };
+
+    tick();
+    intervalRef.current = setInterval(tick, 250);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

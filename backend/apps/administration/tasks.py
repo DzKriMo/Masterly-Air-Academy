@@ -9,11 +9,16 @@ def check_overdue_invoices():
     """Mark issued invoices as overdue if past their due date and notify students."""
     from apps.notifications.services import NotificationService
 
-    overdue = Invoice.objects.filter(status='issued', due_at__lt=timezone.now())
-    count = 0
-    for invoice in overdue:
+    overdue = Invoice.objects.filter(
+        status='issued', due_at__lt=timezone.now()
+    ).select_related('student__user')
+
+    invoices = list(overdue)
+    for invoice in invoices:
         invoice.status = 'overdue'
-        invoice.save(update_fields=['status'])
+    Invoice.objects.bulk_update(invoices, ['status'])
+
+    for invoice in invoices:
         # Notify the student about the overdue invoice
         NotificationService.notify(
             invoice.student.user,
@@ -30,5 +35,4 @@ def check_overdue_invoices():
             f'Invoice #{invoice.invoice_number} ({invoice.student.full_name}) for {invoice.amount} {invoice.currency} is overdue.',
             {'invoice_id': str(invoice.id), 'student': invoice.student.full_name}
         )
-        count += 1
-    return f'{count} invoices marked as overdue and notifications sent'
+    return f'{len(invoices)} invoices marked as overdue and notifications sent'

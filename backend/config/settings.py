@@ -2,6 +2,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ['SECRET_KEY']
@@ -23,6 +25,7 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
     'storages',
@@ -74,6 +77,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+if not DB_PASSWORD:
+    raise ImproperlyConfigured(
+        'DB_PASSWORD is required. Set it in the environment or your .env file (see .env.example).'
+    )
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -81,7 +90,7 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', '5432'),
         'NAME': os.environ.get('DB_NAME', 'masterly'),
         'USER': os.environ.get('DB_USER', 'masterly'),
-        'PASSWORD': os.environ['DB_PASSWORD'],
+        'PASSWORD': DB_PASSWORD,
         'CONN_MAX_AGE': 600,
         'OPTIONS': {
             'connect_timeout': 10,
@@ -138,11 +147,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost,http://127.0.0.1,http://185.185.80.188:7788,https://185.185.80.188.nip.io').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# Security (relaxed defaults for LAN-only; enable in production with TLS)
+# Security (secure defaults; override per environment)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'false').lower() == 'true'
-SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
-CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'false').lower() == 'true'
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false' if DEBUG else 'true').lower() == 'true'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'false' if DEBUG else 'true').lower() == 'true'
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost,https://185.185.80.188.nip.io')).split(',')
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -176,6 +185,7 @@ REST_FRAMEWORK = {
         'export': '10/hour',
         'file_upload': '20/hour',
         'contact': '5/hour',
+        'backup': '5/hour',
     },
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
     'DEFAULT_RENDERER_CLASSES': (
@@ -224,11 +234,24 @@ CELERY_BEAT_SCHEDULE = {
 
 # Meilisearch
 MEILISEARCH_HOST = os.environ.get('MEILI_HOST', 'http://meilisearch:7700')
-MEILISEARCH_API_KEY = os.environ.get('MEILI_KEY', 'masterkey')
+
+
+def _env_or_dev_default(name, dev_default):
+    value = os.environ.get(name)
+    if value is not None:
+        return value
+    if DEBUG:
+        return dev_default
+    raise ImproperlyConfigured(
+        f'{name} must be set in the environment when DEBUG is disabled (see .env.example).'
+    )
+
+
+MEILISEARCH_API_KEY = _env_or_dev_default('MEILI_KEY', 'masterkey')
 
 # File Storage (MinIO)
-AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
-AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+AWS_ACCESS_KEY_ID = _env_or_dev_default('MINIO_ACCESS_KEY', 'minioadmin')
+AWS_SECRET_ACCESS_KEY = _env_or_dev_default('MINIO_SECRET_KEY', 'minioadmin')
 AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
 AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET', 'masterly-documents')
 AWS_S3_REGION_NAME = 'us-east-1'
@@ -247,18 +270,22 @@ MEDICAL_EXPIRY_NOTICE_DAYS = 30
 
 # ── Email Configuration ────────────────────────────────
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.example.com')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@masterly-air-academy.dz')
 
+if EMAIL_BACKEND in ('django.core.mail.backends.smtp.EmailBackend', 'smtp') and not EMAIL_HOST:
+    raise ImproperlyConfigured(
+        'EMAIL_HOST is required when EMAIL_BACKEND uses SMTP. '
+        'Set EMAIL_HOST (and EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL) '
+        'in your environment or .env (see .env.example).'
+    )
+
 # Site URL (used for certificate QR codes, etc.)
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost')
-
-# Inactivity auto-logout (seconds, 0 = disabled)
-INACTIVITY_TIMEOUT_SECONDS = int(os.environ.get('INACTIVITY_TIMEOUT', 1800))  # 30 min default
 
 # Quality & safety deadline monitoring
 QUALITY_SAFETY_DEADLINE_DAYS_AHEAD = 30

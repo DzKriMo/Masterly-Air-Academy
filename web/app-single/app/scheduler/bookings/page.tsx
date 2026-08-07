@@ -67,7 +67,7 @@ export default function BookingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/resource-bookings/", { ...form, status: "confirmed" });
+      await api.post("/resource-bookings/", { ...form });
       setShowForm(false);
       setForm({ resource_type: "", resource_id: "", start_time: "", end_time: "", notes: "" });
       fetchBookings();

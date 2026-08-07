@@ -47,11 +47,7 @@ export default function MedicalPage() {
       return;
     }
     try {
-      const token = api.getAccessToken();
-      const r = await fetch(`/api/medical-certificates/${cert.id}/download/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok) return;
+      const r = await api.download(`/medical-certificates/${cert.id}/download/`);
       const b = await r.blob();
       const u = window.URL.createObjectURL(b);
       const a = document.createElement("a");

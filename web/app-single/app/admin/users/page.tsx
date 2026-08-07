@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { api } from "@/lib/api";
+import { api, withFullLimit } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DataTable, Column } from "@/components/data-table";
 import { FilterBar, FilterOption } from "@/components/filter-bar";
@@ -103,7 +103,7 @@ function computeStats(users: AppUser[]) {
 // ─── Page Component ────────────────────────────────────────
 
 export default function AdminUsersPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user: currentUser } = useAuth();
   useAuthGuard(isAuthenticated, authLoading);
   const router = useRouter();
   const { t } = useTranslation();
@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
   } = useQuery<AppUser[]>({
     queryKey: ["admin", "users"],
     queryFn: async (): Promise<AppUser[]> => {
-      const d: any = await api.get("/users/");
+      const d: any = await api.get(withFullLimit("/users/"));
       return (d?.results || d || []) as AppUser[];
     },
     enabled: isAuthenticated,
@@ -197,6 +197,7 @@ export default function AdminUsersPage() {
       setResetTarget(null);
       setResetPassword("");
       setResetConfirm("");
+      setResetCurrentPassword("");
     },
     onError: (err: any) => {
       showToast("error", err.message || "Failed to reset password");
@@ -247,6 +248,7 @@ export default function AdminUsersPage() {
   const [resetTarget, setResetTarget] = useState<AppUser | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [resetConfirm, setResetConfirm] = useState("");
+  const [resetCurrentPassword, setResetCurrentPassword] = useState("");
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
@@ -306,8 +308,17 @@ export default function AdminUsersPage() {
       showToast("error", "Passwords do not match");
       return;
     }
-    resetPasswordMutation.mutate({ id: resetTarget.id, password: resetPassword });
-  }, [resetTarget, resetPassword, resetConfirm, resetPasswordMutation, showToast]);
+    const isSelf = currentUser?.id === resetTarget.id;
+    if (isSelf && !resetCurrentPassword) {
+      showToast("error", "Enter your current password to change your own password");
+      return;
+    }
+    resetPasswordMutation.mutate({
+      id: resetTarget.id,
+      password: resetPassword,
+      ...(isSelf ? { current_password: resetCurrentPassword } : {}),
+    });
+  }, [resetTarget, resetPassword, resetConfirm, resetCurrentPassword, currentUser, resetPasswordMutation, showToast]);
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return;
@@ -913,6 +924,7 @@ export default function AdminUsersPage() {
               setResetTarget(null);
               setResetPassword("");
               setResetConfirm("");
+              setResetCurrentPassword("");
             }
           }}
           title={
@@ -927,6 +939,7 @@ export default function AdminUsersPage() {
                   setResetTarget(null);
                   setResetPassword("");
                   setResetConfirm("");
+                  setResetCurrentPassword("");
                 }}
                 disabled={resetPasswordMutation.isPending}
                 className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white transition-colors disabled:opacity-50"
@@ -1022,6 +1035,21 @@ export default function AdminUsersPage() {
                 </p>
               )}
             </div>
+
+            {resetTarget && currentUser?.id === resetTarget.id && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Current Password <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={resetCurrentPassword}
+                  onChange={(e) => setResetCurrentPassword(e.target.value)}
+                  placeholder="Required to change your own password"
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+            )}
 
             {resetTarget && (
               <p className="text-xs text-gray-500 bg-navy-900/50 rounded-lg px-3 py-2 border border-navy-700">

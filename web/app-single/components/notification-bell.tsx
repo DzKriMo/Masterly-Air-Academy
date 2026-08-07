@@ -21,7 +21,15 @@ export function NotificationBell() {
   const fetchNotifications = () => {
     if (!api.isAuthenticated()) return;
     api.get<{ results: Notif[] }>("/notifications/")
-      .then(d => setNotifs((d as unknown as { results: Notif[] }).results || []))
+      .then(d => {
+        const fetched = (d as unknown as { results: Notif[] }).results || [];
+        setNotifs(prev => {
+          const seen = new Set(fetched.map(n => n.id));
+          return [...prev.filter(n => !seen.has(n.id)), ...fetched].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
+      })
       .catch(() => {});
   };
 
@@ -33,7 +41,7 @@ export function NotificationBell() {
   }, [isExam]);
 
   useNotificationStream((n: StreamNotification) => {
-    setNotifs(prev => [{ ...n, is_read: false } as Notif, ...prev]);
+    setNotifs(prev => [{ ...n, is_read: n.is_read ?? false } as Notif, ...prev]);
     if (n.title) {
       showToast("info", `${n.title}${n.message ? `: ${n.message}` : ""}`);
     }
@@ -42,8 +50,8 @@ export function NotificationBell() {
 
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
 
-  // Hidden entirely inside the exam portal (no polling, no auto-logout)
-  if (isExam) return null;
+  // Hidden entirely inside the exam portal (no polling, no auto-logout) and for unauthenticated visitors
+  if (isExam || !api.isAuthenticated()) return null;
 
 
 
@@ -59,7 +67,7 @@ export function NotificationBell() {
   const markAllRead = async () => {
     try {
       await api.post("/notifications/mark_all_read/");
-      setNotifs(notifs.map(n => ({ ...n, is_read: true })));
+      setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch {}
   };
 

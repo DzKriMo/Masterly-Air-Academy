@@ -12,6 +12,7 @@ import { ErrorCard } from "@/components/error-card";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 import { VideoPlayer } from "@/components/video-player";
+import { mediaStreamUrl } from "@/lib/download";
 
 interface Lesson {
   id: string;
@@ -35,7 +36,7 @@ interface VideoStats {
 }
 
 export default function LessonViewPage() {
-  const { isAuthenticated, isLoading: authLoading, token } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { t } = useTranslation();
@@ -239,14 +240,15 @@ export default function LessonViewPage() {
           has_video: !!d.has_video,
         });
         const raw = d.video_url || null;
-        const streamBase = `/api/module-lessons/${lessonId}/video/`;
-        setVideoUrl(
-          raw && (raw.startsWith("http") || raw.startsWith("/media/"))
-            ? raw
-            : raw
-            ? `${streamBase}${token ? `?token=${encodeURIComponent(token)}` : ""}`
-            : null
-        );
+        if (raw && (raw.startsWith("http") || raw.startsWith("/media/"))) {
+          setVideoUrl(raw);
+        } else if (raw) {
+          mediaStreamUrl(String(d.id), `/api/module-lessons/${lessonId}/video/`)
+            .then((url) => { if (url) setVideoUrl(url); })
+            .catch(() => { setVideoUrl(null); });
+        } else {
+          setVideoUrl(null);
+        }
         const watched = d.video_watched_seconds || 0;
         const duration = d.video_duration || 0;
         setVideoStats({
@@ -264,7 +266,7 @@ export default function LessonViewPage() {
         setError(t("student.lessonLoadError", "Failed to load lesson."));
       })
       .finally(() => setLoading(false));
-  }, [isAuthenticated, lessonId, token]);
+  }, [isAuthenticated, lessonId]);
 
   useEffect(() => { loadLesson(); }, [loadLesson]);
 

@@ -127,19 +127,23 @@ docker compose exec api python manage.py seed_demo_data
 
 Open `http://localhost:7788`.
 
-## 🔑 Default Test Accounts
+## 🔐 Credentials & Secrets
 
-| Email | Password | Role |
-|---|---|---|
-| `admin@masterly-air-academy.dz` | `Admin@2026` | System Administrator |
-| `director@masterly-air-academy.dz` | `director123` | Director General |
-| `finance@masterly-air-academy.dz` | `finance123` | Finance Responsible |
-| `quality@masterly-air-academy.dz` | `quality123` | Quality Manager |
-| `fi@masterly-air-academy.dz` | `instructor123` | Flight Instructor |
-| `gi@masterly-air-academy.dz` | `instructor123` | Ground Instructor |
-| `ahmed@student.maa.dz` | `student123` | Student (PPL) |
+No default or demo credentials are shipped in the repository. All secrets are
+provisioned through the environment:
 
-Full list: 18 accounts covering all 19 roles are seeded. Complete credentials in the User Guide.
+- Copy `.env.example` to `.env` and fill in every value (never commit `.env`).
+  `docker compose` fails fast if a required variable (`SECRET_KEY`,
+  `DB_PASSWORD`, `REDIS_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`,
+  `MEILI_KEY`) is missing.
+- The initial Django superuser is created automatically on the first boot from
+  `DJANGO_SUPERUSER_PASSWORD` / `SUPERUSER_PASSWORD` (only when no superuser
+  exists; the command fails loudly if the password is unset outside DEBUG).
+- Staff accounts provisioned by `deploy-vps.sh` are created from the
+  `DIRECTOR_PASS`, `FINANCE_PASS`, `QUALITY_PASS` and `SCHEDULER_PASS`
+  environment variables — the script aborts if any are unset.
+- For a dev environment, you may set `DEBUG=true` in `.env`; production
+  deployments must keep `DEBUG=false` and supply real secrets.
 
 ## 🛠️ Tech Stack
 

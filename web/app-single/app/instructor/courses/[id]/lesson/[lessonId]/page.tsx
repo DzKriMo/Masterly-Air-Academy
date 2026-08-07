@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { ErrorCard } from "@/components/error-card";
+import { mediaStreamUrl } from "@/lib/download";
 
 interface Lesson {
   id: string;
@@ -102,13 +103,15 @@ export default function InstructorLessonViewPage() {
           subject_code: d.subject_code || "",
         });
         const raw = d.video_url || null;
-        setVideoUrl(
-          raw && (raw.startsWith("http") || raw.startsWith("/media/"))
-            ? raw
-            : raw
-            ? `/api/module-lessons/${lessonId}/video/`
-            : null
-        );
+        if (raw && (raw.startsWith("http") || raw.startsWith("/media/"))) {
+          setVideoUrl(raw);
+        } else if (raw) {
+          mediaStreamUrl(String(d.id), `/api/module-lessons/${lessonId}/video/`)
+            .then((url) => { if (url) setVideoUrl(url); })
+            .catch(() => { setVideoUrl(null); });
+        } else {
+          setVideoUrl(null);
+        }
         setError(null);
       })
       .catch(err => {

@@ -21,6 +21,7 @@ import {
   getStoredBiometric,
   setStoredBiometric,
 } from '@/lib/auth';
+import { NotificationPreferencesService } from '@/services/notification-preferences.service';
 import { APP_VERSION } from '@/constants/config';
 
 type Language = 'en' | 'fr' | 'ar';
@@ -46,6 +47,9 @@ export default function SettingsScreen() {
         getStoredBiometric().then(setBiometricEnabled);
       }
     });
+    NotificationPreferencesService.get()
+      .then((prefs) => setNotificationsEnabled(prefs.in_app_enabled))
+      .catch(() => {});
   }, []);
 
   const handleLanguageChange = useCallback(
@@ -64,10 +68,20 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  const handleNotificationsToggle = useCallback(async (value: boolean) => {
+    setNotificationsEnabled(value);
+    try {
+      await NotificationPreferencesService.update({ in_app_enabled: value });
+    } catch {
+      setNotificationsEnabled(!value);
+      Alert.alert(t('common.error'), t('settings.updateFailed'));
+    }
+  }, [t]);
+
   const handleSignOut = useCallback(() => {
     Alert.alert(
       t('settings.logout'),
-      'Are you sure you want to sign out?',
+      t('settings.logoutConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -156,13 +170,15 @@ export default function SettingsScreen() {
               <View>
                 <Text style={styles.settingLabel}>{t('settings.notifications')}</Text>
                 <Text style={styles.settingDescription}>
-                  {notificationsEnabled ? 'Enabled' : 'Disabled'}
+                  {notificationsEnabled
+                    ? t('settings.notificationsEnabled')
+                    : t('settings.notificationsDisabled')}
                 </Text>
               </View>
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={handleNotificationsToggle}
               trackColor={{ false: colors.navy[700], true: colors.gold[600] }}
               thumbColor={notificationsEnabled ? colors.navy[900] : colors.text.muted}
             />

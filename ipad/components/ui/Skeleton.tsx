@@ -28,9 +28,10 @@ export function Skeleton({
     ).start();
   }, [shimmerX]);
 
+  const numericWidth = typeof width === 'number' ? width : 200;
   const translateX = shimmerX.interpolate({
     inputRange: [-1, 1],
-    outputRange: [-(width as number), width as number],
+    outputRange: [-numericWidth, numericWidth],
   });
 
   return (

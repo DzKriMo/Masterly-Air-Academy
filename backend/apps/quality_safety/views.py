@@ -252,9 +252,13 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         """Upload an attachment (image/document) and return its /media/ URL."""
         from apps.ground_training.views import _store_upload
+        from apps.core.uploads import validate_upload
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        ok, err = validate_upload(file)
+        if not ok:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
         key = _store_upload('safety_events', file)
         return Response({'file_url': f'/media/{key}'}, status=status.HTTP_201_CREATED)
 
@@ -265,6 +269,20 @@ class SafetyEventViewSet(viewsets.ModelViewSet):
         url = request.query_params.get('url')
         if not url:
             return Response({'error': 'No url provided'}, status=status.HTTP_400_BAD_REQUEST)
+        # Ownership scoping: the attachment must belong to an event the current
+        # user reported, or to an event they are allowed to view.
+        from .models import SafetyEvent
+        from django.db.models import Q
+        from apps.accounts.permissions import user_has_domain_permission
+        if not user_has_domain_permission(request.user, 'quality', 'view'):
+            attached = SafetyEvent.objects.filter(
+                Q(reported_by=request.user) | Q(confidential=False)
+            ).values_list('attachments', flat=True)
+            if not any(
+                any(isinstance(a, dict) and (a.get('file_url') == url or a.get('url') == url) for a in (atts or []))
+                for atts in attached
+            ):
+                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         name = url.rsplit('/', 1)[-1]
         content_type = {
             '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',

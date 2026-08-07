@@ -1,7 +1,11 @@
 import { useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { storeTokens } from '@/lib/storage';
-import { isStudentRole } from '@/lib/auth';
+import {
+  isStudentRole,
+  storeBiometricCredentials,
+  clearBiometricCredentials,
+} from '@/lib/auth';
 import api from '@/lib/api';
 import type { LoginResponse } from '@/types/api';
 
@@ -29,6 +33,7 @@ export function useAuth() {
         }
 
         await storeTokens(loginData.access, loginData.refresh);
+        await storeBiometricCredentials(email, password);
         setUser(loginData.user);
 
         return loginData.user;
@@ -44,6 +49,7 @@ export function useAuth() {
     try {
       await api.post('/logout/').catch(() => {});
     } finally {
+      await clearBiometricCredentials();
       await storeLogout();
     }
   }, [storeLogout]);
