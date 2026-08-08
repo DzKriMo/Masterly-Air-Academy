@@ -149,3 +149,63 @@ class TestCookieAuth:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
         response = client.get(ME_URL)
         assert response.status_code == status.HTTP_200_OK
+
+    def test_logout_revokes_all_outstanding_refresh_tokens(self, user_admin):
+        """Logout must revoke every outstanding refresh token for the user, not
+        just the one currently in the cookie. A sibling tab may hold a rotated
+        token that would otherwise resurrect the session after logout."""
+        client = _client()
+        _login(client)
+        first_refresh = client.cookies[REFRESH_COOKIE].value
+
+        # Rotate once so a second valid refresh token exists for the user
+        response = client.post(REFRESH_URL, **_csrf_header(client))
+        assert response.status_code == status.HTTP_200_OK
+        second_refresh = client.cookies[REFRESH_COOKIE].value
+        assert second_refresh and second_refresh != first_refresh
+
+        response = client.post(LOGOUT_URL, **_csrf_header(client))
+        assert response.status_code == status.HTTP_200_OK
+        assert _cookie_cleared(client, ACCESS_COOKIE)
+        assert _cookie_cleared(client, REFRESH_COOKIE)
+
+        user_admin.refresh_from_db()
+        assert user_admin.last_logout_at is not None
+
+        # Neither the pre-logout token nor the rotated one can be reused
+        for token in (first_refresh, second_refresh):
+            stale = APIClient()
+            resp = stale.post(REFRESH_URL, {'refresh': token})
+            assert resp.status_code == status.HTTP_401_UNAUTHORIZED, token
+
+    def test_refresh_rejected_for_token_issued_before_logout(self, user_admin):
+        """A refresh token issued before the logout stays dead even if it
+        escaped the blacklist sweep (simulates the multi-tab rotation race)."""
+        from django.utils import timezone as dj_tz
+        client = _client()
+        _login(client)
+        pre_logout_refresh = client.cookies[REFRESH_COOKIE].value
+
+        # Simulate the race: the token was never blacklisted, but the user
+        # logged out after the token was issued.
+        user_admin.last_logout_at = dj_tz.now()
+        user_admin.save(update_fields=['last_logout_at'])
+
+        stale = APIClient()
+        resp = stale.post(REFRESH_URL, {'refresh': pre_logout_refresh})
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_relogin_after_logout_issues_working_tokens(self, user_admin):
+        """A fresh login after logout issues tokens newer than last_logout_at,
+        so refresh and /me/ keep working."""
+        client = _client()
+        _login(client)
+        response = client.post(LOGOUT_URL, **_csrf_header(client))
+        assert response.status_code == status.HTTP_200_OK
+
+        fresh = _client()
+        _login(fresh)
+        response = fresh.post(REFRESH_URL, **_csrf_header(fresh))
+        assert response.status_code == status.HTTP_200_OK
+        response = fresh.get(ME_URL)
+        assert response.status_code == status.HTTP_200_OK

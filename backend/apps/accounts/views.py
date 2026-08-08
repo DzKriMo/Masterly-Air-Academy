@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.utils import timezone
@@ -8,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import (
@@ -178,12 +181,13 @@ class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        user = request.user
         AuditLog.objects.create(
-            user=request.user,
+            user=user,
             action='logout',
             entity='User',
-            entity_id=request.user.id,
-            new_values={'email': request.user.email},
+            entity_id=user.id,
+            new_values={'email': user.email},
             ip_address=request.META.get('REMOTE_ADDR', ''),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
@@ -200,6 +204,21 @@ class LogoutView(views.APIView):
             except Exception:
                 # Invalid/expired tokens are already unusable; nothing to revoke.
                 pass
+
+        # Stamp the logout so refresh tokens issued before it can never be used
+        # again, then blacklist EVERY outstanding refresh token for the user.
+        # This closes a multi-tab race: sibling tabs rotate the refresh cookie
+        # independently, so several valid refresh tokens can exist at logout
+        # time. Revoking only the cookie's current token leaves the others to
+        # resurrect the session moments later (no login, no audit entry).
+        now = timezone.now()
+        user.last_logout_at = now
+        user.save(update_fields=['last_logout_at'])
+        from rest_framework_simplejwt.token_blacklist.models import (
+            BlacklistedToken, OutstandingToken,
+        )
+        for ot in OutstandingToken.objects.filter(user=user, expires_at__gt=now):
+            BlacklistedToken.objects.get_or_create(token=ot)
 
         response = Response({
             'success': True,
@@ -277,6 +296,25 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
             refresh = attrs.get('refresh')
         if not refresh:
             raise serializers.ValidationError({'detail': 'No refresh token provided.'})
+
+        # Reject refresh tokens issued before the user's last logout. Concurrent
+        # multi-tab rotations can mint extra valid tokens that escape the logout
+        # blacklist sweep; this guard makes the logout definitive regardless of
+        # timing. Raised as TokenError so the view maps it to a 401.
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            token = RefreshToken(refresh)
+        except Exception:
+            raise TokenError('Invalid or expired refresh token.')
+        user_id = token.payload.get('user_id')
+        if user_id:
+            user = User.objects.filter(pk=user_id).first()
+            if user and user.last_logout_at:
+                iat = token.payload.get('iat')
+                if iat and datetime.datetime.fromtimestamp(
+                        iat, tz=datetime.timezone.utc) < user.last_logout_at:
+                    raise TokenError('Refresh token issued before last logout.')
+
         return super().validate({'refresh': refresh})
 
 
