@@ -156,10 +156,16 @@ CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', os.environ.get('CO
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
+# httpOnly-cookie JWT auth for the SPA (access/refresh JWTs in cookies).
+# Keep the header-based authenticators so API tooling / curl / tests still work.
+MAA_COOKIE_SECURE = os.environ.get('MAA_COOKIE_SECURE', 'false' if DEBUG else 'true').lower() == 'true'
+MAA_COOKIE_SAMESITE = os.environ.get('MAA_COOKIE_SAMESITE', 'Lax')
+
 # DRF
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.accounts.cookie_auth.CookieJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (

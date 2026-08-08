@@ -1,17 +1,23 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.utils import timezone
-from rest_framework import status, views, viewsets
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import serializers, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import (
     UserSerializer, UserCreateSerializer, ProfileUpdateSerializer,
     CustomTokenObtainPairSerializer, GroupSerializer, PermissionSerializer,
 )
 from apps.accounts.permissions import HasRolePermission
+from apps.accounts.cookie_auth import (
+    REFRESH_COOKIE, set_auth_cookies, delete_auth_cookies,
+)
 from apps.core.models import AuditLog
 
 User = get_user_model()
@@ -142,7 +148,9 @@ class LogoutView(views.APIView):
         )
 
         # Revoke the refresh token so a leaked session cannot be reused.
-        refresh_token = request.data.get('refresh') or ''
+        # Prefer the httpOnly cookie; fall back to the request body for API
+        # clients that authenticate via the Authorization header.
+        refresh_token = request.COOKIES.get(REFRESH_COOKIE) or (request.data.get('refresh') or '')
         if refresh_token:
             try:
                 from rest_framework_simplejwt.tokens import RefreshToken
@@ -152,10 +160,12 @@ class LogoutView(views.APIView):
                 # Invalid/expired tokens are already unusable; nothing to revoke.
                 pass
 
-        return Response({
+        response = Response({
             'success': True,
             'message': 'Logged out',
         })
+        delete_auth_cookies(response)
+        return response
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -201,8 +211,45 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
 
+    @method_decorator(ensure_csrf_cookie)
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+        # Also hand the tokens to the browser as httpOnly cookies. The tokens
+        # remain in the response body so header-based API clients keep working.
+        if response.status_code == status.HTTP_200_OK:
+            set_auth_cookies(response, response.data.get('access'), response.data.get('refresh'))
+        return response
+
+
+class CookieTokenRefreshSerializer(TokenRefreshSerializer):
+    """Refresh serializer that accepts the refresh token from the `maa_refresh`
+    cookie (SPA flow) with the request body as fallback (API clients)."""
+
+    refresh = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        refresh = None
+        if request is not None:
+            refresh = request.COOKIES.get(REFRESH_COOKIE) or attrs.get('refresh')
+        else:
+            refresh = attrs.get('refresh')
+        if not refresh:
+            raise serializers.ValidationError({'detail': 'No refresh token provided.'})
+        return super().validate({'refresh': refresh})
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+    """POST /api/token/refresh/ — rotates the refresh token (SimpleJWT) and
+    re-issues both auth cookies. Reads the refresh token from the `maa_refresh`
+    cookie; falls back to the request body for header-based API clients."""
+
+    serializer_class = CookieTokenRefreshSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == status.HTTP_200_OK:
+            set_auth_cookies(response, response.data.get('access'), response.data.get('refresh'))
         return response
 
 

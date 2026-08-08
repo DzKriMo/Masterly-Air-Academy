@@ -1,10 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.views import (
     CurrentUserView, UpdateProfileView, LogoutView, UserViewSet,
-    CustomTokenObtainPairView, GroupViewSet, PermissionViewSet,
+    CustomTokenObtainPairView, CookieTokenRefreshView, GroupViewSet, PermissionViewSet,
 )
 from apps.ground_training.views import (
     SubjectViewSet, ModuleViewSet, RoomViewSet,
@@ -175,7 +174,7 @@ urlpatterns = [
     path('students/me/history/', student_history, name='student-history'),
 
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('me/', CurrentUserView.as_view(), name='me'),
     path('profile/', UpdateProfileView.as_view(), name='profile'),
     path('logout/', LogoutView.as_view(), name='logout'),
