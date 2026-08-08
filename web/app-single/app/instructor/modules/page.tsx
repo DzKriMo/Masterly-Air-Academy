@@ -76,7 +76,7 @@ export default function ModulesPage() {
       return;
     }
     const raw = viewLesson.video_url;
-    if (raw.startsWith("http") || raw.startsWith("/media/")) {
+    if (raw.startsWith("http")) {
       setViewVideoUrl(raw);
     } else {
       mediaStreamUrl(String(viewLesson.id), `/api/module-lessons/${viewLesson.id}/video/`)

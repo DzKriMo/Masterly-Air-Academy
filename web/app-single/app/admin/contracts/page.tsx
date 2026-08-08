@@ -232,7 +232,7 @@ export default function AdminContractsPage() {
             </button>
             {i.file_url && (
               <a
-                href={i.file_url}
+                href={`/api/contracts/${i.id}/stream/`}
                 target="_blank"
                 className="px-2 py-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/20 transition-colors"
                 onClick={(e) => e.stopPropagation()}
@@ -455,7 +455,7 @@ export default function AdminContractsPage() {
                 <Dtl label="End" value={selectedContract.end_date ? new Date(selectedContract.end_date).toLocaleDateString() : "—"} />
               </div>
               {selectedContract.file_url && (
-                <a href={selectedContract.file_url} target="_blank" className="inline-block px-4 py-2 text-sm bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-lg hover:bg-gold-500/20 transition-colors">
+                <a href={`/api/contracts/${selectedContract.id}/stream/`} target="_blank" className="inline-block px-4 py-2 text-sm bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-lg hover:bg-gold-500/20 transition-colors">
                   View Document
                 </a>
               )}

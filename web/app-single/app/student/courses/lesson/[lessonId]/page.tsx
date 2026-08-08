@@ -240,7 +240,7 @@ export default function LessonViewPage() {
           has_video: !!d.has_video,
         });
         const raw = d.video_url || null;
-        if (raw && (raw.startsWith("http") || raw.startsWith("/media/"))) {
+        if (raw && raw.startsWith("http")) {
           setVideoUrl(raw);
         } else if (raw) {
           mediaStreamUrl(String(d.id), `/api/module-lessons/${lessonId}/video/`)

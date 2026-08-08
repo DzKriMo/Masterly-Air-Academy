@@ -605,18 +605,36 @@ class ContractViewSet(viewsets.ModelViewSet):
         })
         try:
             from weasyprint import HTML
+            from django.core.files.base import ContentFile
+            from django.core.files.storage import default_storage
             pdf = HTML(string=html).write_pdf()
-            import os, uuid
             filename = f'contract-{contract.contract_number}.pdf'
-            filepath = os.path.join(settings.MEDIA_ROOT, 'contracts', filename)
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            with open(filepath, 'wb') as f:
-                f.write(pdf)
-            contract.file_url = f'/media/contracts/{filename}'
+            # Persist through the default (MinIO/S3) storage so PDFs survive
+            # container recreates and are reachable via the stream action.
+            key = default_storage.save(f'contracts/{filename}', ContentFile(pdf))
+            contract.file_url = key
             contract.save()
-            return Response({'file_url': contract.file_url, 'status': 'generated'})
+            return Response({'file_url': f'/api/contracts/{pk}/stream/', 'status': 'generated'})
         except ImportError:
             return Response({'error': 'PDF generation not available'}, status=501)
+
+    @action(detail=True, methods=['get'])
+    def stream(self, request, pk=None):
+        """Stream a generated contract PDF in-browser (authenticated)."""
+        contract = self.get_object()
+        if not contract.file_url:
+            return Response({'error': 'No file attached'}, status=404)
+        from apps.ground_training.views import _stream_from_storage
+        response = _stream_from_storage(
+            contract.file_url,
+            content_type='application/pdf',
+            filename=f'contract-{contract.contract_number}.pdf',
+            inline=True,
+            request=request,
+        )
+        if response is None:
+            return Response({'error': 'File not found'}, status=404)
+        return response
 
 
 class InvoicePdfView(APIView):

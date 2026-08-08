@@ -540,10 +540,11 @@ export default function QualityDashboard() {
                     <p className="text-sm text-gray-400"><strong className="text-gray-300">{t('quality.version', 'Version:')}</strong> {d.version || t('common.na', 'N/A')}</p>
                     <p className="text-sm text-gray-400"><strong className="text-gray-300">{t('quality.reviewDate', 'Review Date:')}</strong> {d.review_date?.slice(0, 10) || t('common.na', 'N/A')}</p>
                     {d.file_url && (
-                      <a href={d.file_url} target="_blank"
+                      <button
+                        onClick={() => downloadBlob(`/quality-documents/${d.id}/download/`, `${d.title || d.number || 'document'}.pdf`)}
                         className="inline-block px-4 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 rounded text-xs hover:bg-gold-500 hover:text-navy-900">
                         {t('common.download', 'Download')}
-                      </a>
+                      </button>
                     )}
                   </div>
                 )}
