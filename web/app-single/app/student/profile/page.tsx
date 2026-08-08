@@ -28,8 +28,26 @@ export default function StudentProfilePage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoObjectUrlRef = useRef<string | null>(null);
 
   useAuthGuard(isAuthenticated, isLoading, "/student/login");
+
+  // A plain <img src="/media/..."> cannot work in production: DEBUG=False disables
+  // Django's static media route and the files live in MinIO, so we fetch the
+  // cookie-authenticated streaming endpoint and display it via an object URL.
+  const loadServerPhoto = async (): Promise<boolean> => {
+    try {
+      const res = await api.download("/profile/photo/");
+      const blob = await res.blob();
+      const newUrl = URL.createObjectURL(blob);
+      if (photoObjectUrlRef.current) URL.revokeObjectURL(photoObjectUrlRef.current);
+      photoObjectUrlRef.current = newUrl;
+      setPhotoPreview(newUrl);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // Load existing profile data
   useEffect(() => {
@@ -37,9 +55,12 @@ export default function StudentProfilePage() {
     api.get("/profile/")
       .then((d: any) => {
         if (d.address !== undefined) setContactForm({ address: d.address || "", phone: d.phone || "", nationality: d.nationality || "" });
-        if (d.photo) setPhotoPreview(d.photo);
+        if (d.photo) loadServerPhoto();
       })
       .catch(() => {});
+    return () => {
+      if (photoObjectUrlRef.current) URL.revokeObjectURL(photoObjectUrlRef.current);
+    };
   }, [isAuthenticated]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -78,6 +99,10 @@ export default function StudentProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setPhotoFile(file);
+    if (photoObjectUrlRef.current) {
+      URL.revokeObjectURL(photoObjectUrlRef.current);
+      photoObjectUrlRef.current = null;
+    }
     const reader = new FileReader();
     reader.onload = () => setPhotoPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -91,7 +116,9 @@ export default function StudentProfilePage() {
       fd.append('photo', photoFile);
       const res = await api.upload("/profile/", fd);
       if (res) {
-        if (res.photo) setPhotoPreview(res.photo);
+        if (res.photo) {
+          await loadServerPhoto();
+        }
         setPhotoFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         showToast("success", t('profile.photoUploaded', 'Photo uploaded successfully.'));

@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import (
-    CurrentUserView, UpdateProfileView, LogoutView, UserViewSet,
+    CurrentUserView, UpdateProfileView, ProfilePhotoView, LogoutView, UserViewSet,
     CustomTokenObtainPairView, CookieTokenRefreshView, GroupViewSet, PermissionViewSet,
 )
 from apps.ground_training.views import (
@@ -177,6 +177,7 @@ urlpatterns = [
     path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('me/', CurrentUserView.as_view(), name='me'),
     path('profile/', UpdateProfileView.as_view(), name='profile'),
+    path('profile/photo/', ProfilePhotoView.as_view(), name='profile-photo'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('', include(router.urls)),
 ]

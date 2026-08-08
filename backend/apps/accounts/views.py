@@ -130,6 +130,50 @@ class UpdateProfileView(views.APIView):
         })
 
 
+class ProfilePhotoView(views.APIView):
+    """Stream the current student's profile photo from storage.
+
+    Production runs with DEBUG=False, so Django's DEBUG-only ``static()``
+    media route is unavailable and files live in MinIO (the default storage),
+    not on the local filesystem. A plain ``<img src="/media/...">`` therefore
+    ices out; the frontend fetches this endpoint (cookie-authenticated) and
+    shows the blob instead.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.students.models import Student
+        from apps.ground_training.views import _stream_from_storage
+        import os
+        try:
+            student = Student.objects.get(user=request.user)
+        except Student.DoesNotExist:
+            return Response({'error': 'Student profile not found'}, status=404)
+
+        if not student.photo:
+            return Response({'error': 'No photo'}, status=404)
+
+        ext = os.path.splitext(str(student.photo))[1].lower()
+        content_type = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.webp': 'image/webp',
+        }.get(ext, 'application/octet-stream')
+
+        response = _stream_from_storage(
+            str(student.photo),
+            content_type=content_type,
+            filename=os.path.basename(str(student.photo)),
+            inline=True,
+            request=request,
+        )
+        if response is None:
+            return Response({'error': 'File not found'}, status=404)
+        return response
+
+
 class LogoutView(views.APIView):
     permission_classes = [IsAuthenticated]
 

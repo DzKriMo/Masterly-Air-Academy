@@ -495,14 +495,14 @@ function LibraryCard({
         {(isVideo || isImage || isPdf) && (
           <button
             onClick={onPreview}
-            className="flex-1 py-2 text-xs bg-navy-700 hover:bg-navy-600 text-gray-200 rounded-lg transition-colors"
+            className="flex-1 px-4 py-2 text-xs bg-navy-700 hover:bg-navy-600 text-gray-200 rounded-lg transition-colors"
           >
             {isVideo ? t("library.play", "Play") : t("library.preview", "Preview")}
           </button>
         )}
         <button
           onClick={onDownload}
-          className={`${isVideo || isImage || isPdf ? "" : "flex-1"} py-2 text-xs bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg transition-colors`}
+          className={`${isVideo || isImage || isPdf ? "" : "flex-1"} px-4 py-2 text-xs bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg transition-colors`}
         >
           {t("common.download", "Download")}
         </button>
@@ -586,7 +586,7 @@ function PreviewModal({
 
           <button
             onClick={onDownload}
-            className="w-full mt-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors"
+            className="w-full px-4 mt-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors"
           >
             {t("common.download", "Download")}
           </button>
