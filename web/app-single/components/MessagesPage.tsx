@@ -24,7 +24,8 @@ export type MessagesRole =
   | "instructor"
   | "student"
   | "director"
-  | "scheduler";
+  | "scheduler"
+  | "marketing";
 
 interface MsgAttachment {
   name: string;
@@ -190,6 +191,23 @@ const roleConfigs: Record<MessagesRole, MessagesConfig> = {
     titleFallback: "Messages",
     backHref: "/scheduler/dashboard",
     backLabelKey: "scheduler.dashboard",
+    backLabelFallback: "Back to Dashboard",
+    loginPath: "/login",
+    deleteEnabled: false,
+    recipientsEndpoint: "/users/",
+    filterStudentRecipients: false,
+    showUnreadBanner: true,
+    ns: "student",
+    mainMaxWidth: "max-w-4xl",
+    headerMaxWidth: "max-w-4xl",
+    loadingRows: 5,
+  },
+  marketing: {
+    layout: "standard",
+    titleKey: "marketing.messages",
+    titleFallback: "Messages",
+    backHref: "/marketing/dashboard",
+    backLabelKey: "marketing.dashboard",
     backLabelFallback: "Back to Dashboard",
     loginPath: "/login",
     deleteEnabled: false,

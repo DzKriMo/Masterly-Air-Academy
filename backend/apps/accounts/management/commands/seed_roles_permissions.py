@@ -30,6 +30,7 @@ PERMISSION_DOMAINS = {
     'promotions': ['view', 'create', 'update', 'delete', 'manage'],
     'settings': ['view', 'manage'],
     'notifications': ['view', 'broadcast', 'manage'],
+    'landing': ['view', 'manage', 'publish'],
 }
 
 # 19 roles with their assigned permission domains + actions
@@ -250,6 +251,15 @@ ROLE_DEFINITIONS = {
             'academic_years': ['view'], 'promotions': ['view'],
             'documents': ['view'],
             'notifications': ['view', 'broadcast'],
+        },
+    },
+    'social_manager': {
+        'label': 'Social Media Manager',
+        'domains': {
+            'dashboard': ['view'],
+            'landing': ['manage', 'publish'],
+            'documents': ['view'],
+            'notifications': ['view'],
         },
     },
     'student': {

@@ -21,6 +21,7 @@ class UserRole(models.TextChoices):
     SAFETY_MANAGER = 'safety_manager', 'Safety Manager'
     SCHEDULER = 'scheduler', 'Scheduler'
     TRAINING_ADMIN = 'training_admin', 'Training Administrator'
+    SOCIAL_MANAGER = 'social_manager', 'Social Media Manager'
     STUDENT = 'student', 'Student'
     CANDIDATE = 'candidate', 'Candidate'
     GRADUATE = 'graduate', 'Graduate'

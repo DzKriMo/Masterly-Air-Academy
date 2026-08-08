@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/page-header";
 import { useNotificationStream, type StreamNotification } from "@/lib/use-notification-stream";
 import { NotificationPreferencesModal } from "@/components/notification-preferences";
 
-export type NotificationsRole = "admin" | "finance" | "quality" | "director" | "student" | "instructor" | "scheduler";
+export type NotificationsRole = "admin" | "finance" | "quality" | "director" | "student" | "instructor" | "scheduler" | "marketing";
 
 interface Notif {
   id: string;
@@ -157,6 +157,24 @@ const ROLES: Record<NotificationsRole, RoleConfig> = {
     titleFallback: "Notifications",
     backHref: "/scheduler/dashboard",
     backLabelKey: "scheduler.dashboard",
+    backLabelFallback: "Back to Dashboard",
+    markAllReadSuccessText: "All notifications marked as read.",
+  },
+  marketing: {
+    queryKey: "marketing-notifications",
+    guard: { loginPath: "/login" },
+    markReadMethod: "POST",
+    paginate: true,
+    layout: "table",
+    refetchInterval: 30000,
+    header: "pageheader",
+    headerMaxWidth: "max-w-5xl",
+    contentMaxWidth: "max-w-5xl",
+    wrapperClass: "flex-1 min-w-0",
+    titleKey: "marketing.notifications",
+    titleFallback: "Notifications",
+    backHref: "/marketing/dashboard",
+    backLabelKey: "marketing.dashboard",
     backLabelFallback: "Back to Dashboard",
     markAllReadSuccessText: "All notifications marked as read.",
   },

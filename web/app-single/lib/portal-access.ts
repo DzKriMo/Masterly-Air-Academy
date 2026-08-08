@@ -10,7 +10,7 @@ export const USER_ROLES = [
   'finance_responsible', 'accounting_agent',
   'admissions_responsible', 'training_admin',
   'quality_manager', 'compliance_monitoring_manager', 'safety_manager',
-  'scheduler',
+  'scheduler', 'social_manager',
   'student', 'candidate', 'graduate',
 ] as const;
 
@@ -37,6 +37,7 @@ const PORTAL_MAP: Record<string, { label: string; defaultPath: string; usesDjang
   safety_manager:             { label: 'Quality', defaultPath: '/quality/dashboard', usesDjangoAdmin: false },
   finance_responsible:        { label: 'Finance', defaultPath: '/finance/dashboard', usesDjangoAdmin: false },
   accounting_agent:           { label: 'Finance', defaultPath: '/finance/dashboard', usesDjangoAdmin: false },
+  social_manager:             { label: 'Marketing', defaultPath: '/marketing/dashboard', usesDjangoAdmin: false },
 };
 
 export function getDefaultPortal(role: string): string {

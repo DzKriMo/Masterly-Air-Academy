@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
 import { getDefaultPortal } from "@/lib/portal-access";
 import { api } from "@/lib/api";
+import { LandingBlocks, Block } from "@/components/landing-blocks";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
 const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "prog_cpl_title", IR: "prog_ir_title", MEP: "prog_mep_title", MCC: "prog_mcc_title" };
@@ -82,6 +83,31 @@ export default function LandingPage() {
       router.replace(getDefaultPortal(user.role));
     }
   }, [isLoading, isAuthenticated, user, router]);
+
+  const [landingSections, setLandingSections] = useState<Record<string, Block[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLanding = () => {
+      api
+        .get<any>("/landing/")
+        .then((d: any) => {
+          if (cancelled) return;
+          const list: any[] = Array.isArray(d) ? d : d?.results || [];
+          const map: Record<string, Block[]> = {};
+          list.forEach((s: any) => {
+            if (s && Array.isArray(s.content) && s.content.length) map[s.key] = s.content;
+          });
+          setLandingSections(map);
+        })
+        .catch(() => {
+          if (!cancelled) setLandingSections({});
+        });
+    };
+    fetchLanding();
+    const interval = setInterval(fetchLanding, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   useEffect(() => {
     const update = () => setCardsPerView(window.innerWidth < 620 ? 1 : 3);
@@ -177,6 +203,15 @@ export default function LandingPage() {
     { icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", title: t("efficient_training"), desc: t("efficient_training_desc"), color: "green" },
   ];
 
+  const heroBlocks = landingSections["hero"] || [];
+  const programsBlocks = landingSections["programs"] || [];
+  const aboutBlocks = landingSections["about"] || [];
+  const whyUsBlocks = landingSections["why_us"] || [];
+  const accredBlocks = landingSections["accreditations"] || [];
+  const galleryBlocks = landingSections["gallery"] || [];
+  const videoBlocks = landingSections["videos"] || [];
+  const testimonialBlocks = landingSections["testimonials"] || [];
+
   return (
     <div className="min-h-screen bg-navy-900 text-white" dir={locale === "ar" ? "rtl" : "ltr"}>
       <nav className="sticky top-0 z-40 bg-navy-900/95 backdrop-blur border-b border-navy-800">
@@ -212,6 +247,11 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
+      {heroBlocks.length > 0 ? (
+        <div id="hero">
+          <LandingBlocks blocks={heroBlocks} locale={locale} />
+        </div>
+      ) : (
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gold-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
@@ -232,8 +272,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Programs — Carousel */}
+      {programsBlocks.length > 0 ? (
+        <div id="programs">
+          <LandingBlocks blocks={programsBlocks} locale={locale} />
+        </div>
+      ) : (
       <section id="programs" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -305,8 +351,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* About */}
+      {aboutBlocks.length > 0 ? (
+        <div id="about">
+          <LandingBlocks blocks={aboutBlocks} locale={locale} />
+        </div>
+      ) : (
       <section id="about" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -321,8 +373,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Why Us */}
+      {whyUsBlocks.length > 0 ? (
+        <div id="why-us">
+          <LandingBlocks blocks={whyUsBlocks} locale={locale} />
+        </div>
+      ) : (
       <section id="why-us" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -342,8 +400,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Accreditations */}
+      {accredBlocks.length > 0 ? (
+        <div id="accreditations">
+          <LandingBlocks blocks={accredBlocks} locale={locale} />
+        </div>
+      ) : (
       <section id="accreditations" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
         <div className="text-center mb-12">
           <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("accreditations_title", "Accreditations & Approvals")}</p>
@@ -365,6 +429,24 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Dynamic extras from marketing portal */}
+      {galleryBlocks.length > 0 && (
+        <div id="gallery">
+          <LandingBlocks blocks={galleryBlocks} locale={locale} />
+        </div>
+      )}
+      {videoBlocks.length > 0 && (
+        <div id="videos">
+          <LandingBlocks blocks={videoBlocks} locale={locale} />
+        </div>
+      )}
+      {testimonialBlocks.length > 0 && (
+        <div id="testimonials">
+          <LandingBlocks blocks={testimonialBlocks} locale={locale} />
+        </div>
+      )}
 
       {/* Contact */}
       <section id="contact" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">

@@ -61,6 +61,9 @@ from apps.ground_training.pdf import AttendancePdfView
 from apps.quality_safety.pdf import AuditReportPdfView
 from apps.flight_training.tv_views import tv_schedule
 from apps.administration.contact_views import submit_contact
+from apps.landing.views import (
+    LandingSectionViewSet, LandingMediaViewSet, PublicLandingView, PublicMediaStreamView,
+)
 
 
 router = DefaultRouter()
@@ -123,6 +126,8 @@ router.register(r'simulators', SimulatorViewSet)
 router.register(r'simulator-sessions', SimulatorSessionViewSet)
 router.register(r'groups', GroupViewSet)
 router.register(r'permissions', PermissionViewSet)
+router.register(r'landing-sections', LandingSectionViewSet, basename='landing-section')
+router.register(r'landing-media', LandingMediaViewSet, basename='landing-media')
 
 urlpatterns = [
     path('students/progress/', StudentProgressViewSet.as_view({'get': 'list'}), name='student-progress'),
@@ -179,5 +184,8 @@ urlpatterns = [
     path('profile/', UpdateProfileView.as_view(), name='profile'),
     path('profile/photo/', ProfilePhotoView.as_view(), name='profile-photo'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    # Public landing page content + media (no auth)
+    path('landing/', PublicLandingView.as_view(), name='public-landing'),
+    path('landing/media/<path:key>/', PublicMediaStreamView.as_view(), name='public-landing-media'),
     path('', include(router.urls)),
 ]

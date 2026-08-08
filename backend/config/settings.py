@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'apps.quality_safety',
     'apps.exams',
     'apps.notifications',
+    'apps.landing',
 ]
 
 MIDDLEWARE = [
