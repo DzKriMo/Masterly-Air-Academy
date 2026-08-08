@@ -63,6 +63,7 @@ SECTIONS = [
             {
                 "type": "rich_text",
                 "data": {
+                    "kicker": L("About the Academy", "A propos de l'Academie", "عن الأكاديمية"),
                     "heading": L(
                         "Training Pilots to the Highest Standard",
                         "Former des Pilotes au Plus Haut Niveau",
@@ -78,7 +79,8 @@ SECTIONS = [
             {
                 "type": "features",
                 "data": {
-                    "heading": L("About the Academy", "A propos de l'Academie", "عن الأكاديمية"),
+                    "heading": "",
+                    "kicker": "",
                     "items": [
                         {
                             "title": L("Modern Fleet", "Flotte Moderne", "أسطول حديث"),
@@ -126,6 +128,11 @@ SECTIONS = [
             {
                 "type": "features",
                 "data": {
+                    "kicker": L(
+                        "Why Masterly Air Academy",
+                        "Pourquoi Masterly Air Academy",
+                        "لماذا أكاديمية ماسترلي للطيران",
+                    ),
                     "heading": L(
                         "Built for Serious Training",
                         "Construite pour une Formation Serieuse",
@@ -170,51 +177,79 @@ SECTIONS = [
             {
                 "type": "programs",
                 "data": {
+                    "kicker": L("Training Programs", "Programmes de Formation", "برامج التدريب"),
                     "heading": L("Choose Your Path", "Choisissez Votre Voie", "اختر مسارك"),
+                    "subtitle": L(
+                        "Structured programs from your first discovery flight to airline-ready certification.",
+                        "Des programmes structures depuis votre premier vol jusqu'a la certification.",
+                        "برامج منظمة من أول رحلة استكشافية إلى شهادة الطيار التجاري.",
+                    ),
+                    "durationLabel": L("Duration", "Duree", "المدة"),
+                    "prereqLabel": L("Prerequisites", "Prerequis", "المتطلبات"),
                     "items": [
                         {
+                            "code": "PPL",
+                            "image": {"key": "/images/ppl.png", "alt": "PPL"},
                             "title": L("Private Pilot License", "Licence de Pilote Prive", "رخصة طيار خاص"),
                             "description": L(
                                 "The foundation of your aviation career. Learn basic flight maneuvers, navigation, and aircraft handling.",
                                 "Le fondement de votre carriere. Apprenez les manoeuvres de base, la navigation et le pilotage.",
                                 "أساس مسيرتك في الطيران. تعلم مناورات الطيران الأساسية والملاحة.",
                             ),
+                            "duration": L("6-8 months", "6-8 mois", "٦-٨ أشهر"),
+                            "prereq": L("Class 2 Medical Certificate", "Certificat Medical Classe 2", "شهادة طبية فئة ٢"),
                             "link": "#programs",
                         },
                         {
+                            "code": "CPL",
+                            "image": {"key": "/images/cpl.png", "alt": "CPL"},
                             "title": L("Commercial Pilot License", "Licence de Pilote Commercial", "رخصة طيار تجاري"),
                             "description": L(
                                 "Advanced training for professional pilots. Master complex aircraft operations and multi-engine handling.",
                                 "Formation avancee pour pilotes professionnels. Maitrisez les operations complexes et le pilotage multimoteur.",
                                 "تدريب متقدم للطيارين المحترفين. إتقان العمليات المعقدة والطيران متعدد المحركات.",
                             ),
+                            "duration": L("12-18 months", "12-18 mois", "١٢-١٨ شهراً"),
+                            "prereq": L("PPL + Class 1 Medical Certificate", "PPL + Certificat Medical Classe 1", "PPL + شهادة طبية فئة ١"),
                             "link": "#programs",
                         },
                         {
+                            "code": "IR",
+                            "image": {"key": "/images/IR.png", "alt": "IR"},
                             "title": L("Instrument Rating", "Instrument Rating", "الطيران بالأجهزة"),
                             "description": L(
                                 "Fly solely by reference to instruments. Essential for commercial operations in all weather conditions.",
                                 "Volez uniquement aux instruments. Essentiel pour les operations commerciales par tous les temps.",
                                 "الطيران بالاعتماد على الأجهزة فقط. أساسي للعمليات التجارية.",
                             ),
+                            "duration": L("3-4 months", "3-4 mois", "٣-٤ أشهر"),
+                            "prereq": L("PPL + 50 hours cross-country", "PPL + 50h navigation", "PPL + ٥٠ ساعة عبر البلاد"),
                             "link": "#programs",
                         },
                         {
+                            "code": "MEP",
+                            "image": {"key": "/images/mep.png", "alt": "MEP"},
                             "title": L("Multi-Engine Piston", "Multi-Moteur Piston", "متعدد المحركات"),
                             "description": L(
                                 "Transition to multi-engine aircraft. Learn asymmetric flight management and engine-out procedures.",
                                 "Transition vers les avions multimoteurs. Apprenez la gestion du vol asymetrique.",
                                 "الانتقال إلى الطائرات متعددة المحركات. تعلم إدارة الطيران غير المتماثل.",
                             ),
+                            "duration": L("1-2 months", "1-2 mois", "١-٢ شهر"),
+                            "prereq": L("CPL or in progress", "CPL ou en cours", "CPL أو قيد التقدم"),
                             "link": "#programs",
                         },
                         {
+                            "code": "MCC",
+                            "image": {"key": "/images/mcc.png", "alt": "MCC"},
                             "title": L("Multi-Crew Cooperation", "Cooperation Multi-Equipage", "التعاون متعدد الطاقم"),
                             "description": L(
                                 "Prepare for airline operations. Develop crew resource management and multi-pilot cockpit discipline.",
                                 "Preparation aux operations aeriennes. Developpez la gestion des ressources de l'equipage.",
                                 "الاستعداد لعمليات الخطوط الجوية. تطوير إدارة موارد الطاقم.",
                             ),
+                            "duration": L("2-3 weeks", "2-3 semaines", "٢-٣ أسابيع"),
+                            "prereq": L("CPL + IR", "CPL + IR", "CPL + IR"),
                             "link": "#programs",
                         },
                     ],
@@ -231,6 +266,11 @@ SECTIONS = [
             {
                 "type": "logos",
                 "data": {
+                    "kicker": L(
+                        "Accreditations & Approvals",
+                        "Agrements et Approbations",
+                        "الاعتمادات والموافقات",
+                    ),
                     "heading": L(
                         "Approved & Recognized By",
                         "Approuve et Reconnu Par",
@@ -314,6 +354,10 @@ class Command(BaseCommand):
             '--publish', action='store_true',
             help='Publish the seeded content immediately (default: keep as drafts).',
         )
+        parser.add_argument(
+            '--force', action='store_true',
+            help='Overwrite existing section content with the seed (default: keep manager edits).',
+        )
 
     def handle(self, *args, **options):
         created = 0
@@ -326,7 +370,7 @@ class Command(BaseCommand):
             obj.title = spec['title']
             obj.description = spec.get('description')
             obj.sort_order = spec['sort_order']
-            if not obj.content:
+            if not obj.content or options['force']:
                 obj.content = spec['blocks']
                 filled += 1
             else:
