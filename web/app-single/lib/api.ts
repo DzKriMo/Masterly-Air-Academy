@@ -18,9 +18,16 @@ interface ApiResponse<T = any> {
   errors?: Record<string, string[]>;
 }
 
+/**
+ * Outcome of a refresh attempt. Only `no-session` is a definitive session
+ * failure (forces logout); `rate-limited` and `network-error` are transient
+ * conditions that must NOT kill a still-valid session.
+ */
+type RefreshOutcome = 'ok' | 'no-session' | 'rate-limited' | 'network-error';
+
 class ApiClient {
   private onLogoutHandler: (() => void) | null = null;
-  private refreshPromise: Promise<boolean> | null = null;
+  private refreshPromise: Promise<RefreshOutcome> | null = null;
 
   getBaseUrl(): string {
     return API_BASE;
@@ -69,6 +76,7 @@ class ApiClient {
       if (csrf) headers['X-CSRFToken'] = csrf;
     }
 
+    let sessionLost = false;
     let response = await fetch(url, {
       ...options,
       headers,
@@ -76,19 +84,24 @@ class ApiClient {
     });
 
     // On 401, rotate the refresh cookie once and retry (the refresh itself is
-    // cookie-driven, so no token needs to be passed).
-    if (response.status === 401 && !url.endsWith('/token/refresh/')) {
-      const refreshed = await this.tryRefreshToken();
-      if (refreshed) {
+    // cookie-driven, so no token needs to be passed). A rate-limited or
+    // network-failed refresh is transient — keep the session and surface the
+    // original error to the caller instead of logging out.
+    if (response.status === 401 && !url.endsWith('/token/refresh/') && !url.endsWith('/login/')) {
+      const outcome = await this.tryRefreshToken();
+      if (outcome === 'ok') {
         response = await fetch(url, {
           ...options,
           headers,
           credentials: 'include',
         });
+        if (response.status === 401) sessionLost = true;
+      } else if (outcome === 'no-session') {
+        sessionLost = true;
       }
     }
 
-    if (response.status === 401 && !url.endsWith('/login/')) {
+    if (sessionLost) {
       this.onLogoutHandler?.();
     }
 
@@ -122,7 +135,7 @@ class ApiClient {
    * auth context) so concurrent refreshes can never race — important when the
    * backend rotates refresh tokens.
    */
-  async refreshAccessToken(): Promise<boolean> {
+  async refreshAccessToken(): Promise<RefreshOutcome> {
     if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.performRefresh();
     try {
@@ -132,7 +145,7 @@ class ApiClient {
     }
   }
 
-  private async performRefresh(): Promise<boolean> {
+  private async performRefresh(): Promise<RefreshOutcome> {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -144,14 +157,16 @@ class ApiClient {
         headers,
         credentials: 'include',
       });
-      return res.ok;
+      if (res.ok) return 'ok';
+      if (res.status === 429) return 'rate-limited';
+      return 'no-session';
     } catch {
       // Network error — the session might still be valid, report failure
-      return false;
+      return 'network-error';
     }
   }
 
-  private async tryRefreshToken(): Promise<boolean> {
+  private async tryRefreshToken(): Promise<RefreshOutcome> {
     return this.refreshAccessToken();
   }
 
@@ -201,16 +216,20 @@ class ApiClient {
   async download(endpoint: string): Promise<Response> {
     const url = `${API_BASE}/api${endpoint}`;
 
+    let sessionLost = false;
     let res = await fetch(url, { credentials: 'include' });
 
     if (res.status === 401 && !url.endsWith('/token/refresh/')) {
-      const refreshed = await this.tryRefreshToken();
-      if (refreshed) {
+      const outcome = await this.tryRefreshToken();
+      if (outcome === 'ok') {
         res = await fetch(url, { credentials: 'include' });
+        if (res.status === 401) sessionLost = true;
+      } else if (outcome === 'no-session') {
+        sessionLost = true;
       }
     }
 
-    if (res.status === 401 && !url.endsWith('/login/')) {
+    if (sessionLost) {
       this.onLogoutHandler?.();
     }
 

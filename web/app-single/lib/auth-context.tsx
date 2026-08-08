@@ -110,7 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const role = userRef.current?.role || loadCachedUser()?.role;
     if (typeof window !== 'undefined') {
       const studentRoles = ['student', 'candidate', 'graduate'];
-      window.location.href = role && studentRoles.includes(role) ? '/student/login' : '/login';
+      const target = role && studentRoles.includes(role) ? '/student/login' : '/login';
+      // Setting location.href to the page we're already on forces a full reload,
+      // which can loop (boot → /me/ 401 → refresh → onLogout → reload). Stay put
+      // when already on the login page.
+      if (window.location.pathname === target) return;
+      window.location.href = target;
     }
   }, []);
 
@@ -143,7 +148,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         saveCachedUser(me);
       } catch {
         if (cancelled) return;
-        clearSession();
+        // Only tear down a cached session we can't re-verify. An anonymous
+        // visitor (no cache) on the login page just stays anonymous — no
+        // redirect, no reload loop.
+        if (cached) clearSession();
       } finally {
         if (!cancelled) setIsLoading(false);
       }
