@@ -651,6 +651,13 @@ def exam_access(request):
         assignment.started_at = timezone.now()
         assignment.save()
 
+    # Server-authoritative remaining time. The client must not derive it from
+    # its own wall clock: a device clock that is off by an hour would stretch
+    # (or shrink) the whole countdown by exactly that offset.
+    now = timezone.now()
+    elapsed = max(timedelta(0), now - assignment.started_at) if assignment.started_at else timedelta(0)
+    remaining_seconds = max(0, assignment.exam.duration_minutes * 60 - int(elapsed.total_seconds()))
+
     questions = FinalExamQuestion.objects.filter(id__in=assignment.questions)
     questions_data = FinalExamQuestionSerializer(questions, many=True).data
 
@@ -665,6 +672,7 @@ def exam_access(request):
         'exam_title': assignment.exam.title,
         'student_name': assignment.student.full_name,
         'duration_minutes': assignment.exam.duration_minutes,
+        'remaining_seconds': remaining_seconds,
         'started_at': assignment.started_at,
         'questions': questions_data,
     })
@@ -734,11 +742,16 @@ def exam_heartbeat(request):
         return Response({'error': 'Invalid access code'}, status=400)
 
     def state():
+        remaining = 0
+        if assignment.started_at:
+            elapsed = max(timedelta(0), timezone.now() - assignment.started_at)
+            remaining = max(0, assignment.exam.duration_minutes * 60 - int(elapsed.total_seconds()))
         return Response({
             'status': assignment.status,
             'score': float(assignment.score) if assignment.score is not None else None,
             'violations': assignment.violations or [],
             'is_flagged': assignment.is_flagged,
+            'remaining_seconds': remaining,
             'auto_submitted': False,
         })
 
@@ -784,6 +797,7 @@ def exam_heartbeat(request):
             'score': float(assignment.score) if assignment.score is not None else None,
             'violations': assignment.violations or [],
             'is_flagged': assignment.is_flagged,
+            'remaining_seconds': 0,
             'auto_submitted': True,
         })
 
@@ -803,8 +817,14 @@ def exam_status(request, access_code):
     except FinalExamAssignment.DoesNotExist:
         return Response({'error': 'Invalid access code'}, status=400)
 
+    remaining = 0
+    if assignment.started_at:
+        elapsed = max(timedelta(0), timezone.now() - assignment.started_at)
+        remaining = max(0, assignment.exam.duration_minutes * 60 - int(elapsed.total_seconds()))
+
     return Response({
         'status': assignment.status,
         'score': float(assignment.score) if assignment.score else None,
         'exam_title': assignment.exam.title,
+        'remaining_seconds': remaining,
     })

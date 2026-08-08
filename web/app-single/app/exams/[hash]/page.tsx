@@ -14,7 +14,22 @@ interface QuestionData {
 interface ExamState {
   assignment_id: string; exam_title: string; student_name: string;
   duration_minutes: number; started_at: string;
+  remaining_seconds?: number;
   questions: QuestionData[];
+}
+
+/**
+ * Remaining time in seconds, server-authoritative when available. Deriving it
+ * from the device clock (`Date.now() - new Date(started_at)`) breaks when the
+ * device clock is off by an hour: the countdown is stretched/shrunk by exactly
+ * that offset. The server's `remaining_seconds` is timezone/clock independent,
+ * so it is used whenever present.
+ */
+function remainingFrom(exam: ExamState, startedAt?: string | null): number {
+  if (exam.remaining_seconds != null) return Math.max(0, exam.remaining_seconds);
+  const epoch = startedAt ? new Date(startedAt).getTime() : Date.now();
+  const elapsed = Math.floor((Date.now() - epoch) / 1000);
+  return Math.max(0, exam.duration_minutes * 60 - elapsed);
 }
 
 export default function ExamPortalPage() {
@@ -39,6 +54,7 @@ export default function ExamPortalPage() {
   const autoSubmitLockRef = useRef(false);
   const answersRef = useRef<Record<string, string>>({});
   const codeRef = useRef("");
+  const deadlineRef = useRef(0);
   const SERIOUS_TYPES = new Set(["tab_switch", "window_blur", "fullscreen_exit", "copy_paste", "right_click", "devtools"]);
   const FLAG_THRESHOLD = 2;   // 2 serious violations -> flagged for review
   const SUBMIT_THRESHOLD = 3; // 3 serious violations -> forced auto-submit
@@ -67,9 +83,21 @@ export default function ExamPortalPage() {
           seriousCountRef.current = saved.violations.filter((v: any) => SERIOUS_TYPES.has(v?.type)).length;
         }
         setStep("exam");
-        const startedAt = saved.exam.started_at ? new Date(saved.exam.started_at).getTime() : Date.now();
-        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-        setTimeLeft(Math.max(0, saved.exam.duration_minutes * 60 - elapsed));
+        // Stored deadline is device-clock-relative, so its clock skew cancels
+        // out when compared against Date.now(). Re-sync with the server after.
+        const remaining = saved.deadline
+          ? Math.max(0, Math.round((saved.deadline - Date.now()) / 1000))
+          : remainingFrom(saved.exam, saved.exam.started_at);
+        deadlineRef.current = saved.deadline || Date.now() + remaining * 1000;
+        setTimeLeft(remaining);
+        api.post("/exam/access/", { access_code: saved.accessCode })
+          .then((fresh: any) => {
+            if (fresh?.remaining_seconds != null && codeRef.current === saved.accessCode) {
+              deadlineRef.current = Date.now() + fresh.remaining_seconds * 1000;
+              setTimeLeft(fresh.remaining_seconds);
+            }
+          })
+          .catch(() => {});
       }
     } catch {}
   }, [sessionKey]);
@@ -80,6 +108,7 @@ export default function ExamPortalPage() {
       sessionStorage.setItem(sessionKey, JSON.stringify({
         exam, accessCode, answers, step,
         violations: violationsRef.current,
+        deadline: deadlineRef.current,
       }));
     } catch {
       // SessionStorage quota exceeded — nothing we can do, but the exam continues
@@ -124,6 +153,12 @@ export default function ExamPortalPage() {
         violations: violationsRef.current,
         answers: answersRef.current,
       });
+      // Re-anchor the deadline from the server every heartbeat so clock drift
+      // (or a device clock that is off by an hour) can never affect the countdown.
+      if (res?.remaining_seconds != null) {
+        deadlineRef.current = Date.now() + res.remaining_seconds * 1000;
+        setTimeLeft(Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000)));
+      }
       if (res?.status === "submitted" && !autoSubmitLockRef.current) {
         try { sessionStorage.removeItem(`maa_exam_${hash}`); } catch {}
         setResult({ score: res.score ?? null, correct: 0, total_auto_graded: 0, auto_submitted: true });
@@ -274,16 +309,23 @@ export default function ExamPortalPage() {
 
   const beginExam = () => {
     const payload = exam!;
-    const elapsed = payload.started_at ? Math.floor((Date.now() - new Date(payload.started_at).getTime()) / 1000) : 0;
-    setTimeLeft(Math.max(0, (payload.duration_minutes * 60) - elapsed));
+    const remaining = remainingFrom(payload, payload.started_at);
+    deadlineRef.current = Date.now() + remaining * 1000;
+    setTimeLeft(remaining);
     setStep("exam");
   };
 
   useEffect(() => {
     if (step !== "exam" || !exam) return;
-    const startedAt = exam.started_at ? new Date(exam.started_at).getTime() : Date.now();
-    const total = exam.duration_minutes * 60;
-    const tick = () => setTimeLeft(Math.max(0, total - Math.floor((Date.now() - startedAt) / 1000)));
+    const tick = () => {
+      if (!deadlineRef.current) {
+        const r = remainingFrom(exam, exam.started_at);
+        deadlineRef.current = Date.now() + r * 1000;
+        setTimeLeft(r);
+        return;
+      }
+      setTimeLeft(Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000)));
+    };
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);

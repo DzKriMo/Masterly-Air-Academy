@@ -177,6 +177,34 @@ def test_submit_one_serious_violation_not_flagged(api_client, assignment, final_
     assert len(assignment.violations) == 1
 
 
+def test_exam_access_returns_server_remaining_seconds(api_client, assignment):
+    """Remaining time is server-authoritative, so a skewed device clock can
+    never stretch or shrink the countdown."""
+    resp = api_client.post('/api/exam/access/', {
+        'access_code': assignment.access_code,
+    }, format='json')
+    assert resp.status_code == 200
+    data = resp.json()
+    assert 'remaining_seconds' in data
+    assert 120 * 60 - 60 <= data['remaining_seconds'] <= 120 * 60
+    assert data['duration_minutes'] == 120
+
+    hb = api_client.post('/api/exam/heartbeat/', {
+        'access_code': assignment.access_code,
+    }, format='json')
+    assert hb.status_code == 200
+    assert 'remaining_seconds' in hb.json()
+    assert 0 <= hb.json()['remaining_seconds'] <= data['remaining_seconds']
+
+
+def test_exam_status_returns_remaining_seconds(api_client, assignment):
+    resp = api_client.get(f'/api/exam/status/{assignment.access_code}/')
+    assert resp.status_code == 200
+    data = resp.json()
+    assert 'remaining_seconds' in data
+    assert 0 <= data['remaining_seconds'] <= 120 * 60
+
+
 def test_student_report_html(api_client, assignment, final_questions, user_admin):
     q1, q2 = final_questions
     api_client.post('/api/exam/submit/', {
