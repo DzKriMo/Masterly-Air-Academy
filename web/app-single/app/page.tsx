@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
@@ -66,8 +66,7 @@ const programDetails: ProgramDetail[] = [
 
 export default function LandingPage() {
   const { t, locale } = useTranslation();
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const isPreview = searchParams.get("preview") === "1";
   const [navOpen, setNavOpen] = useState(false);
@@ -78,14 +77,7 @@ export default function LandingPage() {
   const [cardsPerView, setCardsPerView] = useState(3);
   const SWIPE_THRESHOLD = 50;
 
-  // Redirect logged-in users to their portal (skip when previewing the landing)
-  useEffect(() => {
-    if (isLoading) return;
-    if (isPreview) return;
-    if (isAuthenticated && user) {
-      router.replace(getDefaultPortal(user.role));
-    }
-  }, [isLoading, isPreview, isAuthenticated, user, router]);
+  const portalPath = isAuthenticated && user ? getDefaultPortal(user.role) : "/student/login";
 
   const [landingSections, setLandingSections] = useState<Record<string, Block[]>>({});
 
@@ -235,7 +227,11 @@ export default function LandingPage() {
               <a href="#why-us" className="hover:text-white transition-colors">{t("why_us")}</a>
               <a href="#accreditations" className="hover:text-white transition-colors">{t("nav_accreditations", "Accreditations")}</a>
               <a href="#contact" className="hover:text-white transition-colors">{t("nav_contact")}</a>
-              <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
+              {isAuthenticated && user ? (
+                <Link href={portalPath} className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg transition-colors">{t("nav_portal")}</Link>
+              ) : (
+                <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
+              )}
             </div>
             <button onClick={() => setNavOpen(!navOpen)} className="md:hidden flex items-center justify-center w-[50px] h-[50px] text-gray-400 active:text-white rounded-lg transition-colors">
               {navOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -248,7 +244,11 @@ export default function LandingPage() {
               <a href="#why-us" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("why_us")}</a>
               <a href="#accreditations" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_accreditations", "Accreditations")}</a>
               <a href="#contact" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_contact")}</a>
-              <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
+              {isAuthenticated && user ? (
+                <Link href={portalPath} onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_portal")}</Link>
+              ) : (
+                <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
+              )}
             </div>
           )}
         </div>
