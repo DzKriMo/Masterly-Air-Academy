@@ -18,6 +18,7 @@ db.sqlite3
 .env.*
 mailserver.env
 seed_*.py
+!backend/apps/landing/management/commands/seed_landing_sections.py
 
 # Node
 node_modules/
