@@ -263,3 +263,26 @@ class TestLibraryCategories:
         api_client.force_authenticate(user=staff_with_docs_view)
         resp = api_client.post('/api/documents/create_category/', {'name': 'Nope'})
         assert resp.status_code == 403
+
+
+class TestCookieAuthOnLibrary:
+    """The SPA authenticates via the httpOnly cookies only; the Library
+    ViewSet's explicit authentication_classes must include CookieJWTAuthentication
+    or the frontend gets 'Authentication credentials were not provided'."""
+
+    def test_cookie_authenticated_documents_list(self, training_admin_client, library_doc):
+        from apps.accounts.cookie_auth import ACCESS_COOKIE, REFRESH_COOKIE
+        from rest_framework.test import APIClient
+        from django.urls import reverse
+        client = APIClient(enforce_csrf_checks=True)
+        resp = client.post(reverse('token_obtain_pair'), {
+            'email': 'training@masterly.test', 'password': 'testpass123',
+        })
+        assert resp.status_code == 200
+        assert ACCESS_COOKIE in client.cookies
+        assert REFRESH_COOKIE in client.cookies
+        # No Authorization header — pure cookie auth
+        resp = client.get('/api/documents/')
+        assert resp.status_code == 200, resp.content
+        names = [d['name'] for d in resp.data['results']]
+        assert 'Shared Manual' in names

@@ -9,6 +9,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count, Q
 from apps.accounts.authentication import SignedMediaAuthentication
+from apps.accounts.cookie_auth import CookieJWTAuthentication
 from apps.accounts.permissions import HasRolePermission, user_has_domain_permission
 from apps.students.models import Student, Promotion
 from apps.exams.pdf import generate_invoice_pdf as _inv_pdf
@@ -308,6 +309,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         SignedMediaAuthentication,
         SessionAuthentication,
         JWTAuthentication,
+        CookieJWTAuthentication,
     ]
     filterset_fields = ['type', 'category', 'status', 'library_category']
     search_fields = ['name', 'description']

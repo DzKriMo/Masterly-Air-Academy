@@ -9,6 +9,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.accounts.authentication import SignedMediaAuthentication
+from apps.accounts.cookie_auth import CookieJWTAuthentication
 from apps.accounts.permissions import HasRolePermission, user_has_domain_permission
 from apps.core.uploads import validate_upload
 from .models import (
@@ -109,6 +110,7 @@ class ModuleLessonViewSet(viewsets.ModelViewSet):
         SignedMediaAuthentication,
         JWTAuthentication,
         SessionAuthentication,
+        CookieJWTAuthentication,
     ]
     filterset_fields = ['module']
 
