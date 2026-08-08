@@ -375,7 +375,7 @@ class Command(BaseCommand):
                 filled += 1
             else:
                 kept += 1
-            if options['publish'] and obj.status != 'published':
+            if options['publish'] and (options['force'] or obj.status != 'published'):
                 obj.published_content = obj.content or []
                 obj.published_version = (obj.published_version or 0) + 1
                 obj.status = 'published'
