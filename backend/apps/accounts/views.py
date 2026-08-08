@@ -56,10 +56,7 @@ class CurrentUserView(views.APIView):
             except Exception:
                 pass  # Instructor profile may not exist yet
 
-        return Response({
-            'success': True,
-            'data': data,
-        })
+        return Response(data)
 
 
 class UpdateProfileView(views.APIView):

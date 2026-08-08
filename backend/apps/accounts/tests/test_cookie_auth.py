@@ -64,7 +64,14 @@ class TestCookieAuth:
         _login(client)
         response = client.get(ME_URL)
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['data']['email'] == 'admin@masterly.test'
+        # The view returns bare data (the renderer wraps it exactly once), so
+        # there must be no nested {success, data} layer to double-wrap.
+        data = response.data
+        assert isinstance(data, dict)
+        assert 'success' not in data
+        assert data['email'] == 'admin@masterly.test'
+        assert data['role'] == 'system_admin'
+        assert 'permissions' in data
 
     def test_me_without_cookie_returns_401(self):
         client = _client()
