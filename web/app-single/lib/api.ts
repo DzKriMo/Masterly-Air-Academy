@@ -1,8 +1,15 @@
 ﻿// ============================================================
-// MASTERLY AIR ACADEMY | API Client (JWT + Django DRF)
+// MASTERLY AIR ACADEMY | API Client (httpOnly-cookie JWT + CSRF)
 // ============================================================
 
+import { useAuthStore } from "./auth-store";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+// Methods that change server state and therefore need CSRF enforcement when
+// the request is authenticated via cookies (mirrors the backend's
+// CookieJWTAuthentication).
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS', 'TRACE'];
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -12,35 +19,30 @@ interface ApiResponse<T = any> {
 }
 
 class ApiClient {
-  private accessToken: string | null = null;
-  private refreshToken: string | null = null;
   private onLogoutHandler: (() => void) | null = null;
-  private refreshPromise: Promise<string | null> | null = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
   getBaseUrl(): string {
     return API_BASE;
   }
 
-  setTokens(access: string, refresh: string | null): void {
-    this.accessToken = access;
-    this.refreshToken = refresh;
-  }
-
-  getAccessToken(): string | null {
-    return this.accessToken;
-  }
-
-  getRefreshToken(): string | null {
-    return this.refreshToken;
-  }
-
+  /**
+   * Whether a session exists. Tokens now live in httpOnly cookies (invisible
+   * to JS), so we mirror the auth store's state — set once `/me/` succeeds.
+   */
   isAuthenticated(): boolean {
-    return this.accessToken !== null;
+    try {
+      return useAuthStore.getState().isAuthenticated;
+    } catch {
+      return false;
+    }
   }
 
-  clearAuth(): void {
-    this.accessToken = null;
-    this.refreshToken = null;
+  /** Read the Django CSRF cookie (it is NOT httpOnly). */
+  getCsrfToken(): string {
+    if (typeof document === 'undefined') return '';
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
   }
 
   /** Register a callback invoked when the session is forcibly cleared (e.g. 401 after failed refresh). */
@@ -54,14 +56,17 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE}/api${endpoint}`;
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const method = (options.method || 'GET').toUpperCase();
     const headers: Record<string, string> = {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'Accept': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
     };
 
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    // Cookies authenticate the request; CSRF protects the state-changing ones.
+    if (!SAFE_METHODS.includes(method)) {
+      const csrf = this.getCsrfToken();
+      if (csrf) headers['X-CSRFToken'] = csrf;
     }
 
     let response = await fetch(url, {
@@ -70,11 +75,11 @@ class ApiClient {
       credentials: 'include',
     });
 
-    // If 401, try refreshing the token once
-    if (response.status === 401 && this.refreshToken) {
+    // On 401, rotate the refresh cookie once and retry (the refresh itself is
+    // cookie-driven, so no token needs to be passed).
+    if (response.status === 401 && !url.endsWith('/token/refresh/')) {
       const refreshed = await this.tryRefreshToken();
       if (refreshed) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
         response = await fetch(url, {
           ...options,
           headers,
@@ -84,7 +89,6 @@ class ApiClient {
     }
 
     if (response.status === 401 && !url.endsWith('/login/')) {
-      this.clearAuth();
       this.onLogoutHandler?.();
     }
 
@@ -113,15 +117,14 @@ class ApiClient {
   }
 
   /**
-   * Refresh the access token using the given refresh token.
+   * Rotate the JWT pair using the httpOnly refresh cookie.
    * Shares a single in-flight promise with all callers (401-retry and the
    * auth context) so concurrent refreshes can never race — important when the
    * backend rotates refresh tokens.
-   * Returns the (possibly rotated) refresh token on success, or null on failure.
    */
-  async refreshAccessToken(refresh: string): Promise<string | null> {
+  async refreshAccessToken(): Promise<boolean> {
     if (this.refreshPromise) return this.refreshPromise;
-    this.refreshPromise = this.performRefresh(refresh);
+    this.refreshPromise = this.performRefresh();
     try {
       return await this.refreshPromise;
     } finally {
@@ -129,44 +132,27 @@ class ApiClient {
     }
   }
 
-  private async performRefresh(refresh: string): Promise<string | null> {
+  private async performRefresh(): Promise<boolean> {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      const csrf = this.getCsrfToken();
+      if (csrf) headers['X-CSRFToken'] = csrf;
       const res = await fetch(`${API_BASE}/api/token/refresh/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh }),
+        headers,
+        credentials: 'include',
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        // ROTATE_REFRESH_TOKENS=True → the server returns a NEW refresh token
-        // and blacklists the old one. Persist it or the next refresh 401s.
-        const nextRefresh = data.refresh || refresh;
-        this.accessToken = data.access;
-        this.refreshToken = nextRefresh;
-        try {
-          const session = JSON.parse(localStorage.getItem('maa_session') || '{}');
-          session.token = data.access;
-          session.refresh = nextRefresh;
-          localStorage.setItem('maa_session', JSON.stringify(session));
-        } catch {}
-        return nextRefresh;
-      }
-
-      // Server rejected the refresh token — clear it so we don't retry forever
-      if (res.status === 401 || res.status === 400) {
-        this.refreshToken = null;
-        this.clearAuth();
-      }
+      return res.ok;
     } catch {
-      // Network error — token might still be valid, don't clear it
+      // Network error — the session might still be valid, report failure
+      return false;
     }
-    return null;
   }
 
-  private async tryRefreshToken(): Promise<string | null> {
-    if (!this.refreshToken) return null;
-    return this.refreshAccessToken(this.refreshToken);
+  private async tryRefreshToken(): Promise<boolean> {
+    return this.refreshAccessToken();
   }
 
   async get<T = any>(endpoint: string): Promise<T> {
@@ -208,30 +194,23 @@ class ApiClient {
   }
 
   /**
-   * Authenticated download. Fetches the endpoint with the Bearer token and
-   * returns the response (caller can read blob). Retries once after a 401
-   * refresh, mirroring `request()`. Throws on non-OK.
+   * Authenticated download. The session cookie authenticates the fetch (no
+   * Bearer header). Returns the response so the caller can read the blob.
+   * Retries once after a 401 refresh, mirroring `request()`. Throws on non-OK.
    */
   async download(endpoint: string): Promise<Response> {
     const url = `${API_BASE}/api${endpoint}`;
-    const buildHeaders = (): Record<string, string> => {
-      const headers: Record<string, string> = {};
-      const token = this.accessToken || this.getAccessToken();
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      return headers;
-    };
 
-    let res = await fetch(url, { headers: buildHeaders() });
+    let res = await fetch(url, { credentials: 'include' });
 
-    if (res.status === 401 && this.refreshToken) {
+    if (res.status === 401 && !url.endsWith('/token/refresh/')) {
       const refreshed = await this.tryRefreshToken();
       if (refreshed) {
-        res = await fetch(url, { headers: buildHeaders() });
+        res = await fetch(url, { credentials: 'include' });
       }
     }
 
     if (res.status === 401 && !url.endsWith('/login/')) {
-      this.clearAuth();
       this.onLogoutHandler?.();
     }
 

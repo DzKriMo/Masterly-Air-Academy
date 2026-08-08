@@ -17,10 +17,10 @@ export interface StreamMessage {
 
 /**
  * Subscribe to the real-time message stream via fetch + ReadableStream
- * (EventSource cannot send the JWT Authorization header). Reconnects
- * automatically. Calls `onMessage` for each newly received message. Since the
- * stream returns both backfilled (already-shown) and live messages, the caller
- * should dedupe by id.
+ * (EventSource cannot send the auth cookie reliably across reconnects). The
+ * session cookie authenticates the request. Reconnects automatically. Calls
+ * `onMessage` for each newly received message. Since the stream returns both
+ * backfilled (already-shown) and live messages, the caller should dedupe by id.
  */
 export function useMessageStream(
   onMessage: (m: StreamMessage) => void,
@@ -51,8 +51,6 @@ export function useMessageStream(
       const qs = sinceRef.current ? `?since=${encodeURIComponent(sinceRef.current)}` : "";
       try {
         const headers: Record<string, string> = { Accept: "text/event-stream" };
-        const token = api.getAccessToken();
-        if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${api.getBaseUrl()}/api/messages/stream/${qs}`, {
           headers,
           signal: controller.signal,

@@ -4,8 +4,9 @@ import { api } from "@/lib/api";
 
 /**
  * Renders an image fetched from an authenticated API endpoint.
- * A plain <img src=...> cannot attach the JWT (kept in sessionStorage),
- * so we fetch the blob with the Bearer token and show it via an object URL.
+ * A plain <img src=...> cannot attach auth headers/cookies reliably,
+ * so we fetch the blob (authenticated via the session cookie) and show it
+ * via an object URL.
  */
 export default function SecureImage({
   src,

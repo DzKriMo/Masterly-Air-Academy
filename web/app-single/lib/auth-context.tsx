@@ -1,9 +1,12 @@
 ﻿'use client';
 
 // ============================================================
-// MASTERLY AIR ACADEMY | Auth Context (JWT + Django)
-// Token stored in localStorage — shared across tabs.
-// Proactive token refresh before expiry + activity-based keepalive.
+// MASTERLY AIR ACADEMY | Auth Context (httpOnly-cookie JWT)
+// Tokens live in httpOnly cookies (`maa_access` + `maa_refresh`); JS never
+// touches them. localStorage keeps only the user profile (`maa_session`) for a
+// fast boot, verified against `/me/` on mount. Cross-tab logout is signalled
+// via the `maa_logout` flag. No proactive refresh needed — the API client
+// rotates the refresh cookie on any 401.
 // ============================================================
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
@@ -34,67 +37,47 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ user: AuthUser; token: string }>;
+  login: (email: string, password: string) => Promise<{ user: AuthUser }>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
 }
 
-// ── JWT helpers ──────────────────────────────────────────────
+// ── Persistence (localStorage, shared across tabs) ──────────
 
-function parseJwtPayload(token: string): { exp?: number } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
+const SESSION_KEY = 'maa_session';   // only the user profile, for a fast boot
+const LOGOUT_KEY = 'maa_logout';     // cross-tab logout broadcast flag
 
-function getTokenExpiry(token: string): Date | null {
-  const payload = parseJwtPayload(token);
-  if (payload?.exp) return new Date(payload.exp * 1000);
-  return null;
-}
-
-const REFRESH_MARGIN_MS = 5 * 60 * 1000; // refresh 5 min before expiry
-
-// ── Session persistence (localStorage, shared across tabs) ───
-
-const SESSION_KEY = 'maa_session';
-
-function loadSession(): { token: string | null; refresh: string | null; user: AuthUser | null } {
-  if (typeof window === 'undefined') return { token: null, refresh: null, user: null };
+function loadCachedUser(): AuthUser | null {
+  if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return {
-        token: parsed.token || null,
-        refresh: parsed.refresh || null,
-        user: parsed.user || null,
-      };
+      return parsed.user || null;
     }
   } catch {
     localStorage.removeItem(SESSION_KEY);
   }
-  return { token: null, refresh: null, user: null };
+  return null;
 }
 
-function saveSession(token: string, refresh: string | null, user: AuthUser): void {
+function saveCachedUser(user: AuthUser | null): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, refresh, user }));
+  if (user) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ user }));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
 }
 
-function clearSession(): void {
+function signalLogout(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(SESSION_KEY);
+  try {
+    localStorage.setItem(LOGOUT_KEY, Date.now().toString());
+  } catch {}
 }
 
 // ── Context ─────────────────────────────────────────────────
@@ -103,151 +86,86 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const userRef = useRef<AuthUser | null>(null);
-  const tokenRef = useRef<string | null>(null);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     userRef.current = user;
-    tokenRef.current = token;
-  }, [user, token]);
-
-  const scheduleRefreshRef = useRef<(tok?: string | null) => void>(() => {});
-
-  // ── Refresh token ──────────────────────────────────────────
-
-  const refreshToken = useCallback(async () => {
-    const session = loadSession();
-    if (!session.refresh) return false;
-    try {
-      const ok = await api.refreshAccessToken(session.refresh);
-      if (ok) {
-        const fresh = loadSession();
-        const access = fresh.token;
-        if (access) {
-          api.setTokens(access, ok);
-          saveSession(access, ok, session.user!);
-          setToken(access);
-          tokenRef.current = access;
-          useAuthStore.getState().setAuth(session.user!, access);
-          scheduleRefreshRef.current(access);
-          return true;
-        }
-      }
-    } catch {}
-    return false;
-  }, []);
-
-  // ── Schedule proactive refresh ─────────────────────────────
-
-  const scheduleRefresh = useCallback((tok?: string | null) => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    const t = tok || tokenRef.current;
-    if (!t) return;
-    const expiry = getTokenExpiry(t);
-    if (!expiry) return;
-    const delay = Math.max(0, expiry.getTime() - Date.now() - REFRESH_MARGIN_MS);
-    refreshTimerRef.current = setTimeout(() => {
-      refreshToken();
-    }, delay);
-  }, [refreshToken]);
-
-  scheduleRefreshRef.current = scheduleRefresh;
-
-  // ── Activity tracking ──────────────────────────────────────
-
-  const resetActivityTimer = useCallback(() => {
-    if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
-    // Refresh token proactively if user is active and token is approaching expiry
-    const t = tokenRef.current;
-    if (!t) return;
-    const expiry = getTokenExpiry(t);
-    if (!expiry) return;
-    const remaining = expiry.getTime() - Date.now();
-    if (remaining < REFRESH_MARGIN_MS) {
-      refreshToken();
-    }
-  }, [refreshToken]);
-
-  useEffect(() => {
-    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-    const handler = () => resetActivityTimer();
-    events.forEach(e => document.addEventListener(e, handler, { passive: true }));
-    return () => events.forEach(e => document.removeEventListener(e, handler));
-  }, [resetActivityTimer]);
-
-  // ── Restore session on mount ───────────────────────────────
-
-  useEffect(() => {
-    const session = loadSession();
-    if (session.token && session.user) {
-      const expiry = getTokenExpiry(session.token);
-      if (expiry && expiry.getTime() > Date.now()) {
-        setToken(session.token);
-        setUser(session.user);
-        api.setTokens(session.token, session.refresh);
-        useAuthStore.getState().setAuth(session.user, session.token);
-        scheduleRefresh(session.token);
-      } else if (session.refresh) {
-        // Token expired but refresh is available — try refresh immediately
-        refreshToken().catch(() => {});
-      } else {
-        clearSession();
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  // ── Cross-tab sync (localStorage "storage" event) ──────────
-
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key !== SESSION_KEY) return;
-      if (!e.newValue) {
-        // Session was cleared in another tab — log out here too
-        setToken(null);
-        setUser(null);
-        api.clearAuth();
-        useAuthStore.getState().clearAuth();
-        return;
-      }
-      try {
-        const parsed = JSON.parse(e.newValue);
-        if (parsed.token && parsed.user) {
-          setToken(parsed.token);
-          setUser(parsed.user);
-          api.setTokens(parsed.token, parsed.refresh);
-          useAuthStore.getState().setAuth(parsed.user, parsed.token);
-          scheduleRefresh(parsed.token);
-        }
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [scheduleRefresh]);
-
-  // ── Forced-logout redirect handler ─────────────────────────
+  }, [user]);
 
   const pathname = usePathname();
   const onExamPortal = isExamPortalPath(pathname);
+  const onExamPortalRef = useRef(onExamPortal);
+  onExamPortalRef.current = onExamPortal;
 
+  const clearSession = useCallback(() => {
+    setUser(null);
+    saveCachedUser(null);
+    useAuthStore.getState().clearAuth();
+  }, []);
+
+  const redirectToLogin = useCallback(() => {
+    // Auto-logout is disabled entirely inside the exam portal
+    if (onExamPortalRef.current) return;
+    const role = userRef.current?.role || loadCachedUser()?.role;
+    if (typeof window !== 'undefined') {
+      const studentRoles = ['student', 'candidate', 'graduate'];
+      window.location.href = role && studentRoles.includes(role) ? '/student/login' : '/login';
+    }
+  }, []);
+
+  // ── Forced-logout redirect handler ─────────────────────────
+  // Fired by the API client when a 401 survives a cookie refresh attempt.
   useEffect(() => {
     api.onLogout(() => {
-      // Auto-logout is disabled entirely inside the exam portal
-      if (onExamPortal) return;
-      const storedRole = userRef.current?.role || loadSession().user?.role;
-      setToken(null);
-      setUser(null);
       clearSession();
-      if (typeof window !== 'undefined') {
-        const studentRoles = ['student', 'candidate', 'graduate'];
-        window.location.href = storedRole && studentRoles.includes(storedRole) ? '/student/login' : '/login';
-      }
+      redirectToLogin();
     });
-  }, [onExamPortal]);
+  }, [clearSession, redirectToLogin]);
+
+  // ── Restore session on mount ───────────────────────────────
+  // Boot optimistically from the cached profile, then verify via /me/.
+  // The API client refreshes the access cookie once on 401; if that fails the
+  // session is gone and we clear the cached state (guards redirect).
+  useEffect(() => {
+    let cancelled = false;
+    const cached = loadCachedUser();
+    if (cached) {
+      setUser(cached);
+      useAuthStore.getState().setAuth(cached);
+    }
+    (async () => {
+      try {
+        const me = await api.get<AuthUser>('/me/');
+        if (cancelled) return;
+        setUser(me);
+        useAuthStore.getState().setAuth(me);
+        saveCachedUser(me);
+      } catch {
+        if (cancelled) return;
+        clearSession();
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clearSession]);
+
+  // ── Cross-tab logout (storage event on the broadcast flag) ─
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== LOGOUT_KEY || !e.newValue) return;
+      setUser(null);
+      saveCachedUser(null);
+      useAuthStore.getState().clearAuth();
+      redirectToLogin();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [redirectToLogin]);
 
   // ── Auth methods ───────────────────────────────────────────
 
@@ -258,38 +176,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: AuthUser;
     }>('/login/', { email, password });
 
-    const { access, refresh, user: userData } = response as unknown as {
-      access: string;
-      refresh: string;
-      user: AuthUser;
-    };
-
-    if (!access || !userData) {
+    const userData = (response as unknown as { user: AuthUser }).user;
+    if (!userData) {
       throw new Error('Invalid response from server.');
     }
 
-    setToken(access);
-    setUser(userData);
-    api.setTokens(access, refresh);
-    saveSession(access, refresh, userData);
-    useAuthStore.getState().setAuth(userData, access);
-    scheduleRefresh(access);
+    try {
+      localStorage.removeItem(LOGOUT_KEY);
+    } catch {}
 
-    return { user: userData, token: access };
-  }, [scheduleRefresh]);
+    setUser(userData);
+    saveCachedUser(userData);
+    useAuthStore.getState().setAuth(userData);
+    return { user: userData };
+  }, []);
 
   const logout = useCallback(async () => {
     try {
-      await api.post('/logout/', { refresh: api.getRefreshToken() });
+      await api.post('/logout/');
     } catch {}
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
-    setToken(null);
-    setUser(null);
-    api.clearAuth();
     clearSession();
-    useAuthStore.getState().clearAuth();
-  }, []);
+    signalLogout();
+  }, [clearSession]);
 
   const hasPermission = useCallback(
     (permission: string): boolean => {
@@ -305,22 +213,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
-  // ── Cleanup timers on unmount ──────────────────────────────
-
-  useEffect(() => {
-    return () => {
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-      if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
-    };
-  }, []);
-
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         isLoading,
-        isAuthenticated: token !== null && user !== null,
+        isAuthenticated: user !== null,
         login,
         logout,
         hasPermission,

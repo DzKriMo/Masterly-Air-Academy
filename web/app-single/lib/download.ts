@@ -1,9 +1,9 @@
 import { api } from "@/lib/api";
 
 /**
- * Fetch an API endpoint with the Bearer token and save the response as a file
- * in the browser. Used for module documents and other protected downloads that
- * cannot use a plain <a> link (the JWT lives in sessionStorage, not a cookie).
+ * Fetch an API endpoint (authenticated via the session cookie) and save the
+ * response as a file in the browser. Used for module documents and other
+ * protected downloads that cannot use a plain <a> link.
  * @returns true on success, false on failure.
  */
 export async function downloadBlob(endpoint: string, filename: string): Promise<boolean> {

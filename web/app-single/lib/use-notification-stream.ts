@@ -13,9 +13,10 @@ export interface StreamNotification {
 
 /**
  * Subscribe to the real-time notification stream via fetch + ReadableStream
- * (EventSource cannot send the JWT Authorization header). Reconnects
- * automatically. Calls `onNotification` for each newly received event and
- * `onReconnect` after a successful reconnect.
+ * (EventSource cannot send the auth cookie reliably across reconnects). The
+ * session cookie authenticates the request. Reconnects automatically. Calls
+ * `onNotification` for each newly received event and `onReconnect` after a
+ * successful reconnect.
  */
 export function useNotificationStream(
   onNotification: (n: StreamNotification) => void,
@@ -46,8 +47,6 @@ export function useNotificationStream(
       const qs = sinceRef.current ? `?since=${encodeURIComponent(sinceRef.current)}` : "";
       try {
         const headers: Record<string, string> = { Accept: "text/event-stream" };
-        const token = api.getAccessToken();
-        if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${api.getBaseUrl()}/api/notifications/stream/${qs}`, {
           headers,
           signal: controller.signal,
