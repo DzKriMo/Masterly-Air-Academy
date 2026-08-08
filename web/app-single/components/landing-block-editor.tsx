@@ -1,8 +1,8 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "@/lib/use-translation";
 import { BLOCK_TYPES, Block, BlockType, defaultBlockData, resolveField } from "@/components/landing-blocks";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, GripVertical } from "lucide-react";
 
 // ============================================================
 // MASTERLY | Landing block editor
@@ -53,13 +53,42 @@ function LocalizedInput({ label, value, onChange, textarea = false }: { label: s
 function ListEditor<T>({ label, items, onChange, renderItem }: { label: string; items: T[]; onChange: (items: T[]) => void; renderItem: (item: T, update: (patch: Partial<T>) => void) => React.ReactNode }) {
   const { t } = useTranslation();
   const list = items || [];
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const moveItem = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...list];
+    const [it] = next.splice(from, 1);
+    next.splice(to, 0, it);
+    onChange(next);
+  };
+
   return (
     <div className="mb-3">
       <label className="block text-xs text-gray-400 mb-1">{label}</label>
       <div className="space-y-2">
         {list.map((item, i) => (
-          <div key={i} className="border border-navy-700 rounded-lg p-2 bg-navy-900/50">
-            <div className="flex justify-end mb-1">
+          <div
+            key={i}
+            onDragOver={(e) => { if (dragIndex !== null && dragIndex !== i) { e.preventDefault(); setOverIndex(i); } }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragIndex !== null && dragIndex !== i) moveItem(dragIndex, i);
+              setDragIndex(null); setOverIndex(null);
+            }}
+            className={`border border-navy-700 rounded-lg p-2 bg-navy-900/50 transition-colors ${dragIndex === i ? "opacity-40" : ""} ${overIndex === i && dragIndex !== null && dragIndex !== i ? "ring-2 ring-gold-500/60" : ""}`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span
+                draggable
+                onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = "move"; }}
+                onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+                className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-white p-1 -m-1"
+                title={t("marketing.dragToReorder")}
+              >
+                <GripVertical className="w-4 h-4" />
+              </span>
               <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300" title={t("marketing.removeBlock")}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -231,6 +260,8 @@ const BLOCK_LABEL_KEYS: Record<BlockType, string> = {
 export default function LandingBlockEditor({ blocks, media, onChange }: { blocks: Block[]; media: any[]; onChange: (blocks: Block[]) => void }) {
   const { t } = useTranslation();
   const list = blocks || [];
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const updateBlock = (i: number, patch: Partial<Block>) => {
     onChange(list.map((b, j) => (j === i ? { ...b, ...patch } : b)));
@@ -239,22 +270,49 @@ export default function LandingBlockEditor({ blocks, media, onChange }: { blocks
   const changeType = (i: number, type: BlockType) => {
     onChange(list.map((b, j) => (j === i ? { type, data: defaultBlockData(type) } : b)));
   };
+  const moveBlock = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...list];
+    const [b] = next.splice(from, 1);
+    next.splice(to, 0, b);
+    onChange(next);
+  };
 
   return (
     <div className="space-y-4">
       {list.length === 0 && <p className="text-sm text-gray-500">{t("marketing.noSections")}</p>}
       {list.map((block, i) => (
-        <div key={i} className="bg-navy-800 border border-navy-700 rounded-xl p-4">
+        <div
+          key={i}
+          onDragOver={(e) => { if (dragIndex !== null && dragIndex !== i) { e.preventDefault(); setOverIndex(i); } }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIndex !== null && dragIndex !== i) moveBlock(dragIndex, i);
+            setDragIndex(null); setOverIndex(null);
+          }}
+          className={`bg-navy-800 border border-navy-700 rounded-xl p-4 transition-colors ${dragIndex === i ? "opacity-40" : ""} ${overIndex === i && dragIndex !== null && dragIndex !== i ? "ring-2 ring-gold-500/60" : ""}`}
+        >
           <div className="flex items-center justify-between mb-3">
-            <select
-              value={block.type}
-              onChange={(e) => changeType(i, e.target.value as BlockType)}
-              className="px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
-            >
-              {BLOCK_TYPES.map((bt) => (
-                <option key={bt} value={bt}>{t(BLOCK_LABEL_KEYS[bt], bt)}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <span
+                draggable
+                onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = "move"; }}
+                onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+                className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-white"
+                title={t("marketing.dragToReorder")}
+              >
+                <GripVertical className="w-4 h-4" />
+              </span>
+              <select
+                value={block.type}
+                onChange={(e) => changeType(i, e.target.value as BlockType)}
+                className="px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm"
+              >
+                {BLOCK_TYPES.map((bt) => (
+                  <option key={bt} value={bt}>{t(BLOCK_LABEL_KEYS[bt], bt)}</option>
+                ))}
+              </select>
+            </div>
             <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300" title={t("marketing.removeBlock")}>
               <Trash2 className="w-4 h-4" />
             </button>

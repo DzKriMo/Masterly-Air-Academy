@@ -38,7 +38,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     { href: "/marketing/dashboard", label: t("marketing.dashboard"), Icon: LayoutDashboard },
     { href: "/marketing/sections", label: t("marketing.sections"), Icon: LayoutList },
     { href: "/marketing/media", label: t("marketing.mediaLibrary"), Icon: Images },
-    { href: "/", label: t("marketing.openPublicSite"), Icon: Globe, external: true },
+    { href: "/?preview=1", label: t("marketing.openPublicSite"), Icon: Globe, external: true },
     { href: "/marketing/messages", label: t("finance.messages", "Messages"), Icon: MessageSquare, badge: unreadMsgCount },
     { href: "/marketing/notifications", label: "Notifications", Icon: Bell, badge: unreadNotifCount },
   ];

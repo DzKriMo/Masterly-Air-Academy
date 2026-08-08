@@ -537,6 +537,7 @@ const translations: Record<string, Record<string, string>> = {
     "marketing.addBlock": "+ Add block",
     "marketing.blockType": "Block type",
     "marketing.removeBlock": "Remove",
+    "marketing.dragToReorder": "Drag to reorder",
 
     // ── Login ──
     "login.emailLabel": "Email",
@@ -1326,6 +1327,7 @@ const translations: Record<string, Record<string, string>> = {
     "marketing.addBlock": "+ Ajouter un bloc",
     "marketing.blockType": "Type de bloc",
     "marketing.removeBlock": "Supprimer",
+    "marketing.dragToReorder": "Glisser pour reordonner",
 
     // ── Login ──
     "login.emailLabel": "Email",
@@ -2115,6 +2117,7 @@ const translations: Record<string, Record<string, string>> = {
     "marketing.addBlock": "+ إضافة كتلة",
     "marketing.blockType": "نوع الكتلة",
     "marketing.removeBlock": "حذف",
+    "marketing.dragToReorder": "اسحب لإعادة الترتيب",
 
     // ── Login ──
     "login.emailLabel": "البريد الإلكتروني",

@@ -9,7 +9,9 @@ venv/
 *.log
 local_settings.py
 db.sqlite3
-media/
+/media/
+/backend/media/
+!web/app-single/app/marketing/media/
 
 # Environment
 .env

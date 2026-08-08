@@ -46,7 +46,7 @@ export default function MarketingDashboard() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-lg font-bold text-white">{t("marketing.dashboardTitle")}</h1>
-          <Link href="/" target="_blank" className="flex items-center gap-2 px-4 py-2 text-sm bg-gold-500/10 text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors">
+          <Link href="/?preview=1" target="_blank" className="flex items-center gap-2 px-4 py-2 text-sm bg-gold-500/10 text-gold-500 border border-gold-500/30 rounded-lg hover:bg-gold-500 hover:text-navy-900 transition-colors">
             <Globe className="w-4 h-4" /> {t("marketing.openPublicSite")}
           </Link>
         </div>

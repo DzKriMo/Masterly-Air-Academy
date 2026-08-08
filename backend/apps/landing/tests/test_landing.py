@@ -159,6 +159,44 @@ class TestSeededRole:
         assert 'landing.publish' in perms
 
 
+class TestSeedLandingSections:
+    def test_creates_all_sections_as_drafts(self, db):
+        from django.core.management import call_command
+        from apps.landing.models import LandingSection
+        call_command('seed_landing_sections', verbosity=0)
+        assert LandingSection.objects.count() == 8
+        hero = LandingSection.objects.get(key='hero')
+        assert hero.status == 'draft'
+        assert hero.content[0]['type'] == 'hero'
+        assert hero.content[0]['data']['title']['en']  # localized content
+        assert hero.content[0]['data']['title']['ar']
+        assert hero.content[0]['data']['title']['fr']
+        assert LandingSection.objects.get(key='accreditations').content[0]['data']['items'][0]['key'] == '/images/1.webp'
+
+    def test_idempotent_and_preserves_existing_content(self, db):
+        from django.core.management import call_command
+        from apps.landing.models import LandingSection
+        call_command('seed_landing_sections', verbosity=0)
+        hero = LandingSection.objects.get(key='hero')
+        hero.content = [{'type': 'hero', 'data': {'title': {'en': 'Customized', 'fr': '', 'ar': ''}}}]
+        hero.save()
+        call_command('seed_landing_sections', verbosity=0)
+        hero.refresh_from_db()
+        assert hero.content[0]['data']['title']['en'] == 'Customized'
+        assert LandingSection.objects.count() == 8
+
+    def test_empty_section_is_filled_on_rerun(self, db):
+        from django.core.management import call_command
+        from apps.landing.models import LandingSection
+        call_command('seed_landing_sections', verbosity=0)
+        programs = LandingSection.objects.get(key='programs')
+        programs.content = []
+        programs.save()
+        call_command('seed_landing_sections', verbosity=0)
+        programs.refresh_from_db()
+        assert programs.content[0]['type'] == 'programs'
+
+
 class TestPublicMediaStream:
     def test_streams_published_media_publicly(self, db, api_client):
         key = default_storage.save('landing/photo.png', ContentFile(b'fake-png-bytes'))

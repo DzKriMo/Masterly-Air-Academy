@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Menu, X, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
@@ -68,6 +68,8 @@ export default function LandingPage() {
   const { t, locale } = useTranslation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get("preview") === "1";
   const [navOpen, setNavOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -76,21 +78,27 @@ export default function LandingPage() {
   const [cardsPerView, setCardsPerView] = useState(3);
   const SWIPE_THRESHOLD = 50;
 
-  // Redirect logged-in users to their portal
+  // Redirect logged-in users to their portal (skip when previewing the landing)
   useEffect(() => {
     if (isLoading) return;
+    if (isPreview) return;
     if (isAuthenticated && user) {
       router.replace(getDefaultPortal(user.role));
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isPreview, isAuthenticated, user, router]);
 
   const [landingSections, setLandingSections] = useState<Record<string, Block[]>>({});
 
   useEffect(() => {
     let cancelled = false;
     const fetchLanding = () => {
-      api
-        .get<any>("/landing/")
+      // Preview mode (authenticated) shows working drafts; the public API
+      // serves only published content.
+      const useDrafts = isPreview && isAuthenticated;
+      const req = useDrafts
+        ? api.get<any>("/landing-sections/")
+        : api.get<any>("/landing/");
+      req
         .then((d: any) => {
           if (cancelled) return;
           const list: any[] = Array.isArray(d) ? d : d?.results || [];
@@ -107,7 +115,7 @@ export default function LandingPage() {
     fetchLanding();
     const interval = setInterval(fetchLanding, 30000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [isPreview, isAuthenticated]);
 
   useEffect(() => {
     const update = () => setCardsPerView(window.innerWidth < 620 ? 1 : 3);

@@ -40,7 +40,7 @@ export function resolveField(field: any, locale: string): string {
 
 export function mediaUrl(key?: string | null): string {
   if (!key) return "";
-  if (key.startsWith("http")) return key;
+  if (key.startsWith("http") || key.startsWith("/")) return key;
   return `${api.getBaseUrl()}/api/landing/media/${key}`;
 }
 
