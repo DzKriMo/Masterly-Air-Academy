@@ -124,7 +124,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     api.onLogout(() => {
       clearSession();
-      redirectToLogin();
+      // Only bounce to the login page when we actually had a session to lose.
+      // A fully anonymous visitor (no cache, never authenticated) shouldn't be
+      // redirected off a public page (landing, /student/login) by the boot
+      // /me/ 401 — the protected layouts guard themselves.
+      if (userRef.current || loadCachedUser()) {
+        redirectToLogin();
+      }
     });
   }, [clearSession, redirectToLogin]);
 
