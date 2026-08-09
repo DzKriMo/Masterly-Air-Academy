@@ -296,6 +296,7 @@ services:
     volumes:
       - ./docker-data/postfixadmin:/var/www/html
       - ./scripts/postfixadmin/apache-prefix.conf:/etc/apache2/conf-enabled/zz-postfixadmin-prefix.conf:ro
+      - ./scripts/postfixadmin/php.ini:/usr/local/etc/php/conf.d/zz-postfixadmin.ini:ro
     depends_on:
       maildb:
         condition: service_healthy
