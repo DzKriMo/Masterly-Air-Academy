@@ -738,7 +738,7 @@ class GroundEvaluationViewSet(viewsets.ModelViewSet):
     queryset = GroundEvaluation.objects.select_related('student', 'course').all()
     serializer_class = GroundEvaluationSerializer
     permission_classes = [IsAuthenticated, HasRolePermission]
-    required_permission = 'ground_training.evaluate'
+    required_permission = 'ground_training.view'
     filterset_fields = ['course', 'student', 'flagged']
 
     def get_queryset(self):
