@@ -219,7 +219,7 @@ services:
         max-file: "3"
 
   mailserver:
-    image: docker.io/mailserver/docker-mailserver:v15.1.0
+    image: docker.io/mailserver/docker-mailserver:15.1.0
     hostname: masterly-air-academy.dz
     env_file: ./mailserver.env
     ports:
