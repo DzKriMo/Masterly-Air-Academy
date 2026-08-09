@@ -291,7 +291,7 @@ services:
       POSTFIXADMIN_DB_NAME: postfixadmin
       POSTFIXADMIN_SMTP_SERVER: mailserver
       POSTFIXADMIN_SMTP_PORT: 25
-      POSTFIXADMIN_ENCRYPT: dovecot:SHA512-CRYPT
+      POSTFIXADMIN_ENCRYPT: sha512
       POSTFIXADMIN_SETUP_PASSWORD: ${POSTFIXADMIN_SETUP_HASH:?POSTFIXADMIN_SETUP_HASH is required}
     volumes:
       - ./docker-data/postfixadmin:/var/www/html

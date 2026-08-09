@@ -46,7 +46,15 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
 
 # --- postfix-accounts.cf: user|{SHA512-CRYPT}... for active mailboxes ---------
-psql_query "SELECT username || '|' || password FROM mailbox WHERE active AND EXISTS (SELECT 1 FROM domain d WHERE d.domain = mailbox.domain AND d.active) ORDER BY username;" > "${tmpdir}/postfix-accounts.cf"
+psql_query "SELECT username || '|' || password FROM mailbox WHERE active AND EXISTS (SELECT 1 FROM domain d WHERE d.domain = mailbox.domain AND d.active) ORDER BY username;" \
+  | while IFS='|' read -r user pw; do
+      [[ -z "${user}" ]] && continue
+      if [[ "${pw}" == '{'* ]]; then
+        printf '%s|%s\n' "${user}" "${pw}"
+      else
+        printf '%s|{SHA512-CRYPT}%s\n' "${user}" "${pw}"
+      fi
+    done > "${tmpdir}/postfix-accounts.cf"
 
 # --- postfix-virtual.cf: address<TAB>target, one line per alias target --------
 : > "${tmpdir}/postfix-virtual.cf"
