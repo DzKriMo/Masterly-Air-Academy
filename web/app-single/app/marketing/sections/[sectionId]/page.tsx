@@ -8,9 +8,17 @@ import { api, unwrapResults, withFullLimit } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { useToast } from "@/components/toast";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import LandingBlockEditor from "@/components/landing-block-editor";
-import { LandingBlocks, Block } from "@/components/landing-blocks";
-import { Send, RotateCcw, Save, Eye, ExternalLink, Check } from "lucide-react";
+import { LandingBlocks, Block, LandingTheme } from "@/components/landing-blocks";
+import { Send, RotateCcw, Save, Eye, ExternalLink, Check, History, Palette, X } from "lucide-react";
+
+interface SectionVersion {
+  id: string;
+  version: number;
+  created_by_name?: string;
+  created_at: string;
+}
 
 export default function MarketingSectionEditor() {
   const params = useParams<{ sectionId: string }>();
@@ -25,6 +33,7 @@ export default function MarketingSectionEditor() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [theme, setTheme] = useState<LandingTheme>({});
   const [status, setStatus] = useState<string>("draft");
   const [version, setVersion] = useState(0);
   const [publishedBlocks, setPublishedBlocks] = useState<Block[] | null>(null);
@@ -32,6 +41,10 @@ export default function MarketingSectionEditor() {
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
+  const [versions, setVersions] = useState<SectionVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<SectionVersion | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyRef = useRef(false);
@@ -47,6 +60,7 @@ export default function MarketingSectionEditor() {
       setTitle(section.title || "");
       setDescription(section.description || "");
       setBlocks(Array.isArray(section.content) ? section.content : []);
+      setTheme(section.theme && typeof section.theme === "object" ? section.theme : {});
       setStatus(section.status || "draft");
       setVersion(section.published_version || 0);
       setPublishedBlocks(section.published_content ? section.published_content : null);
@@ -63,7 +77,7 @@ export default function MarketingSectionEditor() {
   const persist = useCallback(() => {
     dirtyRef.current = false;
     setSaving(true);
-    api.patch(`/landing-sections/${sectionId}/`, { title, description, content: blocks })
+    api.patch(`/landing-sections/${sectionId}/`, { title, description, content: blocks, theme })
       .then((section: any) => {
         setSavedAt(new Date().toLocaleTimeString());
         toast.showToast("success", t("marketing.save"));
@@ -71,7 +85,7 @@ export default function MarketingSectionEditor() {
       })
       .catch((e: any) => toast.showToast("error", e?.message || "Save failed"))
       .finally(() => setSaving(false));
-  }, [sectionId, title, description, blocks, toast, t]);
+  }, [sectionId, title, description, blocks, theme, toast, t]);
 
   // Debounced autosave — 800ms after the last change.
   const scheduleSave = useCallback(() => {
@@ -107,6 +121,47 @@ export default function MarketingSectionEditor() {
       toast.showToast("success", t("marketing.rollback"));
     } catch (e: any) {
       toast.showToast("error", e?.message || "Rollback failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateTheme = (key: string, value: string) => {
+    const next: LandingTheme = { ...theme };
+    if (!value) delete (next as any)[key];
+    else (next as any)[key] = value;
+    setTheme(next);
+    scheduleSave();
+  };
+
+  const loadVersions = useCallback(() => {
+    setVersionsLoading(true);
+    api.get<SectionVersion[]>(`/landing-sections/${sectionId}/versions/`)
+      .then((data: any) => {
+        const list = Array.isArray(data) ? data : (data?.results || []);
+        setVersions(list);
+      })
+      .catch(() => setVersions([]))
+      .finally(() => setVersionsLoading(false));
+  }, [sectionId]);
+
+  const openVersions = () => {
+    setShowVersions(true);
+    loadVersions();
+  };
+
+  const restoreVersion = async () => {
+    if (!restoreTarget) return;
+    setSaving(true);
+    try {
+      const section: any = await api.post(`/landing-sections/${sectionId}/restore/`, { version: restoreTarget.version });
+      setBlocks(Array.isArray(section.content) ? section.content : []);
+      setTheme(section.theme && typeof section.theme === "object" ? section.theme : {});
+      setRestoreTarget(null);
+      setShowVersions(false);
+      toast.showToast("success", t("marketing.restored"));
+    } catch (e: any) {
+      toast.showToast("error", e?.message || "Restore failed");
     } finally {
       setSaving(false);
     }
@@ -152,6 +207,9 @@ export default function MarketingSectionEditor() {
                 <RotateCcw className="w-4 h-4" /> {t("marketing.rollback")}
               </button>
             )}
+            <button onClick={openVersions} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-600 text-white rounded-lg hover:border-gold-500 hover:text-gold-500 transition-colors">
+              <History className="w-4 h-4" /> {t("marketing.versions")}
+            </button>
             <a href="/" target="_blank" className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-600 text-white rounded-lg hover:border-gold-500 hover:text-gold-500 transition-colors">
               <ExternalLink className="w-4 h-4" /> {t("marketing.openPublicSite")}
             </a>
@@ -179,6 +237,48 @@ export default function MarketingSectionEditor() {
                 <input value={description} onChange={(e) => { setDescription(e.target.value); scheduleSave(); }} className="w-full px-3 py-2.5 bg-navy-900 border border-navy-600 rounded-lg text-white text-sm" />
               </div>
             </div>
+
+            <div className="bg-navy-800 border border-navy-700 rounded-xl p-5 space-y-3">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5" /> {t("marketing.theme")}
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("marketing.themeAccent")}</label>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={theme.accent || "#c4943c"} onChange={(e) => updateTheme("accent", e.target.value)} className="w-10 h-9 rounded bg-navy-900 border border-navy-600 cursor-pointer" />
+                    <button onClick={() => updateTheme("accent", "")} className="text-[10px] text-gray-500 hover:text-white">Reset</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("marketing.themeBackground")}</label>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={theme.background || "#0a1628"} onChange={(e) => updateTheme("background", e.target.value)} className="w-10 h-9 rounded bg-navy-900 border border-navy-600 cursor-pointer" />
+                    <button onClick={() => updateTheme("background", "")} className="text-[10px] text-gray-500 hover:text-white">{t("marketing.themeTransparent")}</button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("marketing.themePadding")}</label>
+                  <select value={theme.padding || ""} onChange={(e) => updateTheme("padding", e.target.value)} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs">
+                    <option value="">Default</option>
+                    <option value="none">{t("marketing.themePaddingNone")}</option>
+                    <option value="sm">{t("marketing.themePaddingSm")}</option>
+                    <option value="md">{t("marketing.themePaddingMd")}</option>
+                    <option value="lg">{t("marketing.themePaddingLg")}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">{t("marketing.themeAlign")}</label>
+                  <select value={theme.align || ""} onChange={(e) => updateTheme("align", e.target.value)} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs">
+                    <option value="">{t("marketing.themeAlignCenter")}</option>
+                    <option value="left">{t("marketing.themeAlignLeft")}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <LandingBlockEditor blocks={blocks} media={media} onChange={(next) => { setBlocks(next); scheduleSave(); }} />
           </div>
 
@@ -192,7 +292,7 @@ export default function MarketingSectionEditor() {
               </div>
               <div className="bg-navy-900 min-h-[400px] max-h-[70vh] overflow-y-auto">
                 {liveBlocks.length > 0 ? (
-                  <LandingBlocks blocks={liveBlocks} locale={locale} />
+                  <LandingBlocks blocks={liveBlocks} locale={locale} theme={theme} />
                 ) : (
                   <div className="p-6 text-sm text-gray-500">{t("marketing.noSections")}</div>
                 )}
@@ -201,6 +301,52 @@ export default function MarketingSectionEditor() {
           </div>
         </div>
       </main>
+
+      {/* Version history modal */}
+      {showVersions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowVersions(false)}>
+          <div className="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-navy-700">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <History className="w-4 h-4 text-gold-500" /> {t("marketing.versionHistory")}
+              </h2>
+              <button onClick={() => setShowVersions(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              {versionsLoading ? (
+                <p className="text-sm text-gray-500">{t("marketing.noSections")}</p>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-gray-500">{t("marketing.noVersions")}</p>
+              ) : (
+                versions.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between gap-3 bg-navy-900 border border-navy-700 rounded-lg px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">v{v.version}</p>
+                      <p className="text-[11px] text-gray-500">
+                        {new Date(v.created_at).toLocaleString()} {v.created_by_name ? `· ${t("marketing.by")} ${v.created_by_name}` : ""}
+                      </p>
+                    </div>
+                    <button onClick={() => setRestoreTarget(v)} disabled={saving} className="px-3 py-1.5 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 disabled:opacity-50">
+                      {t("marketing.restoreVersion")}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!restoreTarget}
+        title={t("marketing.restoreVersion")}
+        message={restoreTarget ? `${t("marketing.restoreConfirm")} (v${restoreTarget.version})` : ""}
+        confirmLabel={t("marketing.restoreVersion")}
+        onConfirm={restoreVersion}
+        onClose={() => setRestoreTarget(null)}
+      />
     </div>
   );
 }

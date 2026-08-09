@@ -29,6 +29,7 @@ class LandingSection(models.Model):
     )
     published_version = models.IntegerField(default=0)
     published_content = models.JSONField(default=dict, blank=True, null=True)
+    theme = models.JSONField(default=dict, blank=True)
     sort_order = models.IntegerField(default=0)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -45,6 +46,42 @@ class LandingSection(models.Model):
 
     def __str__(self):
         return self.title or self.key
+
+
+class LandingSectionVersion(models.Model):
+    """An immutable snapshot of a section captured on each publish.
+
+    Kept for the full publish history so marketing managers can review past
+    versions and restore the working draft to any of them. The current live
+    snapshot also lives on the section itself (``published_content``) for fast
+    reads on the public endpoint.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    section = models.ForeignKey(
+        LandingSection, on_delete=models.CASCADE, related_name='versions',
+    )
+    version = models.IntegerField(default=1)
+    content = models.JSONField(default=list, blank=True)
+    theme = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='landing_section_versions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'landing_section_versions'
+        ordering = ['-version']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['section', 'version'], name='uniq_landing_section_version'
+            ),
+        ]
+        verbose_name = 'Landing Section Version'
+        verbose_name_plural = 'Landing Section Versions'
+
+    def __str__(self):
+        return f'{self.section.key} v{self.version}'
 
 
 class LandingMedia(models.Model):

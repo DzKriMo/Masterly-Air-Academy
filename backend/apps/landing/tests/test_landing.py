@@ -215,3 +215,148 @@ class TestPublicMediaStream:
     def test_missing_file_returns_404(self, api_client):
         resp = api_client.get(reverse('public-landing-media', kwargs={'key': 'landing/nope.png'}))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestLandingTheme:
+    def test_theme_persisted_via_patch(self, social_client):
+        section = make_section()
+        resp = social_client.patch(
+            reverse('landing-section-detail', kwargs={'pk': section.pk}),
+            {'theme': {'accent': '#00ff00', 'background': '#111111', 'padding': 'lg'}},
+            format='json',
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        section.refresh_from_db()
+        assert section.theme['accent'] == '#00ff00'
+
+    def test_theme_must_be_an_object(self, social_client):
+        section = make_section()
+        resp = social_client.patch(
+            reverse('landing-section-detail', kwargs={'pk': section.pk}),
+            {'theme': ['accent']},
+            format='json',
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_theme_unknown_keys_rejected(self, social_client):
+        section = make_section()
+        resp = social_client.patch(
+            reverse('landing-section-detail', kwargs={'pk': section.pk}),
+            {'theme': {'nope': 'x'}},
+            format='json',
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_public_endpoint_includes_theme(self, db, api_client):
+        make_section(
+            key='hero', status='published', published_version=1,
+            published_content=[{'type': 'hero', 'data': {}}],
+            theme={'accent': '#c4943c'},
+        )
+        resp = api_client.get(reverse('public-landing'))
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data[0]['theme']['accent'] == '#c4943c'
+
+
+class TestNewBlockTypes:
+    @pytest.mark.parametrize('btype', ['cta', 'faq', 'team', 'image', 'embed', 'contact'])
+    def test_new_block_types_accepted(self, social_client, btype):
+        resp = social_client.post(reverse('landing-section-list'), {
+            'key': f'section_{btype}',
+            'title': btype,
+            'content': [{'type': btype, 'data': {'heading': 'Hi'}}],
+        }, format='json')
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_unknown_type_still_rejected(self, social_client):
+        resp = social_client.post(reverse('landing-section-list'), {
+            'key': 'bad2',
+            'title': 'Bad',
+            'content': [{'type': 'script', 'data': {}}],
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+class TestLandingVersions:
+    def test_publish_records_version(self, social_client, social_manager_user):
+        section = make_section()
+        resp = social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
+        assert resp.status_code == status.HTTP_200_OK
+        from apps.landing.models import LandingSectionVersion
+        snapshots = LandingSectionVersion.objects.filter(section=section)
+        assert snapshots.count() == 1
+        assert snapshots.first().version == 1
+        assert snapshots.first().created_by_id == social_manager_user.pk
+        assert snapshots.first().content == section.content
+
+    def test_versions_endpoint_lists_newest_first(self, social_client):
+        section = make_section()
+        social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
+        social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
+        resp = social_client.get(reverse('landing-section-versions', kwargs={'pk': section.pk}))
+        assert resp.status_code == status.HTTP_200_OK
+        versions = resp.data['results'] if isinstance(resp.data, dict) and 'results' in resp.data else resp.data
+        assert [v['version'] for v in versions] == [2, 1]
+        assert versions[0]['created_by_name'] is not None
+
+    def test_restore_sets_draft_from_version(self, social_client):
+        section = make_section(
+            content=[{'type': 'hero', 'data': {'title': 'First draft'}}],
+        )
+        social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
+        section.content = [{'type': 'hero', 'data': {'title': 'Broken draft'}}]
+        section.theme = {'accent': '#ff0000'}
+        section.save()
+        resp = social_client.post(
+            reverse('landing-section-restore', kwargs={'pk': section.pk}),
+            {'version': 1}, format='json',
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        section.refresh_from_db()
+        assert section.content[0]['data']['title'] == 'First draft'
+        assert section.theme == {}
+
+    def test_restore_unknown_version_returns_404(self, social_client):
+        section = make_section()
+        resp = social_client.post(
+            reverse('landing-section-restore', kwargs={'pk': section.pk}),
+            {'version': 99}, format='json',
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_restore_requires_version(self, social_client):
+        section = make_section()
+        resp = social_client.post(reverse('landing-section-restore', kwargs={'pk': section.pk}), {}, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+class TestLandingReorder:
+    def test_reorder_updates_sort_order(self, social_client):
+        a = make_section(key='hero', title='Hero')
+        b = make_section(key='about', title='About')
+        resp = social_client.post(
+            reverse('landing-section-reorder'),
+            {'ordered_ids': [str(b.pk), str(a.pk)]}, format='json',
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        a.refresh_from_db()
+        b.refresh_from_db()
+        assert b.sort_order == 0
+        assert a.sort_order == 1
+
+    def test_reorder_rejects_unknown_id(self, social_client):
+        make_section(key='hero')
+        import uuid
+        resp = social_client.post(
+            reverse('landing-section-reorder'),
+            {'ordered_ids': [str(uuid.uuid4())]}, format='json',
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reorder_requires_ordered_ids(self, social_client):
+        resp = social_client.post(reverse('landing-section-reorder'), {}, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reorder_not_public(self, db, api_client):
+        resp = api_client.post(reverse('landing-section-reorder'), {'ordered_ids': []}, format='json')
+        assert resp.status_code in (401, 403)

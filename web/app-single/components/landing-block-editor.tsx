@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "@/lib/use-translation";
 import { BLOCK_TYPES, Block, BlockType, defaultBlockData, resolveField } from "@/components/landing-blocks";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, CopyPlus } from "lucide-react";
 
 // ============================================================
 // MASTERLY | Landing block editor
@@ -130,6 +130,16 @@ function MediaPicker({ value, onChange, media }: { value: any; onChange: (v: any
   );
 }
 
+function HeaderFields({ d, setField }: { d: any; setField: (k: string, v: any) => void }) {
+  return (
+    <>
+      <LocalizedInput label="Kicker" value={d.kicker} onChange={(v) => setField("kicker", v)} />
+      <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+      <LocalizedInput label="Subtitle" value={d.subtitle} onChange={(v) => setField("subtitle", v)} textarea />
+    </>
+  );
+}
+
 function BlockFields({ block, media, onChange }: { block: Block; media: any[]; onChange: (data: any) => void }) {
   const { t } = useTranslation();
   const d = block.data || {};
@@ -159,14 +169,14 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
     case "rich_text":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <HeaderFields d={d} setField={setField} />
           <LocalizedInput label="Body" value={d.body} onChange={(v) => setField("body", v)} textarea />
         </>
       );
     case "stats":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <HeaderFields d={d} setField={setField} />
           <ListEditor label="Stats" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
             <div className="grid grid-cols-2 gap-2">
               <LocalizedInput label="Value" value={(item as any).value} onChange={(v) => update({ value: v })} />
@@ -176,23 +186,44 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
         </>
       );
     case "features":
+      return (
+        <>
+          <HeaderFields d={d} setField={setField} />
+          <ListEditor label="Features" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
+            <div className="space-y-2">
+              <LocalizedInput label="Title" value={(item as any).title} onChange={(v) => update({ title: v })} />
+              <LocalizedInput label="Description" value={(item as any).description} onChange={(v) => update({ description: v })} textarea />
+            </div>
+          )} />
+        </>
+      );
     case "programs":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
-          <ListEditor label={block.type === "features" ? "Features" : "Programs"} items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
+          <HeaderFields d={d} setField={setField} />
+          <div className="grid grid-cols-2 gap-2">
+            <LocalizedInput label="Duration label" value={d.durationLabel} onChange={(v) => setField("durationLabel", v)} />
+            <LocalizedInput label="Prereq label" value={d.prereqLabel} onChange={(v) => setField("prereqLabel", v)} />
+          </div>
+          <ListEditor label="Programs" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Code</label>
+                  <input value={(item as any).code || ""} onChange={(e) => update({ code: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Link</label>
+                  <input value={(item as any).link || ""} onChange={(e) => update({ link: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <LocalizedInput label="Title" value={(item as any).title} onChange={(v) => update({ title: v })} />
-                {block.type === "programs" && (
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-400 mb-1">Link</label>
-                    <input value={(item as any).link || ""} onChange={(e) => update({ link: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
-                  </div>
-                )}
+                <LocalizedInput label="Duration" value={(item as any).duration} onChange={(v) => update({ duration: v })} />
               </div>
               <LocalizedInput label="Description" value={(item as any).description} onChange={(v) => update({ description: v })} textarea />
-              {block.type === "programs" && <MediaPicker value={(item as any).image} onChange={(v) => update({ image: v?.key ? v : null })} media={media} />}
+              <LocalizedInput label="Prerequisites" value={(item as any).prereq} onChange={(v) => update({ prereq: v })} />
+              <MediaPicker value={(item as any).image} onChange={(v) => update({ image: v?.key ? v : null })} media={media} />
             </div>
           )} />
         </>
@@ -201,7 +232,7 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
     case "gallery":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <HeaderFields d={d} setField={setField} />
           <ListEditor label={block.type === "logos" ? "Logos" : "Gallery"} items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
             <div className="space-y-2">
               <MediaPicker value={{ key: (item as any).key, alt: (item as any).alt }} onChange={(v) => update({ key: v.key, alt: v.alt })} media={media} />
@@ -213,7 +244,7 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
     case "video":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <HeaderFields d={d} setField={setField} />
           <ListEditor label="Videos" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
             <div className="space-y-2">
               <LocalizedInput label="Title" value={(item as any).title} onChange={(v) => update({ title: v })} />
@@ -228,7 +259,7 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
     case "testimonials":
       return (
         <>
-          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <HeaderFields d={d} setField={setField} />
           <ListEditor label="Testimonials" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
             <div className="space-y-2">
               <LocalizedInput label="Quote" value={(item as any).quote} onChange={(v) => update({ quote: v })} textarea />
@@ -236,6 +267,110 @@ function BlockFields({ block, media, onChange }: { block: Block; media: any[]; o
                 <LocalizedInput label="Author" value={(item as any).author} onChange={(v) => update({ author: v })} />
                 <LocalizedInput label="Role" value={(item as any).role} onChange={(v) => update({ role: v })} />
               </div>
+            </div>
+          )} />
+        </>
+      );
+    case "cta":
+      return (
+        <>
+          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <LocalizedInput label="Subtitle" value={d.subtitle} onChange={(v) => setField("subtitle", v)} textarea />
+          <ListEditor label="Buttons" items={d.ctas || []} onChange={(items) => setItems("ctas", items)} renderItem={(item, update) => (
+            <div className="space-y-2">
+              <LocalizedInput label="Text" value={(item as any).text} onChange={(v) => update({ text: v })} />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Link</label>
+                  <input value={(item as any).link || ""} onChange={(e) => update({ link: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Style</label>
+                  <select value={(item as any).style || "solid"} onChange={(e) => update({ style: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs">
+                    <option value="solid">Solid</option>
+                    <option value="outline">Outline</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )} />
+        </>
+      );
+    case "faq":
+      return (
+        <>
+          <HeaderFields d={d} setField={setField} />
+          <ListEditor label="Questions" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
+            <div className="space-y-2">
+              <LocalizedInput label="Question" value={(item as any).question} onChange={(v) => update({ question: v })} />
+              <LocalizedInput label="Answer" value={(item as any).answer} onChange={(v) => update({ answer: v })} textarea />
+            </div>
+          )} />
+        </>
+      );
+    case "team":
+      return (
+        <>
+          <HeaderFields d={d} setField={setField} />
+          <ListEditor label="Members" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <LocalizedInput label="Name" value={(item as any).name} onChange={(v) => update({ name: v })} />
+                <LocalizedInput label="Role" value={(item as any).role} onChange={(v) => update({ role: v })} />
+              </div>
+              <LocalizedInput label="Bio" value={(item as any).bio} onChange={(v) => update({ bio: v })} textarea />
+              <MediaPicker value={(item as any).image} onChange={(v) => update({ image: v?.key ? v : null })} media={media} />
+            </div>
+          )} />
+        </>
+      );
+    case "image":
+      return (
+        <>
+          <MediaPicker value={d.image} onChange={(v) => setField("image", v?.key ? v : null)} media={media} />
+          <LocalizedInput label="Caption" value={d.caption} onChange={(v) => setField("caption", v)} />
+        </>
+      );
+    case "embed":
+      return (
+        <>
+          <LocalizedInput label="Title" value={d.title} onChange={(v) => setField("title", v)} />
+          <div className="mb-3">
+            <label className="block text-xs text-gray-400 mb-1">HTML code</label>
+            <textarea value={d.html || ""} onChange={(e) => setField("html", e.target.value)} rows={6} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs font-mono" />
+            <p className="text-[10px] text-gray-500 mt-1">Trusted embeds only (iframes, maps, forms).</p>
+          </div>
+        </>
+      );
+    case "contact":
+      return (
+        <>
+          <LocalizedInput label="Heading" value={d.heading} onChange={(v) => setField("heading", v)} />
+          <LocalizedInput label="Subtitle" value={d.subtitle} onChange={(v) => setField("subtitle", v)} textarea />
+          <ListEditor label="Channels" items={d.items || []} onChange={(items) => setItems("items", items)} renderItem={(item, update) => (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <LocalizedInput label="Label" value={(item as any).label} onChange={(v) => update({ label: v })} />
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Type</label>
+                  <select value={(item as any).type || "link"} onChange={(e) => update({ type: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs">
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                    <option value="address">Address</option>
+                    <option value="link">Link</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs text-gray-400 mb-1">Value</label>
+                <input value={(item as any).value || ""} onChange={(e) => update({ value: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
+              </div>
+              {(item as any).type === "link" && (
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Link URL</label>
+                  <input value={(item as any).link || ""} onChange={(e) => update({ link: e.target.value })} className="w-full px-3 py-2 bg-navy-900 border border-navy-600 rounded-lg text-white text-xs" />
+                </div>
+              )}
             </div>
           )} />
         </>
@@ -255,6 +390,12 @@ const BLOCK_LABEL_KEYS: Record<BlockType, string> = {
   gallery: "marketing.blockGallery",
   video: "marketing.blockVideo",
   testimonials: "marketing.blockTestimonials",
+  cta: "marketing.blockCta",
+  faq: "marketing.blockFaq",
+  team: "marketing.blockTeam",
+  image: "marketing.blockImage",
+  embed: "marketing.blockEmbed",
+  contact: "marketing.blockContact",
 };
 
 export default function LandingBlockEditor({ blocks, media, onChange }: { blocks: Block[]; media: any[]; onChange: (blocks: Block[]) => void }) {
@@ -262,13 +403,29 @@ export default function LandingBlockEditor({ blocks, media, onChange }: { blocks
   const list = blocks || [];
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [newBlockType, setNewBlockType] = useState<BlockType>("rich_text");
 
   const updateBlock = (i: number, patch: Partial<Block>) => {
     onChange(list.map((b, j) => (j === i ? { ...b, ...patch } : b)));
   };
   const updateData = (i: number, data: any) => updateBlock(i, { data });
+  const mergeBlockData = (old: any, type: BlockType): Record<string, any> => {
+    const fresh = defaultBlockData(type);
+    const merged: Record<string, any> = {};
+    for (const k of Object.keys(fresh)) merged[k] = old && k in old ? old[k] : fresh[k];
+    return merged;
+  };
   const changeType = (i: number, type: BlockType) => {
-    onChange(list.map((b, j) => (j === i ? { type, data: defaultBlockData(type) } : b)));
+    onChange(list.map((b, j) => (j === i ? { type, data: mergeBlockData(b.data, type) } : b)));
+  };
+  const cloneBlock = (i: number) => {
+    const copy = JSON.parse(JSON.stringify(list[i])) as Block;
+    const next = [...list];
+    next.splice(i + 1, 0, copy);
+    onChange(next);
+  };
+  const addBlock = (type: BlockType) => {
+    onChange([...list, { type, data: defaultBlockData(type) }]);
   };
   const moveBlock = (from: number, to: number) => {
     if (from === to) return;
@@ -313,20 +470,36 @@ export default function LandingBlockEditor({ blocks, media, onChange }: { blocks
                 ))}
               </select>
             </div>
-            <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300" title={t("marketing.removeBlock")}>
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button type="button" onClick={() => cloneBlock(i)} className="text-gray-500 hover:text-gold-500" title={t("marketing.duplicate")}>
+                <CopyPlus className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300" title={t("marketing.removeBlock")}>
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <BlockFields block={block} media={media} onChange={(data) => updateData(i, data)} />
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...list, { type: "rich_text", data: defaultBlockData("rich_text") }])}
-        className="flex items-center gap-1.5 px-4 py-2 text-sm text-gold-500 border border-dashed border-gold-500/40 rounded-lg hover:bg-gold-500/10"
-      >
-        <Plus className="w-4 h-4" /> {t("marketing.addBlock")}
-      </button>
+      <div className="flex gap-2">
+        <select
+          value={newBlockType}
+          onChange={(e) => setNewBlockType(e.target.value as BlockType)}
+          className="flex-1 px-3 py-2 text-sm bg-navy-900 border border-dashed border-gold-500/40 rounded-lg text-gold-500"
+        >
+          {BLOCK_TYPES.map((bt) => (
+            <option key={bt} value={bt} className="bg-navy-900 text-white">{t(BLOCK_LABEL_KEYS[bt], bt)}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => addBlock(newBlockType)}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-gold-500 border border-dashed border-gold-500/40 rounded-lg hover:bg-gold-500/10"
+        >
+          <Plus className="w-4 h-4" /> {t("marketing.addBlock")}
+        </button>
+      </div>
     </div>
   );
 }

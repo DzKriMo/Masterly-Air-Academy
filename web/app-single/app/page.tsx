@@ -9,7 +9,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { useAuth } from "@/lib/auth-context";
 import { getDefaultPortal } from "@/lib/portal-access";
 import { api } from "@/lib/api";
-import { LandingBlocks, Block } from "@/components/landing-blocks";
+import { LandingBlocks, Block, LandingTheme } from "@/components/landing-blocks";
 
 const programKeys = ["PPL", "CPL", "IR", "MEP", "MCC"];
 const programTitleKeys: Record<string, string> = { PPL: "prog_ppl_title", CPL: "prog_cpl_title", IR: "prog_ir_title", MEP: "prog_mep_title", MCC: "prog_mcc_title" };
@@ -64,22 +64,24 @@ const programDetails: ProgramDetail[] = [
   },
 ];
 
+// Static fallbacks render in this order when a section has no CMS content.
+const DEFAULT_ORDER = ["hero", "programs", "about", "why_us", "accreditations", "gallery", "videos", "testimonials"];
+
+interface SectionData {
+  blocks: Block[];
+  theme?: LandingTheme;
+}
+
 export default function LandingPage() {
   const { t, locale } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const isPreview = searchParams.get("preview") === "1";
   const [navOpen, setNavOpen] = useState(false);
-  const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const totalSlides = programDetails.length;
-  const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
-  const [cardsPerView, setCardsPerView] = useState(3);
-  const SWIPE_THRESHOLD = 50;
+  const [landingSections, setLandingSections] = useState<Record<string, SectionData>>({});
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
 
   const portalPath = isAuthenticated && user ? getDefaultPortal(user.role) : "/student/login";
-
-  const [landingSections, setLandingSections] = useState<Record<string, Block[]>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -94,20 +96,170 @@ export default function LandingPage() {
         .then((d: any) => {
           if (cancelled) return;
           const list: any[] = Array.isArray(d) ? d : d?.results || [];
-          const map: Record<string, Block[]> = {};
+          const map: Record<string, SectionData> = {};
+          const order: string[] = [];
           list.forEach((s: any) => {
-            if (s && Array.isArray(s.content) && s.content.length) map[s.key] = s.content;
+            if (!s || !s.key) return;
+            if (s && Array.isArray(s.content) && s.content.length) {
+              map[s.key] = { blocks: s.content, theme: s.theme && typeof s.theme === "object" ? s.theme : undefined };
+            }
+            if (!order.includes(s.key)) order.push(s.key);
           });
           setLandingSections(map);
+          setSectionOrder(order);
         })
         .catch(() => {
-          if (!cancelled) setLandingSections({});
+          if (!cancelled) { setLandingSections({}); setSectionOrder([]); }
         });
     };
     fetchLanding();
     const interval = setInterval(fetchLanding, 30000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [isPreview, isAuthenticated]);
+
+  const pageOrder = [...new Set([...sectionOrder, ...DEFAULT_ORDER])];
+
+  const whyItems = [
+    { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: t("ato_certified"), desc: t("ato_certified_desc"), color: "gold" },
+    { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", title: t("modern_fleet"), desc: t("modern_fleet_desc"), color: "blue" },
+    { icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", title: t("efficient_training"), desc: t("efficient_training_desc"), color: "green" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-navy-900 text-white" dir={locale === "ar" ? "rtl" : "ltr"}>
+      <nav className="sticky top-0 z-40 bg-navy-900/95 backdrop-blur border-b border-navy-800">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-24">
+            <div className="flex items-center gap-3">
+              <Image src="/logo.png" alt="MAA" width={110} height={110} />
+              <span className="text-white font-bold text-lg tracking-tight">{t("app_name")}</span>
+            </div>
+            <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
+              <a href="#programs" className="hover:text-white transition-colors">{t("programs")}</a>
+              <a href="#about" className="hover:text-white transition-colors">{t("about")}</a>
+              <a href="#why-us" className="hover:text-white transition-colors">{t("why_us")}</a>
+              <a href="#accreditations" className="hover:text-white transition-colors">{t("nav_accreditations", "Accreditations")}</a>
+              <a href="#contact" className="hover:text-white transition-colors">{t("nav_contact")}</a>
+              {isAuthenticated && user ? (
+                <Link href={portalPath} className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg transition-colors">{t("nav_portal")}</Link>
+              ) : (
+                <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
+              )}
+            </div>
+            <button onClick={() => setNavOpen(!navOpen)} className="md:hidden flex items-center justify-center w-[50px] h-[50px] text-gray-400 active:text-white rounded-lg transition-colors">
+              {navOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+          {navOpen && (
+            <div className="md:hidden pb-5 space-y-1">
+              <a href="#programs" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("programs")}</a>
+              <a href="#about" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("about")}</a>
+              <a href="#why-us" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("why_us")}</a>
+              <a href="#accreditations" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_accreditations", "Accreditations")}</a>
+              <a href="#contact" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_contact")}</a>
+              {isAuthenticated && user ? (
+                <Link href={portalPath} onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_portal")}</Link>
+              ) : (
+                <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
+              )}
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Dynamic sections — rendered in the sort_order defined in the marketing portal. */}
+      {pageOrder.map((key) => {
+        const section = landingSections[key];
+        const blocks = section?.blocks || [];
+        if (blocks.length > 0) {
+          const anchor = key === "why_us" ? "why-us" : key;
+          return (
+            <div id={anchor} key={key}>
+              <LandingBlocks blocks={blocks} locale={locale} theme={section?.theme} />
+            </div>
+          );
+        }
+        switch (key) {
+          case "hero": return <StaticHero key={key} t={t} />;
+          case "programs": return <StaticPrograms key={key} t={t} />;
+          case "about": return <StaticAbout key={key} t={t} />;
+          case "why_us": return <StaticWhyUs key={key} t={t} whyItems={whyItems} />;
+          case "accreditations": return <StaticAccreds key={key} t={t} />;
+          default: return null;
+        }
+      })}
+
+      {/* Contact */}
+      <section id="contact" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+        <div className="text-center mb-16">
+          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("contact_title")}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("contact_heading")}</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">{t("contact_subtitle")}</p>
+        </div>
+        <ContactForm t={t} />
+      </section>
+
+      {/* Portal Access */}
+      <section id="access" className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20">
+        <div className="text-center mb-10"><h2 className="text-xl font-bold text-white mb-2">{t("portal_access")}</h2><p className="text-sm text-gray-500">{t("portal_access_desc")}</p></div>
+        <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
+          <Link href="/student/login" className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
+          <Link href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-navy-800">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110} className="opacity-80" /><span>{t("app_name")}, {t("tagline")}</span></div>
+            <div className="flex gap-4"><span>{t("footer_languages")}</span></div>
+          </div>
+          <p className="text-center text-xs text-gray-600 mt-6">&copy; {new Date().getFullYear()} {t("footer_copyright")}</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function StaticHero({ t }: { t: (key: string, fallback?: string) => string }) {
+  return (
+    <section id="hero" className="relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gold-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.03] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+      </div>
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-24 pb-24 md:pt-28 md:pb-32">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          <div className="flex-1 text-center lg:text-left">
+            <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">{t("tagline")}</p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">{t("hero_title")}</h1>
+            <p className="text-lg md:text-xl text-gray-400 leading-relaxed mb-10">{t("hero_desc")}</p>
+            <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+              <a href="#programs" className="px-8 py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors">{t("explore_programs")}</a>
+              <a href="#contact" className="px-8 py-3.5 border border-gold-500/30 hover:border-gold-500 text-gold-500 font-semibold rounded-lg transition-colors">{t("contact_us")}</a>
+            </div>
+          </div>
+          <div className="flex-shrink-0"><Image src="/logo.png" alt="MAA" width={480} height={480} className="w-64 md:w-80 lg:w-96 object-contain" priority /></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StaticPrograms({ t }: { t: (key: string, fallback?: string) => string }) {
+  const totalSlides = programDetails.length;
+  const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
+  const SWIPE_THRESHOLD = 50;
+  const [cardsPerView, setCardsPerView] = useState(3);
+  const [isHovering, setIsHovering] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
+  const [rawSlide, setRawSlide] = useState(totalSlides);
+  const [transitionOn, setTransitionOn] = useState(true);
+  const [dragOffset, setDragOffset] = useState(0);
+  const snappingRef = useRef(false);
+  const dragMeta = useRef({ active: false, startX: 0, moved: false });
+  const dragOffsetRef = useRef(0);
 
   useEffect(() => {
     const update = () => setCardsPerView(window.innerWidth < 620 ? 1 : 3);
@@ -119,15 +271,6 @@ export default function LandingPage() {
   useEffect(() => {
     setRawSlide(totalSlides);
   }, [cardsPerView, totalSlides]);
-
-  const [rawSlide, setRawSlide] = useState(totalSlides);
-  const [transitionOn, setTransitionOn] = useState(true);
-  const snappingRef = useRef(false);
-
-  // Drag state
-  const [dragOffset, setDragOffset] = useState(0);
-  const dragMeta = useRef({ active: false, startX: 0, moved: false });
-  const dragOffsetRef = useRef(0);
 
   const handleTransitionEnd = useCallback(() => {
     if (rawSlide >= totalSlides * 2) {
@@ -197,97 +340,8 @@ export default function LandingPage() {
     return () => clearInterval(timer);
   }, [isHovering, totalSlides]);
 
-  const whyItems = [
-    { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: t("ato_certified"), desc: t("ato_certified_desc"), color: "gold" },
-    { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", title: t("modern_fleet"), desc: t("modern_fleet_desc"), color: "blue" },
-    { icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", title: t("efficient_training"), desc: t("efficient_training_desc"), color: "green" },
-  ];
-
-  const heroBlocks = landingSections["hero"] || [];
-  const programsBlocks = landingSections["programs"] || [];
-  const aboutBlocks = landingSections["about"] || [];
-  const whyUsBlocks = landingSections["why_us"] || [];
-  const accredBlocks = landingSections["accreditations"] || [];
-  const galleryBlocks = landingSections["gallery"] || [];
-  const videoBlocks = landingSections["videos"] || [];
-  const testimonialBlocks = landingSections["testimonials"] || [];
-
   return (
-    <div className="min-h-screen bg-navy-900 text-white" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <nav className="sticky top-0 z-40 bg-navy-900/95 backdrop-blur border-b border-navy-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-24">
-            <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="MAA" width={110} height={110} />
-              <span className="text-white font-bold text-lg tracking-tight">{t("app_name")}</span>
-            </div>
-            <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-              <a href="#programs" className="hover:text-white transition-colors">{t("programs")}</a>
-              <a href="#about" className="hover:text-white transition-colors">{t("about")}</a>
-              <a href="#why-us" className="hover:text-white transition-colors">{t("why_us")}</a>
-              <a href="#accreditations" className="hover:text-white transition-colors">{t("nav_accreditations", "Accreditations")}</a>
-              <a href="#contact" className="hover:text-white transition-colors">{t("nav_contact")}</a>
-              {isAuthenticated && user ? (
-                <Link href={portalPath} className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg transition-colors">{t("nav_portal")}</Link>
-              ) : (
-                <Link href="/student/login" className="text-gold-500 hover:text-gold-400 font-medium transition-colors">{t("nav_student")}</Link>
-              )}
-            </div>
-            <button onClick={() => setNavOpen(!navOpen)} className="md:hidden flex items-center justify-center w-[50px] h-[50px] text-gray-400 active:text-white rounded-lg transition-colors">
-              {navOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-          {navOpen && (
-            <div className="md:hidden pb-5 space-y-1">
-              <a href="#programs" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("programs")}</a>
-              <a href="#about" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("about")}</a>
-              <a href="#why-us" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("why_us")}</a>
-              <a href="#accreditations" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_accreditations", "Accreditations")}</a>
-              <a href="#contact" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-navy-800 rounded-lg transition-colors">{t("nav_contact")}</a>
-              {isAuthenticated && user ? (
-                <Link href={portalPath} onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_portal")}</Link>
-              ) : (
-                <Link href="/student/login" onClick={() => setNavOpen(false)} className="block px-3 py-2.5 text-sm text-gold-500 hover:text-gold-400 font-medium hover:bg-navy-800 rounded-lg transition-colors">{t("nav_student")}</Link>
-              )}
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero */}
-      {heroBlocks.length > 0 ? (
-        <div id="hero">
-          <LandingBlocks blocks={heroBlocks} locale={locale} />
-        </div>
-      ) : (
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gold-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.03] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-24 pb-24 md:pt-28 md:pb-32">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-            <div className="flex-1 text-center lg:text-left">
-              <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-4">{t("tagline")}</p>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">{t("hero_title")}</h1>
-              <p className="text-lg md:text-xl text-gray-400 leading-relaxed mb-10">{t("hero_desc")}</p>
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                <a href="#programs" className="px-8 py-3.5 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors">{t("explore_programs")}</a>
-                <a href="#contact" className="px-8 py-3.5 border border-gold-500/30 hover:border-gold-500 text-gold-500 font-semibold rounded-lg transition-colors">{t("contact_us")}</a>
-              </div>
-            </div>
-            <div className="flex-shrink-0"><Image src="/logo.png" alt="MAA" width={480} height={480} className="w-64 md:w-80 lg:w-96 object-contain" priority /></div>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Programs — Carousel */}
-      {programsBlocks.length > 0 ? (
-        <div id="programs">
-          <LandingBlocks blocks={programsBlocks} locale={locale} />
-        </div>
-      ) : (
+    <>
       <section id="programs" className="bg-navy-800/30 border-y border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
           <div className="text-center mb-16">
@@ -359,132 +413,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      )}
-
-      {/* About */}
-      {aboutBlocks.length > 0 ? (
-        <div id="about">
-          <LandingBlocks blocks={aboutBlocks} locale={locale} />
-        </div>
-      ) : (
-      <section id="about" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("about_title")}</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">{t("about_heading")}</h2>
-            <div className="space-y-4 text-gray-400 leading-relaxed"><p>{t("about_p1")}</p><p>{t("about_p2")}</p><p>{t("about_p3")}</p></div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[{ k: "modern_fleet", v: t("modern_fleet"), d: t("modern_fleet_desc") }, { k: "expert_team", v: t("expert_team"), d: t("expert_team_desc") }, { k: "structured_curriculum", v: t("structured_curriculum"), d: t("structured_curriculum_desc") }, { k: "full_support", v: t("full_support"), d: t("full_support_desc") }].map(item => (
-              <div key={item.k} className="bg-navy-800 border border-navy-700 rounded-xl p-6"><div className="text-2xl font-bold text-white mb-1">{item.v}</div><p className="text-sm text-gray-400">{item.d}</p></div>
-            ))}
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Why Us */}
-      {whyUsBlocks.length > 0 ? (
-        <div id="why-us">
-          <LandingBlocks blocks={whyUsBlocks} locale={locale} />
-        </div>
-      ) : (
-      <section id="why-us" className="bg-navy-800/30 border-y border-navy-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
-          <div className="text-center mb-16">
-            <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("why_us_title")}</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("why_us_subtitle")}</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {whyItems.map((item, i) => (
-              <div key={i} className="text-center">
-                <div className={`w-14 h-14 mx-auto mb-5 rounded-xl bg-${item.color}-500/10 border border-${item.color}-500/20 flex items-center justify-center`}>
-                  <svg className={`w-6 h-6 text-${item.color}-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Accreditations */}
-      {accredBlocks.length > 0 ? (
-        <div id="accreditations">
-          <LandingBlocks blocks={accredBlocks} locale={locale} />
-        </div>
-      ) : (
-      <section id="accreditations" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
-        <div className="text-center mb-12">
-          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("accreditations_title", "Accreditations & Approvals")}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("accreditations_heading", "Approved & Recognized By")}</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">{t("accreditations_desc", "Masterly Air Academy is officially approved and accredited by the following national authorities.")}</p>
-        </div>
-        <div className="flex flex-wrap justify-center items-center gap-12 md:gap-16">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
-              <Image src="/images/1.webp" alt="Ministry of Interior and Transport" width={100} height={100} className="object-contain" />
-            </div>
-            <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_interior", "Ministry of Interior & Transport")}</p>
-          </div>
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
-              <Image src="/images/3.png" alt="National Civil Aviation Agency" width={100} height={100} className="object-contain" />
-            </div>
-            <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_anac", "National Civil Aviation Agency")}</p>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Dynamic extras from marketing portal */}
-      {galleryBlocks.length > 0 && (
-        <div id="gallery">
-          <LandingBlocks blocks={galleryBlocks} locale={locale} />
-        </div>
-      )}
-      {videoBlocks.length > 0 && (
-        <div id="videos">
-          <LandingBlocks blocks={videoBlocks} locale={locale} />
-        </div>
-      )}
-      {testimonialBlocks.length > 0 && (
-        <div id="testimonials">
-          <LandingBlocks blocks={testimonialBlocks} locale={locale} />
-        </div>
-      )}
-
-      {/* Contact */}
-      <section id="contact" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
-        <div className="text-center mb-16">
-          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("contact_title")}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("contact_heading")}</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">{t("contact_subtitle")}</p>
-        </div>
-        <ContactForm t={t} />
-      </section>
-
-      {/* Portal Access */}
-      <section id="access" className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20">
-        <div className="text-center mb-10"><h2 className="text-xl font-bold text-white mb-2">{t("portal_access")}</h2><p className="text-sm text-gray-500">{t("portal_access_desc")}</p></div>
-        <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
-          <Link href="/student/login" className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
-          <Link href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-navy-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
-            <div className="flex items-center gap-3"><Image src="/logo.png" alt="MAA" width={110} height={110} className="opacity-80" /><span>{t("app_name")}, {t("tagline")}</span></div>
-            <div className="flex gap-4"><span>{t("footer_languages")}</span></div>
-          </div>
-          <p className="text-center text-xs text-gray-600 mt-6">&copy; {new Date().getFullYear()} {t("footer_copyright")}</p>
-        </div>
-      </footer>
 
       {/* Program Detail Modal */}
       {selectedProgram && (
@@ -547,7 +475,76 @@ export default function LandingPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+}
+
+function StaticAbout({ t }: { t: (key: string, fallback?: string) => string }) {
+  return (
+    <section id="about" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("about_title")}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">{t("about_heading")}</h2>
+          <div className="space-y-4 text-gray-400 leading-relaxed"><p>{t("about_p1")}</p><p>{t("about_p2")}</p><p>{t("about_p3")}</p></div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {[{ k: "modern_fleet", v: t("modern_fleet"), d: t("modern_fleet_desc") }, { k: "expert_team", v: t("expert_team"), d: t("expert_team_desc") }, { k: "structured_curriculum", v: t("structured_curriculum"), d: t("structured_curriculum_desc") }, { k: "full_support", v: t("full_support"), d: t("full_support_desc") }].map(item => (
+            <div key={item.k} className="bg-navy-800 border border-navy-700 rounded-xl p-6"><div className="text-2xl font-bold text-white mb-1">{item.v}</div><p className="text-sm text-gray-400">{item.d}</p></div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StaticWhyUs({ t, whyItems }: { t: (key: string, fallback?: string) => string; whyItems: { icon: string; title: string; desc: string; color: string }[] }) {
+  return (
+    <section id="why-us" className="bg-navy-800/30 border-y border-navy-800">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+        <div className="text-center mb-16">
+          <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("why_us_title")}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("why_us_subtitle")}</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {whyItems.map((item, i) => (
+            <div key={i} className="text-center">
+              <div className={`w-14 h-14 mx-auto mb-5 rounded-xl bg-${item.color}-500/10 border border-${item.color}-500/20 flex items-center justify-center`}>
+                <svg className={`w-6 h-6 text-${item.color}-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StaticAccreds({ t }: { t: (key: string, fallback?: string) => string }) {
+  return (
+    <section id="accreditations" className="max-w-7xl mx-auto px-6 lg:px-8 py-20 md:py-28">
+      <div className="text-center mb-12">
+        <p className="text-gold-500 font-semibold text-sm tracking-widest uppercase mb-3">{t("accreditations_title", "Accreditations & Approvals")}</p>
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("accreditations_heading", "Approved & Recognized By")}</h2>
+        <p className="text-gray-400 max-w-2xl mx-auto">{t("accreditations_desc", "Masterly Air Academy is officially approved and accredited by the following national authorities.")}</p>
+      </div>
+      <div className="flex flex-wrap justify-center items-center gap-12 md:gap-16">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+            <Image src="/images/1.webp" alt="Ministry of Interior and Transport" width={100} height={100} className="object-contain" />
+          </div>
+          <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_ministry_interior", "Ministry of Interior & Transport")}</p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-28 h-28 bg-white border border-navy-700 rounded-2xl p-4 flex items-center justify-center">
+            <Image src="/images/3.png" alt="National Civil Aviation Agency" width={100} height={100} className="object-contain" />
+          </div>
+          <p className="text-xs text-gray-400 text-center max-w-[140px]">{t("accred_anac", "National Civil Aviation Agency")}</p>
+        </div>
+      </div>
+    </section>
   );
 }
 

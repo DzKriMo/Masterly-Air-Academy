@@ -14,8 +14,13 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import HasRolePermission
 from apps.core.uploads import validate_upload
 
-from .models import LandingSection, LandingMedia
-from .serializers import LandingSectionSerializer, PublicLandingSectionSerializer, LandingMediaSerializer
+from .models import LandingSection, LandingSectionVersion, LandingMedia
+from .serializers import (
+    LandingSectionSerializer,
+    LandingSectionVersionSerializer,
+    PublicLandingSectionSerializer,
+    LandingMediaSerializer,
+)
 
 MEDIA_PREFIX = 'landing/'
 
@@ -47,6 +52,13 @@ class LandingSectionViewSet(viewsets.ModelViewSet):
         section.updated_by = request.user
         section.updated_at = timezone.now()
         section.save(update_fields=['published_content', 'published_version', 'status', 'updated_by', 'updated_at'])
+        LandingSectionVersion.objects.create(
+            section=section,
+            version=section.published_version,
+            content=section.published_content,
+            theme=section.theme or {},
+            created_by=request.user,
+        )
         return Response(LandingSectionSerializer(section, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=['post'])
@@ -60,6 +72,56 @@ class LandingSectionViewSet(viewsets.ModelViewSet):
         section.updated_at = timezone.now()
         section.save(update_fields=['content', 'updated_by', 'updated_at'])
         return Response(LandingSectionSerializer(section, context=self.get_serializer_context()).data)
+
+    @action(detail=True, methods=['get'])
+    def versions(self, request, pk=None):
+        """List the full publish history for this section (newest first)."""
+        section = self.get_object()
+        versions = LandingSectionVersion.objects.filter(section=section).order_by('-version')
+        return Response(LandingSectionVersionSerializer(versions, many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """Restore the working draft (and theme) from a stored version."""
+        section = self.get_object()
+        version = request.data.get('version')
+        if version is None:
+            return Response({'error': 'version is required'}, status=400)
+        try:
+            snapshot = LandingSectionVersion.objects.get(section=section, version=int(version))
+        except (LandingSectionVersion.DoesNotExist, ValueError, TypeError):
+            return Response({'error': f'Version {version} not found'}, status=404)
+        section.content = snapshot.content
+        section.theme = snapshot.theme or {}
+        section.updated_by = request.user
+        section.updated_at = timezone.now()
+        section.save(update_fields=['content', 'theme', 'updated_by', 'updated_at'])
+        return Response(LandingSectionSerializer(section, context=self.get_serializer_context()).data)
+
+    @action(detail=False, methods=['post'], url_path='reorder')
+    def reorder(self, request):
+        """Bulk-update section ordering from an ordered list of section ids.
+
+        Accepts ``{"ordered_ids": [<id>, ...]}``; each section's ``sort_order``
+        becomes its index in the list so the public page renders in that order.
+        """
+        ordered_ids = request.data.get('ordered_ids')
+        if not isinstance(ordered_ids, list) or not ordered_ids:
+            return Response({'error': 'ordered_ids must be a non-empty list'}, status=400)
+        sections = {str(s.id): s for s in LandingSection.objects.filter(id__in=ordered_ids)}
+        if len(sections) != len(set(ordered_ids)):
+            return Response({'error': 'ordered_ids contains duplicates'}, status=400)
+        missing = [oid for oid in ordered_ids if str(oid) not in sections]
+        if missing:
+            return Response({'error': f'unknown section ids: {missing}'}, status=400)
+        now = timezone.now()
+        for index, sid in enumerate(ordered_ids):
+            section = sections[str(sid)]
+            section.sort_order = index
+            section.updated_at = now
+            section.save(update_fields=['sort_order', 'updated_at'])
+        qs = LandingSection.objects.filter(id__in=ordered_ids).order_by('sort_order', 'key')
+        return Response(LandingSectionSerializer(qs, many=True, context=self.get_serializer_context()).data)
 
 
 class LandingMediaViewSet(viewsets.ModelViewSet):

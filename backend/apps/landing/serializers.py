@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
-from .models import LandingSection, LandingMedia
+from .models import LandingSection, LandingSectionVersion, LandingMedia
 
 ALLOWED_BLOCK_TYPES = {
     'hero', 'rich_text', 'stats', 'features', 'programs',
     'logos', 'gallery', 'video', 'testimonials',
+    'cta', 'faq', 'team', 'image', 'embed', 'contact',
 }
 
 
@@ -16,11 +17,24 @@ class LandingSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = LandingSection
         fields = [
-            'id', 'key', 'title', 'description', 'content', 'status',
+            'id', 'key', 'title', 'description', 'content', 'theme', 'status',
             'published_version', 'published_content', 'sort_order',
             'updated_by', 'updated_by_name', 'created_at', 'updated_at',
         ]
         read_only_fields = ['status', 'published_version', 'published_content', 'updated_by']
+
+    def validate_theme(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('theme must be an object')
+        allowed = {'accent', 'background', 'padding', 'align', 'buttonStyle'}
+        unknown = set(value.keys()) - allowed
+        if unknown:
+            raise serializers.ValidationError(
+                f'unknown theme keys: {", ".join(sorted(unknown))}'
+            )
+        return value
 
     def get_updated_by_name(self, obj):
         if obj.updated_by:
@@ -51,7 +65,21 @@ class PublicLandingSectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LandingSection
-        fields = ['id', 'key', 'title', 'content', 'sort_order', 'published_version']
+        fields = ['id', 'key', 'title', 'content', 'theme', 'sort_order', 'published_version']
+
+
+class LandingSectionVersionSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LandingSectionVersion
+        fields = ['id', 'version', 'content', 'theme', 'created_by_name', 'created_at']
+        read_only_fields = fields
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.email
+        return None
 
 
 class LandingMediaSerializer(serializers.ModelSerializer):
