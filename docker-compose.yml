@@ -295,6 +295,7 @@ services:
       POSTFIXADMIN_SETUP_PASSWORD: ${POSTFIXADMIN_SETUP_HASH:?POSTFIXADMIN_SETUP_HASH is required}
     volumes:
       - ./docker-data/postfixadmin:/var/www/html
+      - ./scripts/postfixadmin/apache-prefix.conf:/etc/apache2/conf-enabled/zz-postfixadmin-prefix.conf:ro
     depends_on:
       maildb:
         condition: service_healthy
