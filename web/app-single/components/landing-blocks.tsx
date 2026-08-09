@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
 // ============================================================
@@ -108,6 +108,9 @@ const FEATURE_STYLES = [
   { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", bg: "bg-blue-500/10", border: "border-blue-500/20", text: "text-blue-400" },
   { icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", bg: "bg-green-500/10", border: "border-green-500/20", text: "text-green-400" },
 ];
+
+const CONTACT_LABEL: Record<string, string> = { en: "Contact Us", fr: "Nous Contacter", ar: "اتصل بنا" };
+const CLOSE_LABEL: Record<string, string> = { en: "Close", fr: "Fermer", ar: "إغلاق" };
 
 function HeroBlock({ data, locale }: { data: any; locale: string }) {
   const img = data.image ? mediaUrl(data.image.key) : "";
@@ -228,6 +231,7 @@ function ProgramsBlock({ data, locale }: { data: any; locale: string }) {
   const [rawSlide, setRawSlide] = useState(totalSlides);
   const [transitionOn, setTransitionOn] = useState(true);
   const [dragOffset, setDragOffset] = useState(0);
+  const [selected, setSelected] = useState<any>(null);
   const snappingRef = useRef(false);
   const dragMeta = useRef({ active: false, startX: 0, moved: false });
   const dragOffsetRef = useRef(0);
@@ -359,15 +363,11 @@ function ProgramsBlock({ data, locale }: { data: any; locale: string }) {
                 );
                 return (
                   <div key={`${i}-${prog.code || "prog"}`} className="shrink-0" style={{ width: `calc(${100 / cardsPerView}% - 8px)` }}>
-                    {prog.link ? (
-                      <a href={prog.link} className="h-full w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5 flex flex-col">
-                        {inner}
-                      </a>
-                    ) : (
-                      <div className="h-full w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5 flex flex-col">
-                        {inner}
-                      </div>
-                    )}
+                    <button
+                      onClick={(e) => { if (dragMeta.current.moved) e.preventDefault(); else setSelected(prog); }}
+                      className="h-full w-full group bg-navy-900 border border-navy-700 rounded-xl overflow-hidden hover:border-gold-500/50 transition-all text-left hover:-translate-y-1 hover:shadow-xl hover:shadow-gold-500/5 flex flex-col">
+                      {inner}
+                    </button>
                   </div>
                 );
               })}
@@ -392,6 +392,51 @@ function ProgramsBlock({ data, locale }: { data: any; locale: string }) {
           ))}
         </div>
       </div>
+
+      {/* Program Detail Modal */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setSelected(null)}>
+          <div className="bg-navy-800 border border-navy-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="relative h-48 bg-navy-800 overflow-hidden rounded-t-2xl">
+              {itemImage(selected) && <img src={itemImage(selected)} alt={selected.image?.alt || resolveField(selected.title, locale)} className="w-full h-full object-cover" />}
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-800 via-transparent to-transparent" />
+              <button onClick={() => setSelected(null)} className="absolute top-3 right-3 w-8 h-8 bg-navy-900/80 rounded-full flex items-center justify-center backdrop-blur hover:bg-navy-700 transition-colors" aria-label="Close">
+                <XCircle className="w-5 h-5 text-gray-400" />
+              </button>
+              {selected.code && <span className="absolute bottom-4 left-5 text-xs font-bold text-gold-500 bg-navy-900/80 px-3 py-1 rounded-full tracking-wider backdrop-blur">{selected.code}</span>}
+            </div>
+
+            <div className="p-6 md:p-8 space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-2">{resolveField(selected.title, locale)}</h3>
+                <p className="text-gray-400 leading-relaxed">{resolveField(selected.description, locale)}</p>
+              </div>
+
+              {(selected.duration || selected.prereq) && (
+                <div className="grid grid-cols-2 gap-4 bg-navy-900 rounded-xl p-4">
+                  {selected.duration && (
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">{resolveField(data.durationLabel || "Duration", locale)}</p>
+                      <p className="text-sm text-white font-medium mt-1">{resolveField(selected.duration, locale)}</p>
+                    </div>
+                  )}
+                  {selected.prereq && (
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">{resolveField(data.prereqLabel || "Prerequisites", locale)}</p>
+                      <p className="text-sm text-white font-medium mt-1">{resolveField(selected.prereq, locale)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <a href="#contact" onClick={() => setSelected(null)} className="flex-1 text-center px-6 py-3 bg-gold-500 hover:bg-gold-600 text-navy-900 font-bold rounded-lg transition-colors text-sm">{CONTACT_LABEL[locale] || CONTACT_LABEL.en}</a>
+                <button onClick={() => setSelected(null)} className="px-6 py-3 border border-navy-600 text-gray-400 hover:text-white rounded-lg transition-colors text-sm">{CLOSE_LABEL[locale] || CLOSE_LABEL.en}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

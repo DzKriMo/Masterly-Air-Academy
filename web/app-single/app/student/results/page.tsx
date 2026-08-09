@@ -127,9 +127,9 @@ export default function StudentResultsPage() {
   const failedCount = attempts.filter(a => a.is_passed === false).length;
   const totalAttempts = attempts.length;
   const passRate = totalAttempts > 0 ? Math.round((passedCount / totalAttempts) * 100) : 0;
-  const scores = attempts.filter(a => a.score !== null).map(a => a.score as number);
+  const scores = attempts.filter(a => a.score !== null).map(a => Number(a.score));
   const averageScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  const bestSubject = attempts.length > 0 ? attempts.reduce((best, curr) => (curr.score || 0) > (best.score || 0) ? curr : best, attempts[0]).exam_code || "-" : "-";
+  const bestSubject = attempts.length > 0 ? attempts.reduce((best, curr) => (Number(curr.score) || 0) > (Number(best.score) || 0) ? curr : best, attempts[0]).exam_code || "-" : "-";
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "theory", label: t('student.theory', 'Theory') },
