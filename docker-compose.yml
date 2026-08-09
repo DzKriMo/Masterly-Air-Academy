@@ -219,7 +219,7 @@ services:
         max-file: "3"
 
   mailserver:
-    image: docker.io/mailserver/docker-mailserver:latest
+    image: docker.io/mailserver/docker-mailserver:v15.1.0
     hostname: masterly-air-academy.dz
     env_file: ./mailserver.env
     ports:
@@ -261,6 +261,47 @@ services:
       - mailserver
     restart: unless-stopped
 
+  maildb:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: postfixadmin
+      POSTGRES_USER: postfixadmin
+      POSTGRES_PASSWORD: ${MAILDB_PASSWORD:?MAILDB_PASSWORD is required}
+    volumes:
+      - maildb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postfixadmin -d postfixadmin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - masterly
+
+  postfixadmin:
+    image: postfixadmin:apache
+    ports:
+      - "127.0.0.1:8091:80"
+    environment:
+      POSTFIXADMIN_DB_TYPE: pgsql
+      POSTFIXADMIN_DB_HOST: maildb
+      POSTFIXADMIN_DB_PORT: 5432
+      POSTFIXADMIN_DB_USER: postfixadmin
+      POSTFIXADMIN_DB_PASSWORD: ${MAILDB_PASSWORD:?MAILDB_PASSWORD is required}
+      POSTFIXADMIN_DB_NAME: postfixadmin
+      POSTFIXADMIN_SMTP_SERVER: mailserver
+      POSTFIXADMIN_SMTP_PORT: 25
+      POSTFIXADMIN_ENCRYPT: dovecot:SHA512-CRYPT
+      POSTFIXADMIN_SETUP_PASSWORD: ${POSTFIXADMIN_SETUP_HASH:?POSTFIXADMIN_SETUP_HASH is required}
+    volumes:
+      - ./docker-data/postfixadmin:/var/www/html
+    depends_on:
+      maildb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - masterly
+
 volumes:
   postgres_data:
   redis_data:
@@ -268,6 +309,7 @@ volumes:
   meilisearch_data:
   backup_data:
   media_data:
+  maildb_data:
 
 networks:
   masterly:

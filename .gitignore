@@ -28,6 +28,9 @@ node_modules/
 # Docker
 *.pid
 
+# Mail data / Postfixadmin config (secrets & mailboxes, never commit)
+docker-data/
+
 # IDE
 .vscode/
 .idea/
