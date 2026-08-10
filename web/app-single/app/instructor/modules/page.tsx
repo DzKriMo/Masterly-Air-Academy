@@ -33,6 +33,7 @@ interface Lesson {
   title: string;
   content: string;
   video_url?: string;
+  is_mandatory?: boolean;
 }
 
 interface Doc {
@@ -62,7 +63,7 @@ export default function ModulesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lessonFormModule, setLessonFormModule] = useState<string>("");
-  const [lessonForm, setLessonForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "" });
+  const [lessonForm, setLessonForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "", is_mandatory: false });
   const [savingLesson, setSavingLesson] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
@@ -87,7 +88,7 @@ export default function ModulesPage() {
 
   // Edit lesson
   const [editLesson, setEditLesson] = useState<Lesson | null>(null);
-  const [editForm, setEditForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "" });
+  const [editForm, setEditForm] = useState({ lesson_no: 1, title: "", content: "", video_url: "", is_mandatory: false });
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingEditVideo, setUploadingEditVideo] = useState(false);
 
@@ -127,12 +128,12 @@ export default function ModulesPage() {
   const toggleExpand = (id: string) => {
     setExpandedModule(expandedModule === id ? "" : id);
     setLessonFormModule("");
-    setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "" });
+    setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "", is_mandatory: false });
   };
 
   const openLessonForm = (moduleId: string, nextLessonNo: number) => {
     setLessonFormModule(moduleId);
-    setLessonForm({ lesson_no: nextLessonNo, title: "", content: "", video_url: "" });
+    setLessonForm({ lesson_no: nextLessonNo, title: "", content: "", video_url: "", is_mandatory: false });
   };
 
   const uploadLessonVideo = async (file: File, mode: "create" | "edit") => {
@@ -164,9 +165,10 @@ export default function ModulesPage() {
         title: lessonForm.title,
         content: lessonForm.content,
         video_url: lessonForm.video_url || undefined,
+        is_mandatory: lessonForm.is_mandatory,
       });
       setLessonFormModule("");
-      setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "" });
+      setLessonForm({ lesson_no: 1, title: "", content: "", video_url: "", is_mandatory: false });
       if (selectedSubject) fetchModules(selectedSubject);
     } catch (err: any) {
       console.error("Failed to create lesson:", err);
@@ -178,7 +180,7 @@ export default function ModulesPage() {
 
   const startEdit = (l: Lesson) => {
     setEditLesson(l);
-    setEditForm({ lesson_no: l.lesson_no, title: l.title || "", content: l.content || "", video_url: l.video_url || "" });
+    setEditForm({ lesson_no: l.lesson_no, title: l.title || "", content: l.content || "", video_url: l.video_url || "", is_mandatory: !!l.is_mandatory });
   };
 
   const handleEditLesson = async (e: React.FormEvent) => {
@@ -191,6 +193,7 @@ export default function ModulesPage() {
         title: editForm.title,
         content: editForm.content,
         video_url: editForm.video_url || undefined,
+        is_mandatory: editForm.is_mandatory,
       });
       setEditLesson(null);
       if (selectedSubject) fetchModules(selectedSubject);
@@ -406,9 +409,15 @@ export default function ModulesPage() {
                                               setUploadingEditVideo(true);
                                               uploadLessonVideo(file, "edit");
                                             }} />
-                                        </label>
+                                          </label>
                                       </div>
                                     </div>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                      <input type="checkbox" checked={editForm.is_mandatory}
+                                        onChange={e => setEditForm({ ...editForm, is_mandatory: e.target.checked })}
+                                        className="w-4 h-4 accent-gold-500" />
+                                      <span className="text-sm text-gray-300">{t("instructor.mandatoryVideo", "Mandatory video (progress tracked)")}</span>
+                                    </label>
                                     <div className="flex gap-2">
                                       <button type="submit" disabled={savingEdit}
                                         className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50">
@@ -425,6 +434,11 @@ export default function ModulesPage() {
                                     <div className="flex items-center justify-between">
                                       <div className="flex-1 min-w-0">
                                         <span className="text-sm text-white font-medium">{t("instructor.lessonLabel", "Lesson")} {l.lesson_no}: {l.title || t("instructor.untitled", "Untitled")}</span>
+                                        {l.is_mandatory && (
+                                          <span className="text-xs px-2 py-0.5 rounded bg-gold-500/10 text-gold-500 ml-2">
+                                            {t("instructor.mandatory", "Mandatory")}
+                                          </span>
+                                        )}
                                         <span className="text-xs text-gray-500 ml-2">{l.content ? `${l.content.length} ${t("instructor.chars", "chars")}` : t("instructor.noContent", "No content")}</span>
                                       </div>
                                       <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -499,9 +513,15 @@ export default function ModulesPage() {
                                       setUploadingVideo(true);
                                       uploadLessonVideo(file, "create");
                                     }} />
-                                </label>
+                                  </label>
                               </div>
                             </div>
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input type="checkbox" checked={lessonForm.is_mandatory}
+                                onChange={e => setLessonForm({ ...lessonForm, is_mandatory: e.target.checked })}
+                                className="w-4 h-4 accent-gold-500" />
+                              <span className="text-sm text-gray-300">{t("instructor.mandatoryVideo", "Mandatory video (progress tracked)")}</span>
+                            </label>
                             <div className="flex gap-2">
                               <button type="submit" disabled={savingLesson}
                                 className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 font-semibold rounded-lg text-sm transition-colors disabled:opacity-50">
