@@ -36,7 +36,19 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: seo.title, template: `%s | Masterly Air Academy` },
     description: seo.description,
     manifest: "/manifest.json",
-    icons: { icon: "/logo.png", apple: "/logo.png" },
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "48x48" },
+        { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+        { url: "/favicon-64x64.png", type: "image/png", sizes: "64x64" },
+        { url: "/icon-192x192.png", type: "image/png", sizes: "192x192" },
+        { url: "/icon-512x512.png", type: "image/png", sizes: "512x512" },
+      ],
+      apple: [
+        { url: "/icon-192x192.png" },
+        { url: "/icon-512x512.png" },
+      ],
+    },
     appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Masterly Air Academy" },
     other: { "mobile-web-app-capable": "yes" },
     keywords: seo.keywords.split(", "),
