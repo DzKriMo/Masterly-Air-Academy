@@ -181,7 +181,7 @@ export default function LandingPage() {
         }
         switch (key) {
           case "hero": return <StaticHero key={key} t={t} />;
-          case "programs": return <StaticPrograms key={key} t={t} />;
+          case "programs": return <StaticPrograms key={key} t={t} locale={locale} />;
           case "about": return <StaticAbout key={key} t={t} />;
           case "why_us": return <StaticWhyUs key={key} t={t} whyItems={whyItems} />;
           case "accreditations": return <StaticAccreds key={key} t={t} />;
@@ -247,7 +247,7 @@ function StaticHero({ t }: { t: (key: string, fallback?: string) => string }) {
   );
 }
 
-function StaticPrograms({ t }: { t: (key: string, fallback?: string) => string }) {
+function StaticPrograms({ t, locale }: { t: (key: string, fallback?: string) => string; locale: string }) {
   const totalSlides = programDetails.length;
   const EXTENDED = [...programDetails, ...programDetails, ...programDetails];
   const SWIPE_THRESHOLD = 50;
@@ -356,8 +356,8 @@ function StaticPrograms({ t }: { t: (key: string, fallback?: string) => string }
             <div className="overflow-hidden rounded-xl select-none">
               <div className="flex gap-3" style={{
                 transform: dragMeta.current.active
-                  ? `translateX(calc(-${rawSlide * (100 / cardsPerView)}% + ${dragOffset}px))`
-                  : `translateX(-${rawSlide * (100 / cardsPerView)}%)`,
+                  ? `translateX(calc(${locale === "ar" ? rawSlide * (100 / cardsPerView) : -rawSlide * (100 / cardsPerView)}% ${locale === "ar" ? "-" : "+"} ${dragOffset}px))`
+                  : `translateX(${locale === "ar" ? rawSlide * (100 / cardsPerView) : -rawSlide * (100 / cardsPerView)}%)`,
                 transition: dragMeta.current.active ? "none" : (transitionOn ? "transform 500ms ease-out" : "none"),
               }}
                 onTransitionEnd={handleTransitionEnd}

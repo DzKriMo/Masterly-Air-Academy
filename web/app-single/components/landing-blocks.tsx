@@ -376,6 +376,10 @@ function ProgramsBlock({ data, locale, theme }: { data: any; locale: string; the
 
   if (totalSlides === 0) return null;
 
+  const isRTL = locale === "ar";
+  const perSlide = 100 / cardsPerView;
+  const slideOffset = isRTL ? rawSlide * perSlide : -rawSlide * perSlide;
+
   return (
     <section className="bg-navy-800/30 border-y border-navy-800" style={blockBgStyle(theme)}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -388,8 +392,8 @@ function ProgramsBlock({ data, locale, theme }: { data: any; locale: string; the
             <div className="overflow-hidden rounded-xl select-none">
               <div className="flex gap-3" style={{
                 transform: dragMeta.current.active
-                  ? `translateX(calc(-${rawSlide * (100 / cardsPerView)}% + ${dragOffset}px))`
-                  : `translateX(-${rawSlide * (100 / cardsPerView)}%)`,
+                  ? `translateX(calc(${slideOffset}% ${isRTL ? "-" : "+"} ${dragOffset}px))`
+                  : `translateX(${slideOffset}%)`,
                 transition: dragMeta.current.active ? "none" : (transitionOn ? "transform 500ms ease-out" : "none"),
               }}
                 onTransitionEnd={handleTransitionEnd}
