@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import serializers
 
 from .models import LandingSection, LandingSectionVersion, LandingMedia
@@ -13,15 +15,16 @@ class LandingSectionSerializer(serializers.ModelSerializer):
     """Management serializer — exposes draft content and publish controls."""
     published_content = serializers.JSONField(read_only=True)
     updated_by_name = serializers.SerializerMethodField()
+    has_pending_changes = serializers.SerializerMethodField()
 
     class Meta:
         model = LandingSection
         fields = [
             'id', 'key', 'title', 'description', 'content', 'theme', 'status',
-            'published_version', 'published_content', 'sort_order',
-            'updated_by', 'updated_by_name', 'created_at', 'updated_at',
+            'published_version', 'published_content', 'has_pending_changes',
+            'sort_order', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['status', 'published_version', 'published_content', 'updated_by']
+        read_only_fields = ['status', 'published_version', 'published_content', 'has_pending_changes', 'updated_by']
 
     def validate_theme(self, value):
         if value is None:
@@ -40,6 +43,16 @@ class LandingSectionSerializer(serializers.ModelSerializer):
         if obj.updated_by:
             return obj.updated_by.get_full_name() or obj.updated_by.email
         return None
+
+    def get_has_pending_changes(self, obj):
+        """True when the working draft differs from the published snapshot
+        (or the section has never been published), i.e. there is something a
+        Publish action would push live."""
+        if not obj.published_version:
+            return True
+        draft = json.dumps(obj.content or [], sort_keys=True, default=str)
+        live = json.dumps(obj.published_content or [], sort_keys=True, default=str)
+        return draft != live
 
     def validate_content(self, value):
         if value is None:

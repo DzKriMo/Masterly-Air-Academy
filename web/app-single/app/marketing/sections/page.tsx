@@ -21,6 +21,7 @@ interface SectionRow {
   description?: string;
   status: string;
   published_version: number;
+  has_pending_changes?: boolean;
   updated_at?: string;
   updated_by_name?: string;
   sort_order?: number;
@@ -123,6 +124,9 @@ export default function MarketingSections() {
       render: (s) => (
         <span className={`text-xs px-2 py-0.5 rounded ${s.status === "published" ? "bg-green-500/10 text-green-400" : "bg-gold-500/10 text-gold-500"}`}>
           {s.status === "published" ? t("marketing.published") : t("marketing.draft")}
+          {s.status === "published" && s.has_pending_changes && (
+            <span className="ml-1.5 text-amber-400">· {t("marketing.hasChanges")}</span>
+          )}
         </span>
       ),
     },
@@ -154,7 +158,7 @@ export default function MarketingSections() {
           <button onClick={() => router.push(`/marketing/sections/${s.id}`)} className="px-2 py-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/20" title={t("marketing.editSection")}>
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          {s.status !== "published" && (
+          {(s.status !== "published" || s.has_pending_changes) && (
             <button disabled={busy === s.id} onClick={() => run(s.id, () => api.post(`/landing-sections/${s.id}/publish/`), t("marketing.published"))} className="px-2 py-1 text-xs bg-green-500/10 text-green-400 border border-green-500/30 rounded hover:bg-green-500/20 disabled:opacity-50" title={t("marketing.publish")}>
               <Send className="w-3.5 h-3.5" />
             </button>

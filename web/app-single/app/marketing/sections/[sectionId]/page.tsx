@@ -36,6 +36,7 @@ export default function MarketingSectionEditor() {
   const [theme, setTheme] = useState<LandingTheme>({});
   const [status, setStatus] = useState<string>("draft");
   const [version, setVersion] = useState(0);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [publishedBlocks, setPublishedBlocks] = useState<Block[] | null>(null);
   const [media, setMedia] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
@@ -63,6 +64,7 @@ export default function MarketingSectionEditor() {
       setTheme(section.theme && typeof section.theme === "object" ? section.theme : {});
       setStatus(section.status || "draft");
       setVersion(section.published_version || 0);
+      setHasPendingChanges(!!section.has_pending_changes);
       setPublishedBlocks(section.published_content ? section.published_content : null);
       setMedia(unwrapResults(mediaRes));
       setLoading(false);
@@ -82,6 +84,7 @@ export default function MarketingSectionEditor() {
         setSavedAt(new Date().toLocaleTimeString());
         toast.showToast("success", t("marketing.save"));
         if (section?.status) setStatus(section.status);
+        if (typeof section?.has_pending_changes === "boolean") setHasPendingChanges(section.has_pending_changes);
       })
       .catch((e: any) => toast.showToast("error", e?.message || "Save failed"))
       .finally(() => setSaving(false));
@@ -101,10 +104,15 @@ export default function MarketingSectionEditor() {
   const publish = async () => {
     setSaving(true);
     try {
+      // Flush any pending autosave first so the snapshot includes the latest edits.
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      dirtyRef.current = false;
+      await api.patch(`/landing-sections/${sectionId}/`, { title, description, content: blocks, theme });
       const section: any = await api.post(`/landing-sections/${sectionId}/publish/`);
       setStatus(section.status);
       setVersion(section.published_version);
       setPublishedBlocks(Array.isArray(section.published_content) ? section.published_content : null);
+      setHasPendingChanges(!!section.has_pending_changes);
       toast.showToast("success", t("marketing.published"));
     } catch (e: any) {
       toast.showToast("error", e?.message || "Publish failed");
@@ -118,6 +126,7 @@ export default function MarketingSectionEditor() {
     try {
       const section: any = await api.post(`/landing-sections/${sectionId}/rollback/`);
       setBlocks(Array.isArray(section.content) ? section.content : []);
+      if (typeof section?.has_pending_changes === "boolean") setHasPendingChanges(section.has_pending_changes);
       toast.showToast("success", t("marketing.rollback"));
     } catch (e: any) {
       toast.showToast("error", e?.message || "Rollback failed");
@@ -157,6 +166,7 @@ export default function MarketingSectionEditor() {
       const section: any = await api.post(`/landing-sections/${sectionId}/restore/`, { version: restoreTarget.version });
       setBlocks(Array.isArray(section.content) ? section.content : []);
       setTheme(section.theme && typeof section.theme === "object" ? section.theme : {});
+      if (typeof section?.has_pending_changes === "boolean") setHasPendingChanges(section.has_pending_changes);
       setRestoreTarget(null);
       setShowVersions(false);
       toast.showToast("success", t("marketing.restored"));
@@ -191,13 +201,18 @@ export default function MarketingSectionEditor() {
             <span className={`text-xs px-2 py-1 rounded ${status === "published" ? "bg-green-500/10 text-green-400" : "bg-gold-500/10 text-gold-500"}`}>
               {status === "published" ? t("marketing.published") : t("marketing.draft")}{status === "published" ? ` · v${version}` : ""}
             </span>
+            {status === "published" && hasPendingChanges && (
+              <span className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-400">
+                {t("marketing.draft")} · {t("marketing.hasChanges")}
+              </span>
+            )}
             <button onClick={() => setShowPreview(!showPreview)} className={`flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors ${showPreview ? "border-gold-500/40 text-gold-500" : "border-gray-600 text-white hover:border-gold-500 hover:text-gold-500"}`}>
               <Eye className="w-4 h-4" /> {t("marketing.livePreview")}
             </button>
             <button onClick={persist} disabled={saving} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 disabled:opacity-50">
               <Save className="w-4 h-4" /> {t("marketing.save")}
             </button>
-            {status !== "published" && (
+            {!hasPendingChanges && status === "published" ? null : (
               <button onClick={publish} disabled={saving} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/20 disabled:opacity-50">
                 <Send className="w-4 h-4" /> {t("marketing.publish")}
               </button>

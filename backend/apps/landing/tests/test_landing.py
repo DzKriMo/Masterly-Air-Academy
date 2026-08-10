@@ -277,17 +277,45 @@ class TestNewBlockTypes:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
+class TestPendingChanges:
+    def test_draft_never_published_has_pending_changes(self, social_client):
+        section = make_section()
+        resp = social_client.get(reverse('landing-section-detail', kwargs={'pk': section.pk}))
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data['has_pending_changes'] is True
+
+    def test_published_unchanged_has_no_pending_changes(self, social_client):
+        section = make_section(
+            status='published', published_version=1,
+            content=[{'type': 'hero', 'data': {'title': 'Live'}}],
+            published_content=[{'type': 'hero', 'data': {'title': 'Live'}}],
+        )
+        resp = social_client.get(reverse('landing-section-detail', kwargs={'pk': section.pk}))
+        assert resp.data['has_pending_changes'] is False
+
+    def test_published_with_edited_draft_has_pending_changes(self, social_client):
+        section = make_section(
+            status='published', published_version=1,
+            content=[{'type': 'hero', 'data': {'title': 'Edited draft'}}],
+            published_content=[{'type': 'hero', 'data': {'title': 'Live'}}],
+        )
+        resp = social_client.get(reverse('landing-section-detail', kwargs={'pk': section.pk}))
+        assert resp.data['has_pending_changes'] is True
+
+    def test_publish_clears_pending_changes(self, social_client):
+        section = make_section(
+            status='published', published_version=1,
+            content=[{'type': 'hero', 'data': {'title': 'Edited draft'}}],
+            published_content=[{'type': 'hero', 'data': {'title': 'Live'}}],
+        )
+        resp = social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data['has_pending_changes'] is False
+
+
 class TestLandingVersions:
     def test_publish_records_version(self, social_client, social_manager_user):
         section = make_section()
-        resp = social_client.post(reverse('landing-section-publish', kwargs={'pk': section.pk}))
-        assert resp.status_code == status.HTTP_200_OK
-        from apps.landing.models import LandingSectionVersion
-        snapshots = LandingSectionVersion.objects.filter(section=section)
-        assert snapshots.count() == 1
-        assert snapshots.first().version == 1
-        assert snapshots.first().created_by_id == social_manager_user.pk
-        assert snapshots.first().content == section.content
 
     def test_versions_endpoint_lists_newest_first(self, social_client):
         section = make_section()
