@@ -55,7 +55,10 @@ export default function CGIDashboard() {
   const passed = attempts.filter((a: any) => a.is_passed === true).length;
   const total = attempts.length;
   const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-  const avgScore = total > 0 ? Math.round(attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / total) : 0;
+  const scores = attempts
+    .map((a: any) => Number(a.score))
+    .filter((n: number) => Number.isFinite(n));
+  const avgScore = scores.length > 0 ? Math.round(scores.reduce((s: number, n: number) => s + n, 0) / scores.length) : 0;
 
   const statusData = Object.entries(
     courses.reduce((acc: any, c: any) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {})
@@ -82,7 +85,7 @@ export default function CGIDashboard() {
 
             {/* Secondary stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <Stat title={t('instructor.cgi.avgScore', 'Average Score')} value={total > 0 ? `${avgScore}%` : "—"} />
+              <Stat title={t('instructor.cgi.avgScore', 'Average Score')} value={scores.length > 0 ? `${avgScore}%` : "—"} />
               <Stat title={t('instructor.cgi.examsTaken', 'Exams Taken')} value={total} />
             </div>
 
