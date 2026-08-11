@@ -73,17 +73,18 @@ class MedicalCertificateSerializer(serializers.ModelSerializer):
 
 class FlightInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
-    email = serializers.CharField(source='user.email', read_only=True)
+    user_id = serializers.CharField(source='user.id', read_only=True)
+    email = serializers.EmailField(source='user.email', required=False, allow_null=True)
     student_count = serializers.SerializerMethodField()
 
     class Meta:
         model = FlightInstructor
         fields = [
-            'id', 'name', 'email', 'first_name', 'last_name',
+            'id', 'user_id', 'name', 'email', 'first_name', 'last_name',
             'license_number', 'qualifications', 'status',
             'total_flight_hours', 'instruction_hours', 'student_count',
         ]
-        read_only_fields = ['id', 'name', 'email', 'student_count']
+        read_only_fields = ['id', 'user_id', 'name', 'student_count']
 
     def get_name(self, obj):
         return f'{obj.first_name} {obj.last_name}'
@@ -91,9 +92,18 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
     def get_student_count(self, obj):
         return obj.assigned_students.count()
 
+    def update(self, instance, validated_data):
+        email = validated_data.pop('email', None)
+        instance = super().update(instance, validated_data)
+        if email is not None and instance.user_id:
+            instance.user.email = email
+            instance.user.save(update_fields=['email'])
+        return instance
+
 
 class GroundInstructorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    user_id = serializers.CharField(source='user.id', read_only=True)
     email = serializers.EmailField(source='user.email', required=False, allow_null=True)
     phone = serializers.SerializerMethodField()
     license_number = serializers.SerializerMethodField()
@@ -104,13 +114,13 @@ class GroundInstructorSerializer(serializers.ModelSerializer):
     class Meta:
         model = GroundInstructor
         fields = [
-            'id', 'name', 'email', 'phone', 'first_name', 'last_name',
+            'id', 'user_id', 'name', 'email', 'phone', 'first_name', 'last_name',
             'license_number', 'qualifications', 'status',
             'total_flight_hours', 'instruction_hours', 'student_count',
             'medical_expiry', 'hire_date', 'authorized_subjects',
         ]
         read_only_fields = [
-            'id', 'name', 'phone', 'license_number',
+            'id', 'user_id', 'name', 'phone', 'license_number',
             'total_flight_hours', 'instruction_hours', 'student_count',
         ]
 

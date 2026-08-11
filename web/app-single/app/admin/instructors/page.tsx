@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -20,6 +20,7 @@ import { StatsCard } from "@/components/stats-card";
 
 interface Instructor {
   id: string;
+  user_id: string;
   name: string;
   email: string;
   license_number?: string;
@@ -91,6 +92,11 @@ export default function AdminInstructorsPage() {
   const [editForm, setEditForm] = useState<EditForm>(INIT_EDIT);
   const [editError, setEditError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Instructor | null>(null);
+
+  // ── Reset password state ──
+  const [resetPwdTarget, setResetPwdTarget] = useState<Instructor | null>(null);
+  const [resetPwdValue, setResetPwdValue] = useState("");
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
 
   // ── Filter state ──
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
@@ -189,6 +195,7 @@ export default function AdminInstructorsPage() {
     if (activeTab === "ground") {
       payload.email = editForm.email;
     } else {
+      payload.email = editForm.email;
       payload.license_number = editForm.license_number;
       payload.qualifications = editForm.qualifications.split(",").map((s: string) => s.trim()).filter(Boolean);
       payload.total_flight_hours = parseFloat(editForm.total_flight_hours) || 0;
@@ -196,6 +203,22 @@ export default function AdminInstructorsPage() {
     }
     updateMutation.mutate({ id: editInstructor.id, payload });
   };
+
+  const handleResetPassword = useCallback(async () => {
+    if (!resetPwdTarget) return;
+    if (resetPwdValue.length < 8) { showToast("error", "Password must be at least 8 characters"); return; }
+    setResetPwdLoading(true);
+    try {
+      await api.post(`/users/${resetPwdTarget.user_id}/reset_password/`, { password: resetPwdValue });
+      showToast("success", "Password reset successfully");
+      setResetPwdTarget(null);
+      setResetPwdValue("");
+    } catch (err: any) {
+      showToast("error", err?.data?.error || err?.message || "Failed to reset password");
+    } finally {
+      setResetPwdLoading(false);
+    }
+  }, [resetPwdTarget, resetPwdValue, showToast]);
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -283,6 +306,12 @@ export default function AdminInstructorsPage() {
               className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 font-medium transition-colors"
             >
               {t("common.delete", "Delete")}
+            </button>
+            <button
+              onClick={() => { setResetPwdTarget(i as Instructor); setResetPwdValue(""); }}
+              className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 font-medium transition-colors"
+            >
+              Reset Pwd
             </button>
           </div>
         ),
@@ -640,6 +669,44 @@ export default function AdminInstructorsPage() {
           </div>
         </div>
       )}
+
+      {/* Reset Password Dialog */}
+      <ModalForm
+        open={!!resetPwdTarget}
+        onClose={() => { setResetPwdTarget(null); setResetPwdValue(""); }}
+        title={`Reset Password: ${resetPwdTarget?.name || ""}`}
+        footer={
+          <>
+            <button
+              onClick={() => { setResetPwdTarget(null); setResetPwdValue(""); }}
+              className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleResetPassword}
+              disabled={resetPwdLoading || resetPwdValue.length < 8}
+              className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-600 disabled:opacity-50"
+            >
+              {resetPwdLoading ? "Resetting..." : "Reset Password"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">New Password</label>
+            <input
+              type="password"
+              value={resetPwdValue}
+              onChange={(e) => setResetPwdValue(e.target.value)}
+              placeholder="Min. 8 characters"
+              className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
+          </div>
+        </div>
+      </ModalForm>
     </div>
   );
 }

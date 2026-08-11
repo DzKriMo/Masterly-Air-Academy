@@ -22,6 +22,7 @@ import { DetailField } from "@/components/detail-field";
 
 interface Student {
   id: string;
+  user_id: string;
   student_number: string;
   first_name: string;
   last_name: string;
@@ -86,6 +87,11 @@ export default function AdminStudentsPage() {
   const [confirmAction, setConfirmAction] = useState<{ student: Student; action: "suspend" | "reactivate" | "archive" } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // ── Reset password state ──
+  const [resetPwdTarget, setResetPwdTarget] = useState<Student | null>(null);
+  const [resetPwdValue, setResetPwdValue] = useState("");
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
+
   // ── Edit modal state ──
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState({
@@ -126,6 +132,22 @@ export default function AdminStudentsPage() {
       setConfirmAction(null);
     }
   }, [confirmAction, showToast]);
+
+  const handleResetPassword = useCallback(async () => {
+    if (!resetPwdTarget) return;
+    if (resetPwdValue.length < 8) { showToast("error", "Password must be at least 8 characters"); return; }
+    setResetPwdLoading(true);
+    try {
+      await api.post(`/users/${resetPwdTarget.user_id}/reset_password/`, { password: resetPwdValue });
+      showToast("success", "Password reset successfully");
+      setResetPwdTarget(null);
+      setResetPwdValue("");
+    } catch (err: any) {
+      showToast("error", err?.data?.error || err?.message || "Failed to reset password");
+    } finally {
+      setResetPwdLoading(false);
+    }
+  }, [resetPwdTarget, resetPwdValue, showToast]);
 
   // ── Auth guard ──
 
@@ -334,6 +356,12 @@ export default function AdminStudentsPage() {
                 Archive
               </button>
             )}
+            <button
+              onClick={() => { setResetPwdTarget(s); setResetPwdValue(""); }}
+              className="px-2 py-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-md hover:bg-blue-500/20 transition-colors"
+            >
+              Reset Pwd
+            </button>
           </div>
         ),
       },
@@ -695,6 +723,44 @@ export default function AdminStudentsPage() {
           destructive={confirmAction?.action === "suspend" || confirmAction?.action === "archive"}
           loading={actionLoading}
         />
+
+        {/* Reset Password Dialog */}
+        <ModalForm
+          open={!!resetPwdTarget}
+          onClose={() => { setResetPwdTarget(null); setResetPwdValue(""); }}
+          title={`Reset Password: ${resetPwdTarget?.full_name || ""}`}
+          footer={
+            <>
+              <button
+                onClick={() => { setResetPwdTarget(null); setResetPwdValue(""); }}
+                className="px-4 py-2 text-sm text-gray-400 border border-navy-700 rounded-lg hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={resetPwdLoading || resetPwdValue.length < 8}
+                className="px-4 py-2 text-sm bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-600 disabled:opacity-50"
+              >
+                {resetPwdLoading ? "Resetting..." : "Reset Password"}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">New Password</label>
+              <input
+                type="password"
+                value={resetPwdValue}
+                onChange={(e) => setResetPwdValue(e.target.value)}
+                placeholder="Min. 8 characters"
+                className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
+            </div>
+          </div>
+        </ModalForm>
       </main>
     </div>
   );
