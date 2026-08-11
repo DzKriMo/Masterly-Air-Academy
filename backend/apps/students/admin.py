@@ -3,8 +3,33 @@ from unfold.admin import ModelAdmin
 from .models import Student, MedicalCertificate, GroundInstructor, FlightInstructor, AdminProfile, Promotion
 
 
+class TrainingAdminMixin:
+    def is_training_admin(self, request):
+        return request.user.role == 'training_admin'
+
+    def has_view_permission(self, request, obj=None):
+        if self.is_training_admin(request):
+            return True
+        return super().has_view_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if self.is_training_admin(request):
+            return True
+        return super().has_change_permission(request, obj)
+
+    def has_add_permission(self, request):
+        if self.is_training_admin(request):
+            return True
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        if self.is_training_admin(request):
+            return True
+        return super().has_delete_permission(request, obj)
+
+
 @admin.register(Promotion)
-class PromotionAdmin(ModelAdmin):
+class PromotionAdmin(TrainingAdminMixin, ModelAdmin):
     list_display = ['code', 'name', 'program', 'status', 'start_date', 'end_date', 'student_count']
     list_filter = ['program', 'status']
     search_fields = ['code', 'name']
@@ -23,7 +48,7 @@ class PromotionAdmin(ModelAdmin):
 
 
 @admin.register(Student)
-class StudentAdmin(ModelAdmin):
+class StudentAdmin(TrainingAdminMixin, ModelAdmin):
     list_display = ['student_number', 'first_name', 'last_name', 'program', 'promotion', 'status', 'enrollment_date']
     list_filter = ['program', 'status', 'promotion']
     search_fields = ['first_name', 'last_name', 'student_number']
@@ -55,7 +80,7 @@ class MedicalCertificateAdmin(ModelAdmin):
 
 
 @admin.register(GroundInstructor)
-class GroundInstructorAdmin(ModelAdmin):
+class GroundInstructorAdmin(TrainingAdminMixin, ModelAdmin):
     list_display = ['first_name', 'last_name', 'status', 'hire_date']
     list_filter = ['status']
     search_fields = ['first_name', 'last_name']
@@ -74,7 +99,7 @@ class GroundInstructorAdmin(ModelAdmin):
 
 
 @admin.register(FlightInstructor)
-class FlightInstructorAdmin(ModelAdmin):
+class FlightInstructorAdmin(TrainingAdminMixin, ModelAdmin):
     list_display = ['first_name', 'last_name', 'license_number', 'total_flight_hours', 'instruction_hours', 'status']
     list_filter = ['status']
     search_fields = ['first_name', 'last_name', 'license_number']

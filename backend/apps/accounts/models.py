@@ -57,6 +57,19 @@ class User(AbstractUser):
             models.Index(fields=['email']),
         ]
 
+    def save(self, *args, **kwargs):
+        STAFF_ROLES = (
+            UserRole.TRAINING_ADMIN,
+            UserRole.SYSTEM_ADMIN,
+            UserRole.ADMIN_RESPONSIBLE,
+            UserRole.ADMIN_AGENT,
+            UserRole.DIRECTOR_GENERAL,
+            UserRole.HEAD_OF_TRAINING,
+        )
+        if self.role in STAFF_ROLES and not self.is_staff:
+            self.is_staff = True
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.email
 
