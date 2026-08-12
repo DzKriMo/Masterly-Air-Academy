@@ -564,6 +564,15 @@ export default function AdminInstructorsPage() {
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="block text-sm text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
                 <label className="block text-sm text-gray-400 mb-1">License #</label>
                 <input
                   type="text"

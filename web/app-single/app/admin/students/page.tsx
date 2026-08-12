@@ -95,6 +95,13 @@ export default function AdminStudentsPage() {
   // ── Edit modal state ──
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState({
+    email: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    address: "",
+    date_of_birth: "",
+    nationality: "",
     promotion: "",
     main_instructor: "",
     status: "",
@@ -213,6 +220,13 @@ export default function AdminStudentsPage() {
 
   const openEdit = (student: Student) => {
     setEditForm({
+      email: student.email || "",
+      first_name: student.first_name || "",
+      last_name: student.last_name || "",
+      phone: student.phone || "",
+      address: student.address || "",
+      date_of_birth: student.date_of_birth || "",
+      nationality: student.nationality || "",
       promotion: student.promotion || "",
       main_instructor: student.main_instructor || "",
       status: student.status || "active",
@@ -224,6 +238,13 @@ export default function AdminStudentsPage() {
   const saveEdit = () => {
     if (!editStudent) return;
     const payload: Record<string, unknown> = {
+      email: editForm.email || null,
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+      phone: editForm.phone,
+      address: editForm.address,
+      date_of_birth: editForm.date_of_birth || null,
+      nationality: editForm.nationality,
       promotion: editForm.promotion || null,
       main_instructor: editForm.main_instructor || null,
       status: editForm.status || "active",
@@ -671,8 +692,74 @@ export default function AdminStudentsPage() {
             {editError && (
               <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">{editError}</div>
             )}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Promotion</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Date of Birth</label>
+                <input
+                  type="date"
+                  value={editForm.date_of_birth}
+                  onChange={(e) => setEditForm((f) => ({ ...f, date_of_birth: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Nationality</label>
+                <input
+                  type="text"
+                  value={editForm.nationality}
+                  onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Promotion</label>
               <select
                 value={editForm.promotion}
                 onChange={(e) => setEditForm((f) => ({ ...f, promotion: e.target.value }))}
@@ -708,6 +795,7 @@ export default function AdminStudentsPage() {
                   <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
+            </div>
             </div>
           </div>
         </ModalForm>

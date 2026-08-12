@@ -17,7 +17,7 @@ class PromotionSerializer(serializers.ModelSerializer):
 class StudentListSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     user_id = serializers.CharField(source='user.id', read_only=True)
-    email = serializers.CharField(source='user.email', read_only=True)
+    email = serializers.EmailField(source='user.email', required=False, allow_null=True)
     instructor_name = serializers.SerializerMethodField()
     medical_certificate = serializers.SerializerMethodField()
     medical_expiry = serializers.SerializerMethodField()
@@ -63,6 +63,14 @@ class StudentListSerializer(serializers.ModelSerializer):
 
     def get_notes(self, obj):
         return ''
+
+    def update(self, instance, validated_data):
+        email = validated_data.pop('email', None)
+        instance = super().update(instance, validated_data)
+        if email is not None and instance.user_id:
+            instance.user.email = email
+            instance.user.save(update_fields=['email'])
+        return instance
 
 
 class MedicalCertificateSerializer(serializers.ModelSerializer):
