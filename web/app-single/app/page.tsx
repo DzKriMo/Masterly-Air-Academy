@@ -83,6 +83,10 @@ export default function LandingPage() {
 
   const portalPath = isAuthenticated && user ? getDefaultPortal(user.role) : "/student/login";
 
+  const studentRoles = ["student", "candidate", "graduate"];
+  const isStudent = isAuthenticated && !!user && studentRoles.includes(user.role);
+  const isStaff = isAuthenticated && !!user && !studentRoles.includes(user.role);
+
   useEffect(() => {
     let cancelled = false;
     const fetchLanding = () => {
@@ -203,8 +207,20 @@ export default function LandingPage() {
       <section id="access" className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20">
         <div className="text-center mb-10"><h2 className="text-xl font-bold text-white mb-2">{t("portal_access")}</h2><p className="text-sm text-gray-500">{t("portal_access_desc")}</p></div>
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto">
-          <Link href="/student/login" className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
-          <Link href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
+          {isStudent ? (
+            <Link href={portalPath} className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
+          ) : isStaff ? (
+            <span className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-500 font-medium rounded-lg text-sm cursor-not-allowed opacity-50">{t("student_portal")}</span>
+          ) : (
+            <Link href="/student/login" className="px-6 py-2.5 bg-gold-500/10 border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-navy-900 font-medium rounded-lg transition-all text-sm">{t("student_portal")}</Link>
+          )}
+          {isStaff ? (
+            <Link href={portalPath} className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
+          ) : isStudent ? (
+            <span className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-500 font-medium rounded-lg text-sm cursor-not-allowed opacity-50">{t("staff_access")}</span>
+          ) : (
+            <Link href="/login" className="px-6 py-2.5 bg-navy-800 border border-navy-700 text-gray-400 hover:border-gray-400 hover:text-white font-medium rounded-lg transition-all text-sm">{t("staff_access")}</Link>
+          )}
         </div>
       </section>
 
