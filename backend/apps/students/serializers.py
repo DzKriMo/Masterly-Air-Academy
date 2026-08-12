@@ -65,7 +65,8 @@ class StudentListSerializer(serializers.ModelSerializer):
         return ''
 
     def update(self, instance, validated_data):
-        email = validated_data.pop('email', None)
+        user_data = validated_data.pop('user', {})
+        email = validated_data.pop('email', None) or user_data.get('email')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -103,7 +104,8 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
         return obj.assigned_students.count()
 
     def update(self, instance, validated_data):
-        email = validated_data.pop('email', None)
+        user_data = validated_data.pop('user', {})
+        email = validated_data.pop('email', None) or user_data.get('email')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -155,7 +157,8 @@ class GroundInstructorSerializer(serializers.ModelSerializer):
         return 0
 
     def update(self, instance, validated_data):
-        email = validated_data.pop('email', None)
+        user_data = validated_data.pop('user', {})
+        email = validated_data.pop('email', None) or user_data.get('email')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
