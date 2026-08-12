@@ -66,7 +66,9 @@ class StudentListSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         email = validated_data.pop('email', None)
-        instance = super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
         if email is not None and instance.user_id:
             instance.user.email = email
             instance.user.save(update_fields=['email'])
@@ -102,7 +104,9 @@ class FlightInstructorSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         email = validated_data.pop('email', None)
-        instance = super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
         if email is not None and instance.user_id:
             instance.user.email = email
             instance.user.save(update_fields=['email'])
@@ -152,7 +156,9 @@ class GroundInstructorSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         email = validated_data.pop('email', None)
-        instance = super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
         if email is not None and instance.user_id:
             instance.user.email = email
             instance.user.save(update_fields=['email'])
