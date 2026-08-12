@@ -39,10 +39,10 @@ interface Student {
   main_instructor?: string;
   instructor_name: string;
   nationality: string;
-  medical_certificate: string;
-  medical_expiry: string;
   emergency_contact: string;
   emergency_phone: string;
+  medical_certificate: string;
+  medical_expiry: string;
   notes: string;
 }
 
@@ -102,6 +102,8 @@ export default function AdminStudentsPage() {
     address: "",
     date_of_birth: "",
     nationality: "",
+    emergency_contact: "",
+    emergency_phone: "",
     promotion: "",
     main_instructor: "",
     status: "",
@@ -227,6 +229,8 @@ export default function AdminStudentsPage() {
       address: student.address || "",
       date_of_birth: student.date_of_birth || "",
       nationality: student.nationality || "",
+      emergency_contact: student.emergency_contact || "",
+      emergency_phone: student.emergency_phone || "",
       promotion: student.promotion || "",
       main_instructor: student.main_instructor || "",
       status: student.status || "active",
@@ -245,6 +249,8 @@ export default function AdminStudentsPage() {
       address: editForm.address,
       date_of_birth: editForm.date_of_birth || null,
       nationality: editForm.nationality,
+      emergency_contact: editForm.emergency_contact,
+      emergency_phone: editForm.emergency_phone,
       promotion: editForm.promotion || null,
       main_instructor: editForm.main_instructor || null,
       status: editForm.status || "active",
@@ -753,6 +759,24 @@ export default function AdminStudentsPage() {
                   type="text"
                   value={editForm.nationality}
                   onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Emergency Contact</label>
+                <input
+                  type="text"
+                  value={editForm.emergency_contact}
+                  onChange={(e) => setEditForm((f) => ({ ...f, emergency_contact: e.target.value }))}
+                  className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Emergency Phone</label>
+                <input
+                  type="tel"
+                  value={editForm.emergency_phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, emergency_phone: e.target.value }))}
                   className="w-full px-3 py-2 bg-navy-900 border border-navy-700 rounded-lg text-white focus:border-gold-500 focus:outline-none"
                 />
               </div>

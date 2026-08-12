@@ -21,8 +21,6 @@ class StudentListSerializer(serializers.ModelSerializer):
     instructor_name = serializers.SerializerMethodField()
     medical_certificate = serializers.SerializerMethodField()
     medical_expiry = serializers.SerializerMethodField()
-    emergency_contact = serializers.SerializerMethodField()
-    emergency_phone = serializers.SerializerMethodField()
     notes = serializers.SerializerMethodField()
     promotion_code = serializers.CharField(read_only=True)
     main_instructor = serializers.PrimaryKeyRelatedField(queryset=FlightInstructor.objects.all(), required=False, allow_null=True)
@@ -54,12 +52,6 @@ class StudentListSerializer(serializers.ModelSerializer):
     def get_medical_expiry(self, obj):
         cert = obj.medical_certificates.order_by('-expiry_date').first()
         return str(cert.expiry_date) if cert else None
-
-    def get_emergency_contact(self, obj):
-        return ''
-
-    def get_emergency_phone(self, obj):
-        return ''
 
     def get_notes(self, obj):
         return ''
