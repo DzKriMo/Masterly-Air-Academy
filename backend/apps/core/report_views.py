@@ -230,7 +230,11 @@ def verify_certificate(request):
     })
 
 
-verify_certificate.throttle_scope = 'certificate_verify'
+# ScopedRateThrottle reads `throttle_scope` off the *view class*, and
+# `api_view` exposes that class as `.cls`. Setting the attribute on the
+# returned function has no effect, which silently leaves the endpoint
+# unthrottled.
+verify_certificate.cls.throttle_scope = 'certificate_verify'
 
 
 @api_view(['GET'])
