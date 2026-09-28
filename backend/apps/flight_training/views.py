@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.http import HttpResponse
 from django.utils.html import escape
 from apps.accounts.permissions import HasRolePermission
+from apps.core.client_ip import get_client_ip
 
 from .models import (
     Aircraft, FlightLesson, FlightPreparation, FlightStatus,
@@ -235,7 +236,7 @@ class FlightLessonViewSet(viewsets.ModelViewSet):
             entity='FlightLesson',
             entity_id=lesson.id,
             new_values={'pedagogical_note': lesson.pedagogical_note, 'solo_authorized': True},
-            ip_address=request.META.get('REMOTE_ADDR', ''),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
 

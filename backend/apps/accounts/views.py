@@ -21,6 +21,7 @@ from apps.accounts.permissions import HasRolePermission
 from apps.accounts.cookie_auth import (
     REFRESH_COOKIE, set_auth_cookies, delete_auth_cookies,
 )
+from apps.core.client_ip import get_client_ip
 from apps.core.models import AuditLog
 
 User = get_user_model()
@@ -190,7 +191,7 @@ class LogoutView(views.APIView):
             entity='User',
             entity_id=user.id,
             new_values={'email': user.email},
-            ip_address=request.META.get('REMOTE_ADDR', ''),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
 

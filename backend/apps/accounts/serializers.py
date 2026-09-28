@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from apps.core.client_ip import get_client_ip
 from apps.core.models import AuditLog
 
 User = get_user_model()
@@ -68,19 +69,20 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user'] = user_data
 
         # Update last login
+        request = self.context.get('request')
+        client_ip = get_client_ip(request) if request is not None else ''
         user.last_login_at = timezone.now()
-        user.last_login_ip = self.context.get('request').META.get('REMOTE_ADDR', '')
+        user.last_login_ip = client_ip
         user.save(update_fields=['last_login_at', 'last_login_ip'])
 
         # Audit log
-        request = self.context.get('request')
         AuditLog.objects.create(
             user=user,
             action='login',
             entity='User',
             entity_id=user.id,
             new_values={'email': user.email},
-            ip_address=request.META.get('REMOTE_ADDR', '') if request else '',
+            ip_address=client_ip,
             user_agent=(request.META.get('HTTP_USER_AGENT', '')[:500]
                         if request else ''),
         )

@@ -59,8 +59,11 @@ def get_request_info():
     """Extract IP and user-agent from the current request (thread-local, not frame inspection)."""
     request = _get_current_request()
     if request and hasattr(request, 'META'):
+        from apps.core.client_ip import get_client_ip
         return {
-            'ip_address': request.META.get('REMOTE_ADDR', ''),
+            # REMOTE_ADDR here is the nginx container's own address, so it has to
+            # be resolved through the proxy chain to get the real client IP.
+            'ip_address': get_client_ip(request),
             'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500],
         }
     return {'ip_address': '', 'user_agent': ''}

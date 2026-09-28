@@ -59,6 +59,23 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# ── Reverse-proxy trust ──────────────────────────────────
+# The app is only ever reached through the host nginx -> container nginx chain,
+# so REMOTE_ADDR is the container's own address. apps.core.client_ip walks the
+# X-Forwarded-For chain from the right and skips these networks to find the real
+# client. Anything NOT listed here is treated as a genuine client address, which
+# is what keeps private/LAN users working.
+TRUSTED_PROXY_CIDRS = [
+    c.strip() for c in os.environ.get(
+        'TRUSTED_PROXY_CIDRS',
+        # 172.16.0.0/12 covers every docker bridge block (172.17.x, 172.19.x,
+        # ...) so the gateway is still recognised if the compose network is
+        # renumbered. Deliberately does NOT include 10/8 or 192.168/16, so real
+        # LAN clients keep their private address.
+        '172.16.0.0/12,127.0.0.1/32,::1/128',
+    ).split(',') if c.strip()
+]
+
 # ── Brute-force protection (django-axes) ──────────────────
 # Locks out repeated auth failures, closing the CWE-307 gap on /django-admin/
 # and the JWT login endpoints.
@@ -68,7 +85,7 @@ AXES_COOLOFF_TIME = int(os.environ.get('AXES_COOLOFF_TIME', '1'))  # hours
 # Lock on IP only: a spray against one username must not be able to lock out a
 # legitimate user who happens to share that username.
 AXES_LOCKOUT_PARAMETERS = ['ip_address']
-AXES_CLIENT_IP_CALLABLE = 'apps.core.axes_helpers.get_client_ip'
+AXES_CLIENT_IP_CALLABLE = 'apps.core.client_ip.get_client_ip'
 # Successful auth clears the counter for the IP.
 AXES_RESET_ON_SUCCESS = True
 # Do not warn loudly about clean IPs in the audit log.
