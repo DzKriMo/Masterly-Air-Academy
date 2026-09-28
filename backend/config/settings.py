@@ -79,13 +79,13 @@ AXES_USERNAME_CALLABLE = None
 # Keep the lockout message generic so it does not confirm the auth backend.
 AXES_LOCKOUT_TEMPLATE = 'locked_out'
 
-# AxesStandaloneBackend subclasses ModelBackend (it honours the custom
-# USERNAME_FIELD='email'), so this is a drop-in replacement. It is required —
-# with only the middleware installed axes records failures but never actually
-# blocks the login. Declared as the sole backend so there is no way to
-# authenticate around the lockout check.
+# AxesStandaloneBackend is a *monitor* only: it raises when an IP is locked
+# out and otherwise returns None, so it must be listed BEFORE a real
+# authentication backend. ModelBackend honours the custom USERNAME_FIELD and
+# performs the actual credential check plus permission lookups.
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 ROOT_URLCONF = 'config.urls'
