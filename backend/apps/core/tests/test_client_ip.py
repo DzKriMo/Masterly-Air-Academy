@@ -57,10 +57,22 @@ class ClientIpTests(SimpleTestCase):
         )
         self.assertEqual(get_client_ip(request), '203.0.113.9')
 
-    def test_x_real_ip_wins_when_it_is_a_real_client(self):
+    def test_x_real_ip_is_not_trusted(self):
+        """A forged X-Real-IP must not decide the recorded address.
+
+        nginx overwrites this header today, but the request itself does not
+        guarantee that, so the resolver ignores it entirely.
+        """
         request = make_request(
-            HTTP_X_REAL_IP='198.51.100.7',
+            HTTP_X_REAL_IP='9.9.9.9',
             HTTP_X_FORWARDED_FOR='203.0.113.9, 172.19.0.1',
+        )
+        self.assertEqual(get_client_ip(request), '203.0.113.9')
+
+    def test_x_real_ip_alone_does_not_win(self):
+        request = make_request(
+            HTTP_X_REAL_IP='9.9.9.9',
+            HTTP_X_FORWARDED_FOR='198.51.100.7, 172.19.0.1',
         )
         self.assertEqual(get_client_ip(request), '198.51.100.7')
 
@@ -82,6 +94,24 @@ class ClientIpTests(SimpleTestCase):
             HTTP_X_FORWARDED_FOR='not-an-ip, <script>, 203.0.113.9, 172.19.0.1',
         )
         self.assertEqual(get_client_ip(request), '203.0.113.9')
+
+    def test_forged_x_real_ip_cannot_relocate_the_recorded_address(self):
+        """Regression: the lockout-bypass shape.
+
+        A client rotating both X-Real-IP and the leading X-Forwarded-For entry
+        must always resolve to the same real address, otherwise django-axes
+        would hand out a fresh counter per attempt and the brute-force lockout
+        would never trigger.
+        """
+        resolved = set()
+        for i in range(1, 7):
+            fake = f'10.0.0.{i}'
+            resolved.add(get_client_ip(make_request(
+                HTTP_X_FORWARDED_FOR=f'{fake}, 203.0.113.9, 172.19.0.1',
+                HTTP_X_REAL_IP=fake,
+                REMOTE_ADDR='172.19.0.14',
+            )))
+        self.assertEqual(resolved, {'203.0.113.9'})
 
     def test_no_headers_at_all(self):
         request = make_request()

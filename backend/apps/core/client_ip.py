@@ -99,23 +99,23 @@ def is_trusted_proxy(value):
     return any(address in net for net in _trusted_networks())
 
 
-def get_client_ip(request, prefer_x_real_ip=True):
+def get_client_ip(request):
     """Return the originating client IP for a (possibly proxied) request.
 
-    Order of trust:
+    The chain is walked from the RIGHT and the first entry that is not a
+    configured trusted proxy wins. Each real proxy appends the address of the
+    machine talking to it, so the right-most non-trusted entry is the client and
+    everything to its left is either an internal hop or a forged value.
 
-    1. ``X-Real-IP`` - but only when it is *not* itself one of our own proxies.
-       The container nginx also sets this header, and the peer it observes is the
-       docker gateway, so an unconditional preference here would stamp every
-       audit row with 172.19.0.1 instead of the client.
-    2. ``X-Forwarded-For`` - scanned right-to-left for the first non-trusted
-       entry, so forged leading entries are ignored.
-    3. ``REMOTE_ADDR`` - last resort; this is the proxy's own address.
+    ``X-Real-IP`` is deliberately NOT trusted. nginx overwrites it today, but
+    nothing in the request itself guarantees that, and honouring it would let a
+    client that reaches the app through any hop that forwards the header choose
+    its own recorded address. The X-Forwarded-For walk needs no such assumption.
     """
     if request is None:
         return ''
 
-    resolved = _resolve_client_ip(request, prefer_x_real_ip)
+    resolved = _resolve_client_ip(request)
 
     # Useful when the proxy topology changes; silent otherwise.
     logger.debug(
@@ -128,14 +128,7 @@ def get_client_ip(request, prefer_x_real_ip=True):
     return resolved
 
 
-def _resolve_client_ip(request, prefer_x_real_ip=True):
-    if prefer_x_real_ip:
-        real_ip_raw = (request.META.get('HTTP_X_REAL_IP', '') or '').strip()
-        if real_ip_raw and not is_trusted_proxy(real_ip_raw):
-            parsed_real = _parse_ip(real_ip_raw)
-            if parsed_real is not None:
-                return str(parsed_real)
-
+def _resolve_client_ip(request):
     forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '') or ''
     for hop in reversed([part for part in forwarded_for.split(',') if part.strip()]):
         if is_trusted_proxy(hop):
@@ -144,5 +137,6 @@ def _resolve_client_ip(request, prefer_x_real_ip=True):
         if parsed is not None:
             return str(parsed)
 
-    # Everything in the chain was a trusted proxy (direct internal call).
+    # No usable X-Forwarded-For entry: fall back to the direct peer, which for
+    # this deployment is the container nginx rather than a real client.
     return (request.META.get('REMOTE_ADDR', '') or '').strip()
