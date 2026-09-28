@@ -1,8 +1,16 @@
 from rest_framework import serializers
+from apps.accounts.models import UserRole
 from apps.students.models import Promotion, Student
 from .models import Application, ApplicationStatus, Invoice, Payment, Contract, Document, LibraryCategory
 
 APPLICATION_STATUSES = [c[0] for c in ApplicationStatus.choices]
+
+# End-user roles that must never be shown who uploaded an internal document.
+_STUDENT_FACING_ROLES = frozenset({
+    UserRole.STUDENT,
+    UserRole.CANDIDATE,
+    UserRole.GRADUATE,
+})
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
@@ -94,11 +102,17 @@ class DocumentSerializer(serializers.ModelSerializer):
     def get_uploaded_by_name(self, obj):
         # Attaches the uploader's name and, as a fallback, their email. That
         # email is an internal staff address (e.g. training@admin.maa.dz), so it
-        # is only exposed to staff/superusers. Students who can read documents
-        # would otherwise harvest staff addresses from this field.
+        # is hidden from the three student-facing roles, which can otherwise
+        # read documents and harvest staff addresses. Non-student roles keep
+        # visibility because the library is managed by them; note that some of
+        # those accounts have is_staff=False, so role is checked as well.
         request = self.context.get('request')
         user = getattr(request, 'user', None)
-        if user is None or not (user.is_authenticated and (user.is_staff or user.is_superuser)):
+        if user is None or not user.is_authenticated:
+            return None
+        if user.is_superuser or user.is_staff:
+            pass
+        elif user.role in _STUDENT_FACING_ROLES:
             return None
         if not obj.uploaded_by_id:
             return None
