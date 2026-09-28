@@ -79,6 +79,15 @@ AXES_USERNAME_CALLABLE = None
 # Keep the lockout message generic so it does not confirm the auth backend.
 AXES_LOCKOUT_TEMPLATE = 'locked_out'
 
+# AxesStandaloneBackend subclasses ModelBackend (it honours the custom
+# USERNAME_FIELD='email'), so this is a drop-in replacement. It is required —
+# with only the middleware installed axes records failures but never actually
+# blocks the login. Declared as the sole backend so there is no way to
+# authenticate around the lockout check.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+]
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
