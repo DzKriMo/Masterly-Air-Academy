@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'storages',
     'django_celery_beat',
     'axes',
-    'axes.contrib.admin',
     # Local apps
     'apps.core',
     'apps.accounts',
