@@ -77,8 +77,10 @@ class UpdateProfileView(views.APIView):
             data['phone'] = student.phone or ''
             data['nationality'] = student.nationality or ''
             if student.photo:
-                photo_path = str(student.photo)
-                data['photo'] = f'/media/{photo_path}'
+                # Photos live in MinIO (the default storage), not on the local
+                # filesystem, so a /media/ URL would 404. The only resolvable
+                # URL is the authenticated streaming endpoint.
+                data['photo'] = '/api/profile/photo/'
         except Student.DoesNotExist:
             pass
         return Response(data)
@@ -129,7 +131,7 @@ class UpdateProfileView(views.APIView):
             return Response({'error': f'Failed to save photo: {str(e)}'}, status=500)
 
         return Response({
-            'photo': f'/media/{key}',
+            'photo': '/api/profile/photo/',
         })
 
 

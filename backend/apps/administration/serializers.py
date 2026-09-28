@@ -92,6 +92,14 @@ class DocumentSerializer(serializers.ModelSerializer):
         ]
 
     def get_uploaded_by_name(self, obj):
+        # Attaches the uploader's name and, as a fallback, their email. That
+        # email is an internal staff address (e.g. training@admin.maa.dz), so it
+        # is only exposed to staff/superusers. Students who can read documents
+        # would otherwise harvest staff addresses from this field.
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not (user.is_authenticated and (user.is_staff or user.is_superuser)):
+            return None
         if not obj.uploaded_by_id:
             return None
         return obj.uploaded_by.get_full_name() or obj.uploaded_by.email

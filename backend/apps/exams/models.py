@@ -247,6 +247,7 @@ class Certificate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='certificates')
     certificate_number = models.CharField(max_length=50, unique=True)
+    verification_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     type = models.CharField(max_length=50, blank=True, null=True)
     title = models.CharField(max_length=255, blank=True, null=True)
     title_ar = models.CharField(max_length=255, blank=True, null=True)

@@ -3,7 +3,8 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.throttling import ScopedRateThrottle
 
 from apps.accounts.permissions import HasRolePermission
 from apps.students.models import Student, MedicalCertificate, TrainingProgram
@@ -12,7 +13,7 @@ from apps.flight_training.models import Aircraft, FlightLesson, FlightLogEntry
 from apps.administration.models import Invoice, Payment
 from apps.quality_safety.models import Audit, NonConformity
 from apps.exams.models import ExamAttempt, Certificate
-from apps.exams.serializers import CertificateSerializer
+from apps.exams.serializers import CertificateSerializer, PublicCertificateVerifySerializer
 
 
 class DashboardKPIView(APIView):
@@ -192,16 +193,44 @@ class StudentDashboardView(APIView):
 
 
 @api_view(['GET'])
+@throttle_classes([ScopedRateThrottle])
 @permission_classes([])  # Public endpoint — no auth required
 def verify_certificate(request):
-    number = request.query_params.get('number', '')
-    if not number:
-        return Response({'valid': False, 'message': 'Certificate number required'}, status=400)
-    try:
-        cert = Certificate.objects.get(certificate_number=number)
-        return Response({'valid': True, 'certificate': CertificateSerializer(cert).data})
-    except Certificate.DoesNotExist:
-        return Response({'valid': False, 'message': 'Certificate not found'})
+    """Publicly verify a certificate by its unguessable token.
+
+    Lookup by ``?token=<uuid>`` is the supported path — the token is a UUID4
+    and cannot be enumerated. ``?number=`` is still honoured for older share
+    links, but it is guessable, so the response is deliberately minimal and
+    the endpoint is rate limited (``certificate_verify`` scope) to blunt
+    enumeration.
+    """
+    token = (request.query_params.get('token') or '').strip()
+    number = (request.query_params.get('number') or '').strip()
+
+    if not token and not number:
+        return Response({'valid': False, 'message': 'Certificate token required'}, status=400)
+
+    queryset = Certificate.objects.select_related('student')
+    if token:
+        try:
+            cert = queryset.get(verification_token=token)
+        except (Certificate.DoesNotExist, ValueError, TypeError):
+            cert = None
+    else:
+        cert = queryset.filter(certificate_number=number).first()
+
+    if cert is None:
+        # Identical response for a bad token and a bad number so the endpoint
+        # cannot be used to probe which certificate numbers exist.
+        return Response({'valid': False, 'message': 'Certificate not found'}, status=404)
+
+    return Response({
+        'valid': True,
+        'certificate': PublicCertificateVerifySerializer(cert).data,
+    })
+
+
+verify_certificate.throttle_scope = 'certificate_verify'
 
 
 @api_view(['GET'])

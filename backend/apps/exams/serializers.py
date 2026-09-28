@@ -200,6 +200,26 @@ class CertificateSerializer(serializers.ModelSerializer):
         return obj.student.full_name
 
 
+class PublicCertificateVerifySerializer(serializers.ModelSerializer):
+    """Minimal, public-safe view of a certificate.
+
+    Used by the unauthenticated verification endpoint, so it deliberately
+    omits the internal primary key, the student's own primary key, the
+    guessable certificate number, and ``file_url`` (which would hand the PDF
+    to anyone who guessed). Deliberately no DOB, ID number or signature image.
+    """
+
+    student_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Certificate
+        fields = ['student_name', 'program', 'type', 'title', 'issue_date', 'expiry_date', 'status']
+        read_only_fields = fields
+
+    def get_student_name(self, obj):
+        return obj.student.full_name
+
+
 class StudentCompetencySerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
 

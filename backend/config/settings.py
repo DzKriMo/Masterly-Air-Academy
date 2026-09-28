@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',
     'django_celery_beat',
+    'axes',
+    'axes.contrib.admin',
     # Local apps
     'apps.core',
     'apps.accounts',
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'axes.middleware.AxesMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -56,6 +59,26 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# ── Brute-force protection (django-axes) ──────────────────
+# Locks out repeated auth failures, closing the CWE-307 gap on /django-admin/
+# and the JWT login endpoints.
+AXES_ENABLED = os.environ.get('AXES_ENABLED', 'true').lower() == 'true'
+AXES_FAILURE_LIMIT = int(os.environ.get('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = int(os.environ.get('AXES_COOLOFF_TIME', '1'))  # hours
+# Lock on IP only: a spray against one username must not be able to lock out a
+# legitimate user who happens to share that username.
+AXES_LOCKOUT_PARAMETERS = ['ip_address']
+AXES_CLIENT_IP_CALLABLE = 'apps.core.axes_helpers.get_client_ip'
+# Successful auth clears the counter for the IP.
+AXES_RESET_ON_SUCCESS = True
+# Do not warn loudly about clean IPs in the audit log.
+AXES_ENABLE_ACCESS_FAILURE_LOG = False
+AXES_ONLY_USER_LOGIN = False
+AXES_HTTP_BASIC_AUTHENTICATE = False
+AXES_USERNAME_CALLABLE = None
+# Keep the lockout message generic so it does not confirm the auth backend.
+AXES_LOCKOUT_TEMPLATE = 'locked_out'
 
 ROOT_URLCONF = 'config.urls'
 
@@ -193,6 +216,7 @@ REST_FRAMEWORK = {
         'file_upload': '20/hour',
         'contact': '5/hour',
         'backup': '5/hour',
+        'certificate_verify': '30/hour',
     },
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
     'DEFAULT_RENDERER_CLASSES': (

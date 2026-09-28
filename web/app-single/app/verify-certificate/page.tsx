@@ -7,8 +7,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "@/lib/use-translation";
 
 interface CertData {
-  id: string;
-  certificate_number: string;
   title: string;
   type: string;
   program: string;
@@ -16,7 +14,6 @@ interface CertData {
   expiry_date: string | null;
   status: string;
   student_name: string;
-  qr_code: string | null;
 }
 
 export default function VerifyCertificatePage() {
@@ -24,17 +21,26 @@ export default function VerifyCertificatePage() {
   const [cert, setCert] = useState<CertData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const number = params.get("number");
-    if (!number) {
+    // Preferred: the unguessable verification token embedded in the share
+    // link / QR code. `number` is retained only for legacy links.
+    const tokenParam = params.get("token") || "";
+    const number = params.get("number") || "";
+    if (!tokenParam && !number) {
       setError(t("verify.noCertificateNumber", "No certificate number provided."));
       setLoading(false);
       return;
     }
+    setToken(tokenParam);
 
-    api.get(`/certificates/verify/?number=${encodeURIComponent(number)}`)
+    const query = tokenParam
+      ? `token=${encodeURIComponent(tokenParam)}`
+      : `number=${encodeURIComponent(number)}`;
+
+    api.get(`/certificates/verify/?${query}`)
       .then((data: any) => {
         if (data.success !== false && data.valid !== false) {
           setCert(data.data?.certificate || data.certificate || data);
@@ -46,8 +52,8 @@ export default function VerifyCertificatePage() {
       .finally(() => setLoading(false));
   }, [t]);
 
-  const verifyUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/verify-certificate?number=${cert?.certificate_number || ""}`
+  const verifyUrl = typeof window !== "undefined" && token
+    ? `${window.location.origin}/verify-certificate?token=${token}`
     : "";
 
   return (
@@ -92,10 +98,6 @@ export default function VerifyCertificatePage() {
                   <span className="text-white font-semibold">{cert.student_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm">{t("verify.certificateNo", "Certificate No")}</span>
-                  <span className="text-gold-500 font-mono text-sm">{cert.certificate_number}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">{t("verify.issueDate", "Issue Date")}</span>
                   <span className="text-white">{cert.issue_date}</span>
                 </div>
@@ -111,11 +113,13 @@ export default function VerifyCertificatePage() {
                 </div>
               </div>
 
-              <div className="flex justify-center mb-4">
-                <div className="bg-white p-3 rounded-xl">
-                  <QRCodeSVG value={verifyUrl} size={120} />
+              {verifyUrl && (
+                <div className="flex justify-center mb-4">
+                  <div className="bg-white p-3 rounded-xl">
+                    <QRCodeSVG value={verifyUrl} size={120} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <p className="text-center text-xs text-gray-500">
                 {t("verify.authenticMessage", "This certificate was issued by Masterly Air Academy and is verified as authentic.")}

@@ -201,8 +201,10 @@ class CertificateService:
             status='issued',
         )
 
-        # Generate QR code data using the site URL
-        verify_url = f"{settings.SITE_URL}/verify-certificate?number={cert.certificate_number}"
+        # Generate QR code data using the site URL. The share link carries the
+        # unguessable verification token, not the sequential certificate
+        # number, so the public endpoint cannot be used to enumerate records.
+        verify_url = f"{settings.SITE_URL}/verify-certificate?token={cert.verification_token}"
         try:
             from apps.exams.pdf import _generate_qr_data_url
             cert.qr_code = _generate_qr_data_url(verify_url)
