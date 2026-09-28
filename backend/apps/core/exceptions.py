@@ -1,5 +1,10 @@
+import logging
+
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
+
+logger = logging.getLogger(__name__)
 
 
 def _extract_first_error(errors: dict) -> str:
@@ -18,6 +23,27 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
 
     if response is not None:
+        # A malformed body produces a json.JSONDecodeError whose text is
+        # echoed straight back to the client ("Expecting property name
+        # enclosed in double quotes: line 1 column 2"). That is parser
+        # internals, not a useful validation message, so it is logged
+        # server-side and replaced with something generic.
+        if isinstance(exc, ParseError):
+            logger.warning(
+                "Malformed request body on %s %s: %s",
+                context.get("request").method if context.get("request") else "?",
+                context.get("request").path if context.get("request") else "?",
+                exc,
+            )
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Malformed JSON request body.',
+                    'errors': {'detail': ['Malformed JSON request body.']},
+                },
+                status=response.status_code,
+            )
+
         errors = None
         if isinstance(response.data, dict):
             errors = {
