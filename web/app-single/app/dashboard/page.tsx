@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, loginPathForRole } from "@/lib/auth-context";
 import { useTranslation } from "@/lib/use-translation";
 import { getPortalLabel } from "@/lib/portal-access";
 
@@ -14,13 +14,16 @@ interface QuickLink {
 }
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+      // Role-aware: a signed-out student belongs on the student login, not the
+      // staff one. Hardcoding "/login" here is what dropped students into the
+      // admin panel's login screen.
+      router.push(loginPathForRole(user?.role));
     }
   }, [isLoading, isAuthenticated, user, router]);
 
@@ -34,11 +37,6 @@ export default function DashboardPage() {
 
   const roleLabel = getPortalLabel(user.role);
   const links = getQuickLinks(user.role, t);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login");
-  };
 
   return (
     <div className="min-h-screen bg-navy-900">
@@ -62,7 +60,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">{user.name || user.email}</span>
             <button
-              onClick={handleLogout}
+              onClick={logoutAndRedirect}
               className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
             >
               {t("common.signOut")}

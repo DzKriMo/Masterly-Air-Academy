@@ -30,7 +30,12 @@ User = get_user_model()
 class CurrentUserView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request):
+        # ensure_csrf_cookie guarantees the SPA has a csrftoken cookie after boot.
+        # Without it the client could reach a state-changing request with no token
+        # to send, the server answered 403, and logout silently failed to clear the
+        # session - the user appeared signed out while the cookie stayed valid.
         user = request.user
         data = {
             'id': str(user.id),
@@ -314,8 +319,14 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
             user = User.objects.filter(pk=user_id).first()
             if user and user.last_logout_at:
                 iat = token.payload.get('iat')
+                # JWT `iat` is a whole-second POSIX timestamp while
+                # `last_logout_at` carries microseconds, so comparing them
+                # directly would reject a token minted in the same second as the
+                # logout - i.e. a user signing straight back in. Truncate the
+                # logout time to the token's resolution before comparing.
+                logged_out_at = user.last_logout_at.replace(microsecond=0)
                 if iat and datetime.datetime.fromtimestamp(
-                        iat, tz=datetime.timezone.utc) < user.last_logout_at:
+                        iat, tz=datetime.timezone.utc) < logged_out_at:
                     raise TokenError('Refresh token issued before last logout.')
 
         return super().validate({'refresh': refresh})

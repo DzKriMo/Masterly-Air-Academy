@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/use-translation";
 import { isExamPortalPath } from "@/lib/exam-portal";
 
@@ -10,8 +10,7 @@ const TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const WARNING_BEFORE = 60 * 1000; // Show warning 1 minute before timeout
 
 export function InactivityDetector() {
-  const { isAuthenticated, logout } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, logoutAndRedirect } = useAuth();
   const pathname = usePathname();
   const { t } = useTranslation();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,14 +30,12 @@ export function InactivityDetector() {
     }, TIMEOUT - WARNING_BEFORE);
 
     timerRef.current = setTimeout(() => {
-      handleLogout();
+      setShowWarning(false);
+      // Role-aware and hard-fails nothing: a student must not be dropped on the
+      // staff login, and this fires from a bare timer callback where a rejected
+      // promise would be unhandled.
+      logoutAndRedirect();
     }, TIMEOUT);
-  };
-
-  const handleLogout = async () => {
-    setShowWarning(false);
-    await logout();
-    router.push("/login");
   };
 
   // Countdown ticker

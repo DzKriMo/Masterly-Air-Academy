@@ -15,7 +15,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import multiMonthPlugin from '@fullcalendar/multimonth';
 
 export default function SchedulePage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
@@ -61,7 +61,7 @@ export default function SchedulePage() {
         backHref="/instructor/dashboard"
         backLabel={t("instructor.backToDashboard", "Back to Dashboard")}
         actions={
-          <button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t("common.signOut", "Logout")}</button>
+          <button onClick={logoutAndRedirect} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t("common.signOut", "Logout")}</button>
         }
       />
       <main className="max-w-7xl mx-auto px-6 py-8">

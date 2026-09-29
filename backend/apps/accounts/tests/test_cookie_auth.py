@@ -13,6 +13,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.cookie_auth import ACCESS_COOKIE, REFRESH_COOKIE
 
@@ -79,12 +80,32 @@ class TestCookieAuth:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_cookie_auth_requires_csrf_on_post(self, user_admin):
+        """CSRF is enforced on cookie-authenticated state changes.
+
+        Logout is the one documented exemption (see
+        test_logout_succeeds_without_csrf_token): it must always be reachable or
+        a user can end up unable to end their session. Everything else stays
+        protected.
+        """
         client = _client()
         _login(client)
-        # State-changing request authenticated via cookie but no CSRF token -> 403
-        response = client.post(LOGOUT_URL)
+        original_csrf = client.cookies['csrftoken'].value
+        csrf = _csrf_header(client)
+        client.cookies.pop('csrftoken', None)
+
+        response = client.put(reverse('profile'), {'phone': '+213600000000'})
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        # With a valid X-CSRFToken it succeeds and clears the cookies
+
+        # With a matching cookie + header the same request succeeds.
+        client.cookies['csrftoken'] = original_csrf
+        response = client.put(
+            reverse('profile'), {'phone': '+213600000000'}, **csrf
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_logout_with_valid_csrf_clears_cookies(self, user_admin):
+        client = _client()
+        _login(client)
         response = client.post(LOGOUT_URL, **_csrf_header(client))
         assert response.status_code == status.HTTP_200_OK
         assert _cookie_cleared(client, ACCESS_COOKIE)
@@ -181,19 +202,93 @@ class TestCookieAuth:
     def test_refresh_rejected_for_token_issued_before_logout(self, user_admin):
         """A refresh token issued before the logout stays dead even if it
         escaped the blacklist sweep (simulates the multi-tab rotation race)."""
+        from datetime import timedelta
+
         from django.utils import timezone as dj_tz
         client = _client()
         _login(client)
         pre_logout_refresh = client.cookies[REFRESH_COOKIE].value
 
         # Simulate the race: the token was never blacklisted, but the user
-        # logged out after the token was issued.
-        user_admin.last_logout_at = dj_tz.now()
+        # logged out after the token was issued. The comparison is made at the
+        # token's own one-second resolution, so the logout is placed a second
+        # later to model a genuinely older token.
+        user_admin.last_logout_at = dj_tz.now() + timedelta(seconds=1)
         user_admin.save(update_fields=['last_logout_at'])
 
         stale = APIClient()
         resp = stale.post(REFRESH_URL, {'refresh': pre_logout_refresh})
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_logout_succeeds_without_csrf_token(self, user_admin):
+        """Regression: logout must always destroy the session.
+
+        The browser occasionally had no csrftoken cookie to send, the server
+        answered 403, and the auth cookies survived. The SPA cleared its own
+        state so the user looked signed out, but the session was still live and
+        the next navigation silently re-authenticated them.
+        """
+        client = _client()
+        _login(client)
+
+        # No CSRF header at all - exactly the failing browser case.
+        response = client.post(LOGOUT_URL)
+        assert response.status_code == status.HTTP_200_OK
+        assert _cookie_cleared(client, ACCESS_COOKIE)
+        assert _cookie_cleared(client, REFRESH_COOKIE)
+
+        # And the session is genuinely dead.
+        assert client.get(ME_URL).status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_logout_with_stale_csrf_token_still_clears_session(self, user_admin):
+        """A rotated/mismatched token must not be able to block a sign-out."""
+        client = _client()
+        _login(client)
+        response = client.post(
+            LOGOUT_URL, HTTP_X_CSRFTOKEN='x' * 32
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert _cookie_cleared(client, ACCESS_COOKIE)
+        assert _cookie_cleared(client, REFRESH_COOKIE)
+
+    def test_me_endpoint_sets_csrf_cookie(self, user_admin):
+        """`/me/` is decorated with ensure_csrf_cookie so the SPA always holds a
+        token before attempting a mutation, instead of discovering it is missing
+        from a 403."""
+        client = _client()
+        _login(client)
+        client.cookies.pop('csrftoken', None)
+        assert 'csrftoken' not in client.cookies
+
+        response = client.get(ME_URL)
+        assert response.status_code == status.HTTP_200_OK
+        assert 'csrftoken' in client.cookies
+
+    def test_other_state_changing_endpoints_still_require_csrf(self, user_admin):
+        """The logout exemption is narrow: ordinary mutations stay protected."""
+        client = _client()
+        _login(client)
+        client.cookies.pop('csrftoken', None)
+
+        response = client.put(reverse('profile'), {'phone': '+213600000000'})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_logout_exemption_is_scoped_to_the_logout_route(self):
+        """The exemption must not leak to any other path.
+
+        Matching on a bare path tail ("...endswith('/logout')") would also
+        exempt an unrelated nested endpoint, which is exactly the kind of
+        silent hole this check is meant to avoid.
+        """
+        from rest_framework.test import APIRequestFactory
+
+        from apps.accounts.cookie_auth import _is_logout_request
+
+        factory = APIRequestFactory()
+        # No resolver match on a bare factory request, so the fallback is used.
+        assert _is_logout_request(factory.post(reverse('logout'))) is True
+        assert _is_logout_request(factory.post('/api/profile/')) is False
+        assert _is_logout_request(factory.post('/api/users/1/logout/')) is False
 
     def test_relogin_after_logout_issues_working_tokens(self, user_admin):
         """A fresh login after logout issues tokens newer than last_logout_at,
@@ -208,4 +303,28 @@ class TestCookieAuth:
         response = fresh.post(REFRESH_URL, **_csrf_header(fresh))
         assert response.status_code == status.HTTP_200_OK
         response = fresh.get(ME_URL)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_relogin_within_the_same_second_is_accepted(self, user_admin):
+        """Regression: JWT `iat` is second-resolution, `last_logout_at` is not.
+
+        Signing out and straight back in inside one second used to produce a
+        401 on the next refresh, because the token's truncated `iat` compared
+        as "earlier" than the microsecond-precise logout timestamp.
+        """
+        from datetime import datetime, timezone as dj_timezone
+
+        client = _client()
+        _login(client)
+        refresh = client.cookies[REFRESH_COOKIE].value
+        iat = datetime.fromtimestamp(
+            int(RefreshToken(refresh).payload['iat']), tz=dj_timezone.utc
+        )
+
+        # A logout recorded in the middle of the same second the token was
+        # issued: exactly what an immediate sign-out/sign-in pair produces.
+        user_admin.last_logout_at = iat.replace(microsecond=500000)
+        user_admin.save(update_fields=['last_logout_at'])
+
+        response = client.post(REFRESH_URL, **_csrf_header(client))
         assert response.status_code == status.HTTP_200_OK

@@ -16,7 +16,7 @@ import { useTranslation } from "@/lib/use-translation";
 const PIE_COLORS = ["#c4943c", "#3b82f6", "#22c55e", "#ef4444", "#8b5cf6", "#f59e0b", "#14b8a6", "#ec4899"];
 
 export default function AdminDashboard() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logoutAndRedirect } = useAuth();
   const router = useRouter();
   useAuthGuard(isAuthenticated, authLoading);
   const { t } = useTranslation();
@@ -113,10 +113,7 @@ export default function AdminDashboard() {
               ]}
             />
             <button
-              onClick={async () => {
-                await logout();
-                router.push("/login");
-              }}
+              onClick={logoutAndRedirect}
               className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
             >
               {t("common.signOut", "Sign Out")}

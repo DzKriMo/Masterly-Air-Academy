@@ -40,7 +40,7 @@ function setStored(id: string, open: boolean) {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -355,7 +355,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
         <div className="p-4 border-t border-navy-700 shrink-0">
           <button
-            onClick={async () => { await logout(); router.push("/login"); }}
+            onClick={logoutAndRedirect}
             className="w-full py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10"
           >
             {t("common.signOut")}

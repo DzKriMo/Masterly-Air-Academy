@@ -51,7 +51,7 @@ interface Subject {
 }
 
 export default function ModulesPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();

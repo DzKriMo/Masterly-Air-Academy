@@ -36,7 +36,7 @@ const statusClass = (s: string) =>
   "bg-gray-500/10 text-gray-400";
 
 export default function FlightsPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const { showToast } = useToast();

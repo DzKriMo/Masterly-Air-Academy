@@ -31,6 +31,27 @@ def _cookie_samesite() -> str:
     return getattr(settings, 'MAA_COOKIE_SAMESITE', 'Lax')
 
 
+def _is_logout_request(request) -> bool:
+    """True only for the logout endpoint.
+
+    Resolved by route name so the check is exact regardless of the mount
+    prefix, with an exact URL comparison as the fallback for requests that
+    arrive without a resolver match. A plain path-tail test would also exempt
+    an unrelated endpoint that happened to end in "logout".
+    """
+    resolver_match = getattr(request, 'resolver_match', None)
+    if resolver_match is not None:
+        return resolver_match.url_name == 'logout'
+
+    from django.urls import reverse
+    from django.urls.exceptions import NoReverseMatch
+    path = (getattr(request, 'path', '') or '').rstrip('/')
+    try:
+        return path == reverse('logout').rstrip('/')
+    except NoReverseMatch:  # pragma: no cover - only if URLs are unavailable
+        return False
+
+
 def set_auth_cookies(response, access=None, refresh=None):
     """Attach the auth cookies to a response (login/refresh)."""
     if access:
@@ -86,7 +107,19 @@ class CookieJWTAuthentication(JWTAuthentication):
 
     def enforce_csrf(self, request):
         """Reject state-changing cookie-authenticated requests without a
-        valid X-CSRFToken header (mirrors DRF SessionAuthentication)."""
+        valid X-CSRFToken header (mirrors DRF SessionAuthentication).
+
+        Logout is deliberately exempt. It is the one endpoint a user must always
+        be able to reach, and when the browser had no csrftoken cookie to send the
+        403 meant the auth cookies were never cleared: the SPA cleared its own
+        state and looked signed out, but the session stayed valid and the next
+        navigation silently re-authenticated. A forced-logout CSRF is a nuisance
+        with no data exposure, and the endpoint still only destroys the caller's
+        own cookies and revokes its own refresh token, so the trade is safe.
+        """
+        if _is_logout_request(request):
+            return
+
         def dummy_get_response(request):  # pragma: no cover
             return None
 

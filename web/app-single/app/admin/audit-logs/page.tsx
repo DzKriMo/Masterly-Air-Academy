@@ -33,6 +33,82 @@ interface AuditLog {
   new_values?: any;
 }
 
+// ── Change formatting ──────────────────────────────────────
+
+/**
+ * Turn a stored field name into something readable: `first_name` -> `First name`,
+ * `dateOfBirth` -> `Date Of Birth`, `id` -> `Id`.
+ */
+function humanizeField(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim();
+  if (!spaced) return key;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** Render one audit value compactly; anything long or structured is summarised. */
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    const json = JSON.stringify(value);
+    return json.length > 60 ? `${json.slice(0, 60)}…` : json;
+  }
+  const text = String(value);
+  return text.length > 80 ? `${text.slice(0, 80)}…` : text;
+}
+
+interface ChangeRow {
+  field: string;
+  label: string;
+  before: string;
+  after: string;
+  same: boolean;
+}
+
+/**
+ * Build a field-by-field diff. A field present on only one side still produces a
+ * row (a create or a removal), so the table never silently drops half the
+ * change the way a raw JSON dump could hide it.
+ */
+function buildChangeRows(
+  oldValues: Record<string, unknown> | undefined | null,
+  newValues: Record<string, unknown> | undefined | null
+): ChangeRow[] {
+  const before = oldValues && typeof oldValues === 'object' ? oldValues : {};
+  const after = newValues && typeof newValues === 'object' ? newValues : {};
+  const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)])).sort();
+
+  return keys.map((key) => {
+    const hadBefore = Object.prototype.hasOwnProperty.call(before, key);
+    const hadAfter = Object.prototype.hasOwnProperty.call(after, key);
+    // Compare serialised forms so objects/arrays compare by content, and so
+    // 1 vs "1" is correctly reported as a change.
+    const same =
+      hadBefore &&
+      hadAfter &&
+      JSON.stringify(before[key]) === JSON.stringify(after[key]);
+    return {
+      field: key,
+      label: humanizeField(key),
+      before: hadBefore ? formatValue(before[key]) : '—',
+      after: hadAfter ? formatValue(after[key]) : '—',
+      same,
+    };
+  });
+}
+
+function summariseChanges(rows: ChangeRow[]): string {
+  const changed = rows.filter((r) => !r.same).length;
+  if (rows.length === 0) return 'No field-level detail recorded';
+  const plural = rows.length === 1 ? '' : 's';
+  if (changed === 0) return `No field changes (${rows.length} field${plural} recorded)`;
+  return `${changed} of ${rows.length} field${plural} changed`;
+}
+
 // ── Constants ─────────────────────────────────────────────
 
 async function downloadExport() {
@@ -112,6 +188,12 @@ export default function AdminAuditLogsPage() {
     // Refresh every 30 seconds
     refetchInterval: 30000,
   });
+
+  // Field-by-field diff for the selected entry's detail modal.
+  const changeRows = useMemo(
+    () => buildChangeRows(selectedLog?.old_values, selectedLog?.new_values),
+    [selectedLog]
+  );
 
   // ── Filtered data ──
   const filtered = useMemo(() => {
@@ -304,19 +386,40 @@ export default function AdminAuditLogsPage() {
               <label className="block text-sm text-gray-400 mb-1">Created At</label>
               <p className="text-white">{formatDateTime(selectedLog?.created_at)}</p>
             </div>
-            {(selectedLog?.old_values && Object.keys(selectedLog.old_values).length > 0) || (selectedLog?.new_values && Object.keys(selectedLog.new_values).length > 0) ? (
+            {changeRows.length > 0 && (
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Changes</label>
-                <div className="bg-navy-900 rounded-lg p-3 space-y-1 text-sm">
-                  {selectedLog?.old_values && Object.keys(selectedLog.old_values).length > 0 && (
-                    <p className="text-red-400">← {JSON.stringify(selectedLog.old_values)}</p>
-                  )}
-                  {selectedLog?.new_values && Object.keys(selectedLog.new_values).length > 0 && (
-                    <p className="text-green-400">→ {JSON.stringify(selectedLog.new_values)}</p>
-                  )}
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm text-gray-400">Changes</label>
+                  <span className="text-xs text-gray-500">{summariseChanges(changeRows)}</span>
                 </div>
+                <div className="bg-navy-900 rounded-lg overflow-hidden border border-navy-700">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 px-3 py-2 bg-navy-800/60 text-xs uppercase tracking-wide text-gray-400">
+                    <span>Field</span>
+                    <span>Before</span>
+                    <span>After</span>
+                  </div>
+                  {changeRows.map((row) => (
+                    <div
+                      key={row.field}
+                      className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 px-3 py-2 text-sm border-t border-navy-700/60"
+                    >
+                      <span className={row.same ? "text-gray-400" : "text-white font-medium"} title={row.field}>
+                        {row.label}
+                      </span>
+                      <span className={`break-words ${row.same ? "text-gray-500" : "text-red-400 line-through"}`}>
+                        {row.before}
+                      </span>
+                      <span className={`break-words ${row.same ? "text-gray-500" : "text-green-400"}`}>
+                        {row.after}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Fields shown in white with a struck-through value are the ones that changed.
+                </p>
               </div>
-            ) : null}
+            )}
           </div>
         </ModalForm>
       </main>

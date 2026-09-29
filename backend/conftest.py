@@ -53,6 +53,25 @@ def _disable_throttling():
 
 
 @pytest.fixture(autouse=True)
+def _disable_axes():
+    """Disable django-axes during tests.
+
+    ``AXES_ONLY_USER_LOGIN = False`` means every 401 is recorded as a failed
+    attempt. Several tests deliberately provoke 401s (stale refresh tokens,
+    logged-out sessions), and all test clients share the loopback address, so
+    they add up to the 5-failure limit and lock out the IP for the remainder of
+    the session. The lockout itself is covered by dedicated assertions rather
+    than incidental cross-test coupling.
+    """
+    from unittest.mock import patch
+    patcher = patch('axes.handlers.database.AxesDatabaseHandler.is_locked',
+                    return_value=False)
+    patcher.start()
+    yield
+    patcher.stop()
+
+
+@pytest.fixture(autouse=True)
 def _disable_meilisearch():
     """Mock Meilisearch availability so URL loading never blocks."""
     patcher = patch('apps.core.search.MEILI_AVAILABLE', False)

@@ -11,7 +11,7 @@ import {
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function SchedulerLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -72,7 +72,7 @@ export default function SchedulerLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
         <div className="p-4 border-t border-navy-700 w-full shrink-0">
-          <button onClick={async () => { await logout(); router.push("/login"); }}
+          <button onClick={logoutAndRedirect}
             className="w-full py-2.5 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors">
             {t("common.signOut")}
           </button>

@@ -26,8 +26,14 @@ class ErrorBoundaryClass extends Component<ClassProps, State> {
   }
 
   componentDidMount() {
+    // Unhandled promise rejections are logged but must NOT trip the boundary.
+    // They are routine in this app: aborted fetches, a background poll that 401s,
+    // a token refresh that loses a race. Treating them as fatal replaced the whole
+    // page with the error card for a condition the user could not act on, and it
+    // disappeared on the next refresh because the transient cause was gone.
+    // Only errors thrown during render (getDerivedStateFromError) are fatal.
     this.unhandledRejection = (e: PromiseRejectionEvent) => {
-      this.setState({ hasError: true, error: e.reason instanceof Error ? e.reason : new Error(String(e.reason)) });
+      console.error('[ErrorBoundary] unhandled rejection:', e.reason);
     };
     window.addEventListener("unhandledrejection", this.unhandledRejection);
   }

@@ -10,7 +10,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 import { PageHeader } from "@/components/page-header";
 
 export default function StudentProfilePage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -139,7 +139,7 @@ export default function StudentProfilePage() {
         backLabel={t('student.backToDashboard')}
         maxWidth="max-w-4xl"
         actions={
-          <button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
+          <button onClick={logoutAndRedirect} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
         }
       />
     <main className="max-w-4xl mx-auto px-6 py-8">

@@ -57,6 +57,23 @@ class ApiClient {
     this.onLogoutHandler = handler;
   }
 
+  /**
+   * Ask the server for a fresh csrftoken cookie. `/me/` is decorated with
+   * ensure_csrf_cookie precisely so the SPA always holds one before it attempts
+   * a mutation. Cheap GET, safe methods, no auth required to be useful.
+   */
+  private async ensureCsrfCookie(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/api/me/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+    } catch {
+      // Network failure - the caller will surface the original error.
+    }
+  }
+
   async request<T = any>(
     endpoint: string,
     options: RequestInit = {}
@@ -64,16 +81,28 @@ class ApiClient {
     const url = `${API_BASE}/api${endpoint}`;
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
     const method = (options.method || 'GET').toUpperCase();
-    const headers: Record<string, string> = {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      'Accept': 'application/json',
-      ...((options.headers as Record<string, string>) || {}),
+    const buildHeaders = (): Record<string, string> => {
+      const headers: Record<string, string> = {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        'Accept': 'application/json',
+        ...((options.headers as Record<string, string>) || {}),
+      };
+      // Cookies authenticate the request; CSRF protects the state-changing ones.
+      if (!SAFE_METHODS.includes(method)) {
+        const csrf = this.getCsrfToken();
+        if (csrf) headers['X-CSRFToken'] = csrf;
+      }
+      return headers;
     };
+    let headers = buildHeaders();
 
-    // Cookies authenticate the request; CSRF protects the state-changing ones.
-    if (!SAFE_METHODS.includes(method)) {
-      const csrf = this.getCsrfToken();
-      if (csrf) headers['X-CSRFToken'] = csrf;
+    // A state-changing request with no csrftoken cookie to send would be
+    // rejected with 403. Fetch the cookie once and retry, so a missing token
+    // cannot silently fail a mutation (this is what made logout appear to work
+    // while leaving the session intact).
+    if (!SAFE_METHODS.includes(method) && !this.getCsrfToken()) {
+      await this.ensureCsrfCookie();
+      headers = buildHeaders();
     }
 
     let sessionLost = false;
@@ -82,6 +111,22 @@ class ApiClient {
       headers,
       credentials: 'include',
     });
+
+    // A 403 on a state-changing request can still be a missing/rotated CSRF
+    // token. Refresh the cookie and retry once before surfacing the error.
+    if (response.status === 403 && !SAFE_METHODS.includes(method)) {
+      await this.ensureCsrfCookie();
+      const retryHeaders = buildHeaders();
+      const retried = await fetch(url, {
+        ...options,
+        headers: retryHeaders,
+        credentials: 'include',
+      });
+      if (retried.status !== 403) {
+        response = retried;
+        headers = retryHeaders;
+      }
+    }
 
     // On 401, rotate the refresh cookie once and retry (the refresh itself is
     // cookie-driven, so no token needs to be passed). A rate-limited or

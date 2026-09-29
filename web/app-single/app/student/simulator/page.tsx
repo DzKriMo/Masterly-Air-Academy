@@ -24,7 +24,7 @@ const SESSION_COLORS: Record<string, string> = {
 };
 
 export default function StudentSimulatorPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -65,7 +65,7 @@ export default function StudentSimulatorPage() {
         backLabel={t("student.backToDashboard")}
         maxWidth="max-w-5xl"
         actions={
-          <button onClick={async()=>{await logout();router.push("/student/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
+          <button onClick={logoutAndRedirect} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button>
         }
       />
       <main className="max-w-5xl mx-auto px-6 py-8">

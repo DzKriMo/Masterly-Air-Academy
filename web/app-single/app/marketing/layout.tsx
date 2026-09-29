@@ -9,7 +9,7 @@ import { LayoutDashboard, LayoutList, Images, Bell, MessageSquare, Menu, X, Glob
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -93,7 +93,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
         <div className="p-4 border-t border-navy-700">
-          <button onClick={async()=>{await logout();router.push("/login")}} className="w-full py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t("common.signOut")}</button>
+          <button onClick={logoutAndRedirect} className="w-full py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t("common.signOut")}</button>
         </div>
       </aside>
 

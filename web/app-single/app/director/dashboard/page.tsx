@@ -30,7 +30,7 @@ const fetchAllInvoices = async (): Promise<any[]> => {
 };
 
 export default function DirectorDashboard() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logoutAndRedirect } = useAuth();
   const router = useRouter();
   useAuthGuard(isAuthenticated, isLoading);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export default function DirectorDashboard() {
   return (<div className="min-h-screen bg-navy-900">
     <PageHeader
       title={t('director.dashboard', 'Director Dashboard')}
-      actions={<><ExportButton exports={[{label:"Students (Excel)",url:"/export/students/",filename:"students.xlsx",type:"excel"},{label:"Invoices (Excel)",url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:"Flights (Excel)",url:"/export/flights/",filename:"flights.xlsx",type:"excel"}]}/><button onClick={async()=>{await logout();router.push("/login")}} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></>}
+      actions={<><ExportButton exports={[{label:"Students (Excel)",url:"/export/students/",filename:"students.xlsx",type:"excel"},{label:"Invoices (Excel)",url:"/export/invoices/",filename:"invoices.xlsx",type:"excel"},{label:"Flights (Excel)",url:"/export/flights/",filename:"flights.xlsx",type:"excel"}]}/><button onClick={logoutAndRedirect} className="px-4 py-2 text-sm text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">{t('common.signOut', 'Logout')}</button></>}
     />
     <main className="max-w-7xl mx-auto px-6 py-8">{error && <ErrorCard message={error} onRetry={()=>setError(null)}/>}{loading?<LoadingSkeleton type="card" rows={4}/>:<>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><KpiCard label={t('director.students', 'Students')} value={kpis.students} c="text-blue-400"/><KpiCard label={t('director.courses', 'Courses')} value={kpis.courses} c="text-green-400"/><KpiCard label={t('director.aircraft', 'Aircraft')} value={kpis.aircraft} c="text-purple-400"/><KpiCard label={t('director.fleetHours', 'Flight Hours')} value={`${kpis.hours}h`} c="text-gold-400"/></div>
